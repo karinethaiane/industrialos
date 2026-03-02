@@ -24,7 +24,7 @@ export default function App() {
   return (
     <div style={S.shell}>
       <aside style={S.sidebar}>
-        <div style={S.logo}>⬡ IndustrialOS</div>
+        <div style={S.logo}>⬡ Gestão de Processos - Energia</div>
         <nav style={S.nav}>
           <div style={S.navLabel}>Módulos</div>
           {[
@@ -67,7 +67,7 @@ function Login() {
   return (
     <div style={S.loginWrap}>
       <div style={S.loginBox}>
-        <div style={S.logo}>⬡ IndustrialOS</div>
+        <div style={S.logo}>⬡ Gestão de Processos - Energia</div>
         <div style={S.loginSub}>Plataforma de Gestão Industrial</div>
         <form onSubmit={entrar} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={S.field}>
