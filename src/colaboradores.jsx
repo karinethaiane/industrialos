@@ -27,6 +27,7 @@ export default function Colaboradores() {
   const [lista, setLista] = useState([])
   const [kits, setKits] = useState([])
   const [modal, setModal] = useState(false)
+  const [editando, setEditando] = useState(null)
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({ nome: '', setor: '', cargo: '', kit_id: '' })
   const [salvando, setSalvando] = useState(false)
@@ -48,19 +49,41 @@ export default function Colaboradores() {
     return 'MAT-' + String(Math.floor(Math.random() * 9000) + 1000)
   }
 
+  function abrirNovo() {
+    setEditando(null)
+    setForm({ nome: '', setor: '', cargo: '', kit_id: '' })
+    setModal(true)
+  }
+
+  function abrirEditar(c) {
+    setEditando(c)
+    setForm({ nome: c.nome, setor: c.setor || '', cargo: c.cargo || '', kit_id: c.kit_id || '' })
+    setModal(true)
+  }
+
   async function salvar() {
     if (!form.nome.trim()) return
     setSalvando(true)
-    await supabase.from('colaboradores').insert({
-      nome: form.nome.toUpperCase().trim(),
-      matricula: gerarMatricula(),
-      setor: form.setor.trim(),
-      cargo: form.cargo.trim(),
-      kit_id: form.kit_id || null,
-      ativo: true,
-    })
+    if (editando) {
+      await supabase.from('colaboradores').update({
+        nome: form.nome.toUpperCase().trim(),
+        setor: form.setor.trim(),
+        cargo: form.cargo.trim(),
+        kit_id: form.kit_id || null,
+      }).eq('id', editando.id)
+    } else {
+      await supabase.from('colaboradores').insert({
+        nome: form.nome.toUpperCase().trim(),
+        matricula: gerarMatricula(),
+        setor: form.setor.trim(),
+        cargo: form.cargo.trim(),
+        kit_id: form.kit_id || null,
+        ativo: true,
+      })
+    }
     setForm({ nome: '', setor: '', cargo: '', kit_id: '' })
     setModal(false)
+    setEditando(null)
     setSalvando(false)
     carregar()
   }
@@ -80,7 +103,7 @@ export default function Colaboradores() {
     <div style={S.wrap}>
       <div style={S.header}>
         <div style={S.title}>👷 Colaboradores</div>
-        <button style={S.btn} onClick={() => setModal(true)}>+ Novo Colaborador</button>
+        <button style={S.btn} onClick={abrirNovo}>+ Novo Colaborador</button>
       </div>
 
       {loading ? <div style={{ color: '#3d4d66', padding: 40, textAlign: 'center' }}>Carregando...</div> : (
@@ -106,6 +129,7 @@ export default function Colaboradores() {
                 </td>
                 <td style={S.td}><span style={S.badge(c.ativo)}>{c.ativo ? 'Ativo' : 'Inativo'}</span></td>
                 <td style={{ ...S.td, display: 'flex', gap: 6 }}>
+                  <button style={S.btnSm} onClick={() => abrirEditar(c)}>Editar</button>
                   <button style={c.ativo ? S.btnSm : S.btn} onClick={() => toggleAtivo(c.id, c.ativo)}>
                     {c.ativo ? 'Desativar' : 'Reativar'}
                   </button>
@@ -123,13 +147,13 @@ export default function Colaboradores() {
       {modal && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setModal(false)}>
           <div style={S.modalBox}>
-            <div style={S.modalTitle}>Novo Colaborador</div>
+            <div style={S.modalTitle}>{editando ? 'Editar Colaborador' : 'Novo Colaborador'}</div>
             <div style={S.field}>
               <label style={S.label}>Nome completo *</label>
               <input style={S.input} value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} placeholder="Ex: JOÃO DA SILVA" />
             </div>
             <div style={S.field}>
-              <label style={S.label}>Função / Kit de EPIs *</label>
+              <label style={S.label}>Função / Kit de EPIs</label>
               <select style={S.fsel} value={form.kit_id} onChange={e => setForm({ ...form, kit_id: e.target.value })}>
                 <option value="">Selecione a função...</option>
                 {kits.map(k => <option key={k.id} value={k.id}>{k.nome}</option>)}

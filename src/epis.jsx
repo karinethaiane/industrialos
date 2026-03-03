@@ -85,6 +85,7 @@ export default function Epis() {
   const [loading, setLoading] = useState(true)
   const [aba, setAba] = useState('entregas')
   const [modal, setModal] = useState(false)
+  const [editando, setEditando] = useState(null)
   const [modalHist, setModalHist] = useState(null)
   const [historico, setHistorico] = useState([])
   const [busca, setBusca] = useState('')
@@ -93,6 +94,7 @@ export default function Epis() {
   const [buscaCheck, setBuscaCheck] = useState('')
   const [expandido, setExpandido] = useState(null)
   const [form, setForm] = useState({ colaborador_id: '', catalogo_id: '', data_entrega: '', quantidade: 1, motivo: '', ca: '' })
+  const [editForm, setEditForm] = useState({ data_entrega: '', quantidade: 1, ca: '', motivo: '', data_prox_entrega: '' })
   const [proxEntrega, setProxEntrega] = useState(null)
   const [salvando, setSalvando] = useState(false)
 
@@ -129,6 +131,33 @@ export default function Epis() {
   function onChangeData(d) {
     setForm(f => ({ ...f, data_entrega: d }))
     if (form.catalogo_id) setProxEntrega(calcProxEntrega(form.catalogo_id, d))
+  }
+
+  function abrirEditar(epi) {
+    setEditando(epi)
+    setEditForm({
+      data_entrega: epi.data_entrega || '',
+      quantidade: epi.quantidade || 1,
+      ca: epi.ca || '',
+      motivo: epi.motivo || '',
+      data_prox_entrega: epi.data_prox_entrega || '',
+    })
+  }
+
+  async function salvarEdicao() {
+    if (!editando) return
+    setSalvando(true)
+    await supabase.from('epis').update({
+      data_entrega: editForm.data_entrega,
+      quantidade: editForm.quantidade,
+      ca: editForm.ca || null,
+      motivo: editForm.motivo,
+      data_prox_entrega: editForm.data_prox_entrega,
+      data_vencimento: editForm.data_prox_entrega,
+    }).eq('id', editando.id)
+    setEditando(null)
+    setSalvando(false)
+    init()
   }
 
   async function salvar() {
@@ -285,6 +314,7 @@ export default function Epis() {
                       </td>
                       <td style={S.td}>{statusBadge(calcStatus(e.data_prox_entrega))}</td>
                       <td style={{ ...S.td, display: 'flex', gap: 5 }}>
+                        <button style={S.btnSm} onClick={() => abrirEditar(e)}>Editar</button>
                         <button style={S.btnSm} onClick={() => verHistorico(e)}>Histórico</button>
                         <button style={S.btnDanger} onClick={() => excluirEpi(e.id)}>✕</button>
                       </td>
@@ -365,6 +395,7 @@ export default function Epis() {
         </>
       )}
 
+      {/* MODAL NOVO REGISTRO */}
       {modal && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setModal(false)}>
           <div style={S.modalBox}>
@@ -423,6 +454,48 @@ export default function Epis() {
         </div>
       )}
 
+      {/* MODAL EDITAR ENTREGA */}
+      {editando && (
+        <div style={S.modal} onClick={e => e.target === e.currentTarget && setEditando(null)}>
+          <div style={S.modalBox}>
+            <div style={S.modalTitle}>Editar Entrega</div>
+            <div style={S.modalSub}>{editando.colaboradores?.nome} · {editando.tipo}</div>
+            <div style={S.field}>
+              <label style={S.label}>Data da Entrega</label>
+              <input type="date" style={S.input} value={editForm.data_entrega} onChange={e => setEditForm({ ...editForm, data_entrega: e.target.value })} />
+            </div>
+            <div style={S.field}>
+              <label style={S.label}>Próxima Entrega</label>
+              <input type="date" style={S.input} value={editForm.data_prox_entrega} onChange={e => setEditForm({ ...editForm, data_prox_entrega: e.target.value })} />
+            </div>
+            <div style={S.field}>
+              <label style={S.label}>Nº CA (Certificado de Aprovação)</label>
+              <input style={S.input} placeholder="Ex: CA-12345" value={editForm.ca} onChange={e => setEditForm({ ...editForm, ca: e.target.value })} />
+            </div>
+            <div style={S.field}>
+              <label style={S.label}>Quantidade</label>
+              <input type="number" min="1" style={S.input} value={editForm.quantidade} onChange={e => setEditForm({ ...editForm, quantidade: e.target.value })} />
+            </div>
+            <div style={S.field}>
+              <label style={S.label}>Motivo</label>
+              <select style={S.fsel} value={editForm.motivo} onChange={e => setEditForm({ ...editForm, motivo: e.target.value })}>
+                <option value="">Selecione...</option>
+                <option>1ª Entrega</option>
+                <option>Substituição por vencimento</option>
+                <option>Substituição por desgaste</option>
+                <option>Substituição por perda</option>
+                <option>Substituição por dano</option>
+              </select>
+            </div>
+            <div style={S.row}>
+              <button style={S.btnSm} onClick={() => setEditando(null)}>Cancelar</button>
+              <button style={S.btn} onClick={salvarEdicao} disabled={salvando}>{salvando ? 'Salvando...' : 'Salvar'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL HISTÓRICO */}
       {modalHist && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setModalHist(null)}>
           <div style={{ ...S.modalBox, maxWidth: 620 }}>
