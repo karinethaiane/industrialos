@@ -77,7 +77,7 @@ function addMeses(data, meses) {
   return d.toISOString().split('T')[0]
 }
 
-export default function Veiculos() {
+export default function Veiculos({ isAdmin = false }) {
   const [veiculos, setVeiculos] = useState([])
   const [colaboradores, setColaboradores] = useState([])
   const [saidas, setSaidas] = useState([])
@@ -122,7 +122,6 @@ export default function Veiculos() {
     setLoading(false)
   }
 
-  // VEÍCULO
   function abrirNovoVeiculo() { setEditandoVeiculo(null); setErro(''); setFormV({ placa: '', modelo: '', marca: '', ano: '', cor: '', km_atual: '', intervalo_revisao_km: 10000, intervalo_revisao_meses: 6, regiao: '', modalidade: '', observacoes: '' }); setModalVeiculo(true) }
   function abrirEditarVeiculo(v) { setEditandoVeiculo(v); setErro(''); setFormV({ placa: v.placa, modelo: v.modelo, marca: v.marca || '', ano: v.ano || '', cor: v.cor || '', km_atual: v.km_atual || '', intervalo_revisao_km: v.intervalo_revisao_km || 10000, intervalo_revisao_meses: v.intervalo_revisao_meses || 6, regiao: v.regiao || '', modalidade: v.modalidade || '', observacoes: v.observacoes || '' }); setModalVeiculo(true) }
 
@@ -148,7 +147,6 @@ export default function Veiculos() {
     init()
   }
 
-  // SAÍDA
   async function salvarSaida(veiculoId) {
     if (!formS.colaborador_id || !formS.data_saida) return
     setSalvando(true)
@@ -169,7 +167,6 @@ export default function Veiculos() {
     init()
   }
 
-  // RETORNO
   async function salvarRetorno(saida) {
     if (!formRet.data_retorno) return
     setSalvando(true)
@@ -183,7 +180,6 @@ export default function Veiculos() {
     setModalRetorno(null); setSalvando(false); init()
   }
 
-  // REVISÃO
   async function salvarRevisao(veiculo) {
     if (!formRev.tipo || !formRev.data_revisao) return
     setSalvando(true)
@@ -207,7 +203,6 @@ export default function Veiculos() {
     init()
   }
 
-  // OCORRÊNCIA
   async function salvarOcorrencia(veiculoId) {
     if (!formOc.tipo || !formOc.data_ocorrencia) return
     setSalvando(true)
@@ -235,14 +230,11 @@ export default function Veiculos() {
     return false
   })
 
-  // Veiculo de referencia para edição de revisão
-  const veiculoParaRevisao = editandoRevisao ? veiculos.find(v => v.id === editandoRevisao.veiculo_id) : modalRevisao
-
   return (
     <div style={S.wrap}>
       <div style={S.header}>
         <div style={S.title}>🚗 Gestão de Veículos</div>
-        <button style={S.btn} onClick={abrirNovoVeiculo}>+ Novo Veículo</button>
+        {isAdmin && <button style={S.btn} onClick={abrirNovoVeiculo}>+ Novo Veículo</button>}
       </div>
 
       <div style={S.stats}>
@@ -259,7 +251,6 @@ export default function Veiculos() {
         ))}
       </div>
 
-      {/* ABA VEÍCULOS */}
       {aba === 'veiculos' && (
         loading ? <div style={{ color: '#3d4d66', textAlign: 'center', padding: 40 }}>Carregando...</div> :
         veiculos.length === 0 ? <div style={{ color: '#3d4d66', textAlign: 'center', padding: 40 }}>Nenhum veículo cadastrado.</div> :
@@ -276,8 +267,8 @@ export default function Veiculos() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {badge(v.status)}
-                  <button style={S.btnSm} onClick={() => abrirEditarVeiculo(v)}>Editar</button>
-                  <button style={S.btnDanger} onClick={() => excluirVeiculo(v.id)}>Excluir</button>
+                  {isAdmin && <button style={S.btnSm} onClick={() => abrirEditarVeiculo(v)}>Editar</button>}
+                  {isAdmin && <button style={S.btnDanger} onClick={() => excluirVeiculo(v.id)}>Excluir</button>}
                 </div>
               </div>
               <div style={S.cardInfo}>
@@ -292,18 +283,19 @@ export default function Veiculos() {
                   <div style={S.kmBar}><div style={S.kmFill(pct, cor)} /></div>
                 </div>
               )}
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {v.status === 'disponivel' && <button style={S.btnWarn} onClick={() => { setModalSaida(v); setEditandoSaida(null); setFormS({ colaborador_id: '', empresa_destino: '', local_destino: '', periodo: '', data_saida: new Date().toISOString().split('T')[0] }) }}>Registrar Saída</button>}
-                {saidaAberta && <button style={S.btnSuccess} onClick={() => { setModalRetorno(saidaAberta); setFormRet({ data_retorno: new Date().toISOString().split('T')[0], km_retorno: '', observacoes: '' }) }}>Registrar Retorno</button>}
-                <button style={S.btnSm} onClick={() => { setModalRevisao(v); setEditandoRevisao(null); setFormRev({ tipo: '', data_revisao: new Date().toISOString().split('T')[0], km_revisao: v.km_atual || '', oficina: '', numero_chamado: '', responsavel_id: '', descricao: '' }) }}>+ Revisão</button>
-                <button style={S.btnSm} onClick={() => { setModalOcorrencia(v); setFormOc({ colaborador_id: '', tipo: '', data_ocorrencia: new Date().toISOString().split('T')[0], descricao: '', valor: '' }) }}>+ Ocorrência</button>
-              </div>
+              {isAdmin && (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {v.status === 'disponivel' && <button style={S.btnWarn} onClick={() => { setModalSaida(v); setEditandoSaida(null); setFormS({ colaborador_id: '', empresa_destino: '', local_destino: '', periodo: '', data_saida: new Date().toISOString().split('T')[0] }) }}>Registrar Saída</button>}
+                  {saidaAberta && <button style={S.btnSuccess} onClick={() => { setModalRetorno(saidaAberta); setFormRet({ data_retorno: new Date().toISOString().split('T')[0], km_retorno: '', observacoes: '' }) }}>Registrar Retorno</button>}
+                  <button style={S.btnSm} onClick={() => { setModalRevisao(v); setEditandoRevisao(null); setFormRev({ tipo: '', data_revisao: new Date().toISOString().split('T')[0], km_revisao: v.km_atual || '', oficina: '', numero_chamado: '', responsavel_id: '', descricao: '' }) }}>+ Revisão</button>
+                  <button style={S.btnSm} onClick={() => { setModalOcorrencia(v); setFormOc({ colaborador_id: '', tipo: '', data_ocorrencia: new Date().toISOString().split('T')[0], descricao: '', valor: '' }) }}>+ Ocorrência</button>
+                </div>
+              )}
             </div>
           )
         })
       )}
 
-      {/* ABA SAÍDAS */}
       {aba === 'saidas' && (
         <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #1e2535' }}>
           <table style={{ ...S.table, border: 'none' }}>
@@ -316,7 +308,7 @@ export default function Veiculos() {
               <th style={S.th}>Data Retorno</th>
               <th style={S.th}>KM Retorno</th>
               <th style={S.th}>Status</th>
-              <th style={S.th}></th>
+              {isAdmin && <th style={S.th}></th>}
             </tr></thead>
             <tbody>
               {saidas.map(s => (
@@ -329,19 +321,18 @@ export default function Veiculos() {
                   <td style={{ ...S.td, fontFamily: 'monospace', fontSize: 12 }}>{fmtData(s.data_retorno)}</td>
                   <td style={{ ...S.td, fontFamily: 'monospace', fontSize: 12 }}>{fmtKm(s.km_retorno)}</td>
                   <td style={S.td}>{s.data_retorno ? <span style={{ background: 'rgba(16,217,160,.12)', color: '#10d9a0', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>Retornado</span> : <span style={{ background: 'rgba(245,158,11,.12)', color: '#f59e0b', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>Em uso</span>}</td>
-                  <td style={{ ...S.td, display: 'flex', gap: 5 }}>
+                  {isAdmin && <td style={{ ...S.td, display: 'flex', gap: 5 }}>
                     <button style={S.btnSm} onClick={() => { setEditandoSaida(s); setModalSaida(veiculos.find(v => v.id === s.veiculo_id)); setFormS({ colaborador_id: s.colaborador_id || '', empresa_destino: s.empresa_destino || '', local_destino: s.local_destino || '', periodo: s.periodo || '', data_saida: s.data_saida || '' }) }}>Editar</button>
                     <button style={S.btnDanger} onClick={() => excluirSaida(s)}>✕</button>
-                  </td>
+                  </td>}
                 </tr>
               ))}
-              {saidas.length === 0 && <tr><td colSpan={9} style={{ ...S.td, textAlign: 'center', padding: 40, color: '#3d4d66' }}>Nenhuma saída registrada.</td></tr>}
+              {saidas.length === 0 && <tr><td colSpan={isAdmin ? 9 : 8} style={{ ...S.td, textAlign: 'center', padding: 40, color: '#3d4d66' }}>Nenhuma saída registrada.</td></tr>}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* ABA REVISÕES */}
       {aba === 'revisoes' && (
         <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #1e2535' }}>
           <table style={{ ...S.table, border: 'none' }}>
@@ -355,7 +346,7 @@ export default function Veiculos() {
               <th style={S.th}>Oficina</th>
               <th style={S.th}>Chamado</th>
               <th style={S.th}>Responsável</th>
-              <th style={S.th}></th>
+              {isAdmin && <th style={S.th}></th>}
             </tr></thead>
             <tbody>
               {revisoes.map(r => (
@@ -369,19 +360,18 @@ export default function Veiculos() {
                   <td style={S.td}>{r.oficina || '—'}</td>
                   <td style={{ ...S.td, fontFamily: 'monospace', fontSize: 12, color: '#a78bfa' }}>{r.numero_chamado || '—'}</td>
                   <td style={S.td}>{r.responsavel?.nome || '—'}</td>
-                  <td style={{ ...S.td, display: 'flex', gap: 5 }}>
+                  {isAdmin && <td style={{ ...S.td, display: 'flex', gap: 5 }}>
                     <button style={S.btnSm} onClick={() => { setEditandoRevisao(r); const v = veiculos.find(x => x.id === r.veiculo_id); setModalRevisao(v); setFormRev({ tipo: r.tipo, data_revisao: r.data_revisao, km_revisao: r.km_revisao || '', oficina: r.oficina || '', numero_chamado: r.numero_chamado || '', responsavel_id: r.responsavel_id || '', descricao: r.descricao || '' }) }}>Editar</button>
                     <button style={S.btnDanger} onClick={() => excluirRevisao(r.id)}>✕</button>
-                  </td>
+                  </td>}
                 </tr>
               ))}
-              {revisoes.length === 0 && <tr><td colSpan={10} style={{ ...S.td, textAlign: 'center', padding: 40, color: '#3d4d66' }}>Nenhuma revisão registrada.</td></tr>}
+              {revisoes.length === 0 && <tr><td colSpan={isAdmin ? 10 : 9} style={{ ...S.td, textAlign: 'center', padding: 40, color: '#3d4d66' }}>Nenhuma revisão registrada.</td></tr>}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* ABA OCORRÊNCIAS */}
       {aba === 'ocorrencias' && (
         <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #1e2535' }}>
           <table style={{ ...S.table, border: 'none' }}>
@@ -408,8 +398,8 @@ export default function Veiculos() {
                     <span style={{ background: o.status === 'Resolvido' ? 'rgba(16,217,160,.12)' : o.status === 'Em andamento' ? 'rgba(245,158,11,.12)' : 'rgba(244,63,94,.12)', color: o.status === 'Resolvido' ? '#10d9a0' : o.status === 'Em andamento' ? '#f59e0b' : '#f43f5e', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{o.status || 'Aberto'}</span>
                   </td>
                   <td style={{ ...S.td, display: 'flex', gap: 5 }}>
-                    <button style={S.btnSm} onClick={() => { setModalOcorrenciaDetalhe(o); setFormOcDet({ autor_id: o.autor_id || '', data_identificacao: o.data_identificacao || '', data_pagamento: o.data_pagamento || '', observacao_resolucao: o.observacao_resolucao || '', status: o.status || 'Aberto' }) }}>Acompanhar</button>
-                    <button style={S.btnDanger} onClick={() => excluirOcorrencia(o.id)}>✕</button>
+                    {isAdmin && <button style={S.btnSm} onClick={() => { setModalOcorrenciaDetalhe(o); setFormOcDet({ autor_id: o.autor_id || '', data_identificacao: o.data_identificacao || '', data_pagamento: o.data_pagamento || '', observacao_resolucao: o.observacao_resolucao || '', status: o.status || 'Aberto' }) }}>Acompanhar</button>}
+                    {isAdmin && <button style={S.btnDanger} onClick={() => excluirOcorrencia(o.id)}>✕</button>}
                   </td>
                 </tr>
               ))}
@@ -419,7 +409,6 @@ export default function Veiculos() {
         </div>
       )}
 
-      {/* MODAL VEÍCULO */}
       {modalVeiculo && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setModalVeiculo(false)}>
           <div style={S.modalBox}>
@@ -464,9 +453,8 @@ export default function Veiculos() {
         </div>
       )}
 
-      {/* MODAL SAÍDA */}
       {modalSaida && (
-        <div style={S.modal} onClick={e => e.target === e.currentTarget && { setModalSaida: setModalSaida(null), setEditandoSaida: setEditandoSaida(null) }}>
+        <div style={S.modal} onClick={e => e.target === e.currentTarget && (setModalSaida(null), setEditandoSaida(null))}>
           <div style={S.modalBox}>
             <div style={S.modalTitle}>{editandoSaida ? 'Editar Saída' : 'Registrar Saída'}</div>
             <div style={S.modalSub}>{modalSaida.placa} · {modalSaida.marca} {modalSaida.modelo}</div>
@@ -493,7 +481,6 @@ export default function Veiculos() {
         </div>
       )}
 
-      {/* MODAL RETORNO */}
       {modalRetorno && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setModalRetorno(null)}>
           <div style={S.modalBox}>
@@ -518,9 +505,8 @@ export default function Veiculos() {
         </div>
       )}
 
-      {/* MODAL REVISÃO */}
       {modalRevisao && (
-        <div style={S.modal} onClick={e => e.target === e.currentTarget && { setModalRevisao: setModalRevisao(null), setEditandoRevisao: setEditandoRevisao(null) }}>
+        <div style={S.modal} onClick={e => e.target === e.currentTarget && (setModalRevisao(null), setEditandoRevisao(null))}>
           <div style={S.modalBox}>
             <div style={S.modalTitle}>{editandoRevisao ? 'Editar Revisão' : 'Registrar Revisão'}</div>
             <div style={S.modalSub}>{modalRevisao.placa} · {modalRevisao.marca} {modalRevisao.modelo}</div>
@@ -560,7 +546,6 @@ export default function Veiculos() {
         </div>
       )}
 
-      {/* MODAL OCORRÊNCIA */}
       {modalOcorrencia && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setModalOcorrencia(null)}>
           <div style={S.modalBox}>
@@ -591,7 +576,6 @@ export default function Veiculos() {
         </div>
       )}
 
-      {/* MODAL ACOMPANHAMENTO OCORRÊNCIA */}
       {modalOcorrenciaDetalhe && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setModalOcorrenciaDetalhe(null)}>
           <div style={S.modalBox}>

@@ -6,21 +6,33 @@ import Veiculos from './veiculos'
 
 export default function App() {
   const [session, setSession] = useState(null)
+  const [perfil, setPerfil] = useState(null)
   const [loading, setLoading] = useState(true)
   const [pagina, setPagina] = useState('epis')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
-      setLoading(false)
+      if (session) carregarPerfil(session.user.id)
+      else setLoading(false)
     })
     supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
+      if (session) carregarPerfil(session.user.id)
+      else { setPerfil(null); setLoading(false) }
     })
   }, [])
 
+  async function carregarPerfil(userId) {
+    const { data } = await supabase.from('perfis').select('*').eq('id', userId).single()
+    setPerfil(data)
+    setLoading(false)
+  }
+
   if (loading) return <div style={S.loading}>Carregando...</div>
   if (!session) return <Login />
+
+  const isAdmin = perfil?.role === 'admin'
 
   return (
     <div style={S.shell}>
@@ -31,7 +43,7 @@ export default function App() {
           {[
             { id: 'epis', icon: '🦺', label: 'EPIs' },
             { id: 'veiculos', icon: '🚗', label: 'Veículos' },
-            { id: 'colaboradores', icon: '👷', label: 'Colaboradores' },
+            ...(isAdmin ? [{ id: 'colaboradores', icon: '👷', label: 'Colaboradores' }] : []),
           ].map(item => (
             <div key={item.id} style={pagina === item.id ? S.navItemOn : S.navItem} onClick={() => setPagina(item.id)}>
               <span>{item.icon}</span> {item.label}
@@ -39,14 +51,15 @@ export default function App() {
           ))}
         </nav>
         <div style={S.sideFooter}>
-          <div style={{ fontSize: 11, color: '#3d4d66', marginBottom: 6 }}>{session.user.email}</div>
+          <div style={{ fontSize: 11, color: '#3d4d66', marginBottom: 2 }}>{session.user.email}</div>
+          <div style={{ fontSize: 10, color: '#28334a', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.06em' }}>{perfil?.role || 'gestor'}</div>
           <button style={S.btnSair} onClick={() => supabase.auth.signOut()}>Sair</button>
         </div>
       </aside>
       <main style={S.main}>
-        {pagina === 'epis' && <Epis />}
-        {pagina === 'veiculos' && <Veiculos />}
-        {pagina === 'colaboradores' && <Colaboradores />}
+        {pagina === 'epis' && <Epis isAdmin={isAdmin} />}
+        {pagina === 'veiculos' && <Veiculos isAdmin={isAdmin} />}
+        {pagina === 'colaboradores' && isAdmin && <Colaboradores />}
       </main>
     </div>
   )

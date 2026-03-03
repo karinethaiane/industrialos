@@ -77,7 +77,7 @@ function epiMatch(entregue, kitItem) {
   return a.includes(b) || b.includes(a) || a === b
 }
 
-export default function Epis() {
+export default function Epis({ isAdmin = false }) {
   const [epis, setEpis] = useState([])
   const [catalogo, setCatalogo] = useState([])
   const [colaboradores, setColaboradores] = useState([])
@@ -247,7 +247,7 @@ export default function Epis() {
     <div style={S.wrap}>
       <div style={S.header}>
         <div style={S.title}>🦺 Gestão de EPIs</div>
-        <button style={S.btn} onClick={() => setModal(true)}>+ Registrar Entrega</button>
+        {isAdmin && <button style={S.btn} onClick={() => setModal(true)}>+ Registrar Entrega</button>}
       </div>
 
       <div style={S.stats}>
@@ -295,7 +295,7 @@ export default function Epis() {
                     <th style={S.th}>Última Entrega</th>
                     <th style={S.th}>Próxima Entrega</th>
                     <th style={S.th}>Status</th>
-                    <th style={S.th}></th>
+                    {isAdmin && <th style={S.th}></th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -313,15 +313,15 @@ export default function Epis() {
                         {fmtData(e.data_prox_entrega)}
                       </td>
                       <td style={S.td}>{statusBadge(calcStatus(e.data_prox_entrega))}</td>
-                      <td style={{ ...S.td, display: 'flex', gap: 5 }}>
+                      {isAdmin && <td style={{ ...S.td, display: 'flex', gap: 5 }}>
                         <button style={S.btnSm} onClick={() => abrirEditar(e)}>Editar</button>
                         <button style={S.btnSm} onClick={() => verHistorico(e)}>Histórico</button>
                         <button style={S.btnDanger} onClick={() => excluirEpi(e.id)}>✕</button>
-                      </td>
+                      </td>}
                     </tr>
                   ))}
                   {filtrado.length === 0 && (
-                    <tr><td colSpan={8} style={{ ...S.td, textAlign: 'center', padding: 40, color: '#3d4d66' }}>
+                    <tr><td colSpan={isAdmin ? 8 : 7} style={{ ...S.td, textAlign: 'center', padding: 40, color: '#3d4d66' }}>
                       {epis.length === 0 ? 'Nenhuma entrega registrada ainda.' : 'Nenhum resultado para os filtros aplicados.'}
                     </td></tr>
                   )}
@@ -395,7 +395,6 @@ export default function Epis() {
         </>
       )}
 
-      {/* MODAL NOVO REGISTRO */}
       {modal && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setModal(false)}>
           <div style={S.modalBox}>
@@ -454,7 +453,6 @@ export default function Epis() {
         </div>
       )}
 
-      {/* MODAL EDITAR ENTREGA */}
       {editando && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setEditando(null)}>
           <div style={S.modalBox}>
@@ -495,7 +493,6 @@ export default function Epis() {
         </div>
       )}
 
-      {/* MODAL HISTÓRICO */}
       {modalHist && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setModalHist(null)}>
           <div style={{ ...S.modalBox, maxWidth: 620 }}>
