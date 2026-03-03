@@ -86,9 +86,12 @@ export default function Veiculos() {
   const [loading, setLoading] = useState(true)
   const [aba, setAba] = useState('veiculos')
   const [modalVeiculo, setModalVeiculo] = useState(false)
+  const [editandoVeiculo, setEditandoVeiculo] = useState(null)
   const [modalSaida, setModalSaida] = useState(null)
+  const [editandoSaida, setEditandoSaida] = useState(null)
   const [modalRetorno, setModalRetorno] = useState(null)
   const [modalRevisao, setModalRevisao] = useState(null)
+  const [editandoRevisao, setEditandoRevisao] = useState(null)
   const [modalOcorrencia, setModalOcorrencia] = useState(null)
   const [modalOcorrenciaDetalhe, setModalOcorrenciaDetalhe] = useState(null)
   const [salvando, setSalvando] = useState(false)
@@ -119,123 +122,110 @@ export default function Veiculos() {
     setLoading(false)
   }
 
+  // VEÍCULO
+  function abrirNovoVeiculo() { setEditandoVeiculo(null); setErro(''); setFormV({ placa: '', modelo: '', marca: '', ano: '', cor: '', km_atual: '', intervalo_revisao_km: 10000, intervalo_revisao_meses: 6, regiao: '', modalidade: '', observacoes: '' }); setModalVeiculo(true) }
+  function abrirEditarVeiculo(v) { setEditandoVeiculo(v); setErro(''); setFormV({ placa: v.placa, modelo: v.modelo, marca: v.marca || '', ano: v.ano || '', cor: v.cor || '', km_atual: v.km_atual || '', intervalo_revisao_km: v.intervalo_revisao_km || 10000, intervalo_revisao_meses: v.intervalo_revisao_meses || 6, regiao: v.regiao || '', modalidade: v.modalidade || '', observacoes: v.observacoes || '' }); setModalVeiculo(true) }
+
   async function salvarVeiculo() {
     if (!formV.placa || !formV.modelo) { setErro('Placa e Modelo são obrigatórios.'); return }
     setSalvando(true); setErro('')
     const km = parseInt(formV.km_atual) || 0
-    const { error } = await supabase.from('veiculos').insert({
-      placa: formV.placa.toUpperCase().trim(),
-      modelo: formV.modelo.trim(),
-      marca: formV.marca.trim(),
-      ano: parseInt(formV.ano) || null,
-      cor: formV.cor.trim(),
-      km_atual: km,
-      km_proxima_revisao: km + parseInt(formV.intervalo_revisao_km),
-      intervalo_revisao_km: parseInt(formV.intervalo_revisao_km),
-      intervalo_revisao_meses: parseInt(formV.intervalo_revisao_meses),
-      regiao: formV.regiao || null,
-      modalidade: formV.modalidade || null,
-      status: 'disponivel',
-      observacoes: formV.observacoes,
-    })
+    const dados = { placa: formV.placa.toUpperCase().trim(), modelo: formV.modelo.trim(), marca: formV.marca.trim(), ano: parseInt(formV.ano) || null, cor: formV.cor.trim(), km_atual: km, intervalo_revisao_km: parseInt(formV.intervalo_revisao_km), intervalo_revisao_meses: parseInt(formV.intervalo_revisao_meses), regiao: formV.regiao || null, modalidade: formV.modalidade || null, observacoes: formV.observacoes }
+    let error
+    if (editandoVeiculo) {
+      ({ error } = await supabase.from('veiculos').update(dados).eq('id', editandoVeiculo.id))
+    } else {
+      ({ error } = await supabase.from('veiculos').insert({ ...dados, km_proxima_revisao: km + parseInt(formV.intervalo_revisao_km), status: 'disponivel' }))
+    }
     setSalvando(false)
     if (error) { setErro('Erro: ' + error.message); return }
-    setFormV({ placa: '', modelo: '', marca: '', ano: '', cor: '', km_atual: '', intervalo_revisao_km: 10000, intervalo_revisao_meses: 6, regiao: '', modalidade: '', observacoes: '' })
-    setModalVeiculo(false); init()
+    setModalVeiculo(false); setEditandoVeiculo(null); init()
   }
 
+  async function excluirVeiculo(id) {
+    if (!confirm('Excluir este veículo? Todos os registros associados serão removidos.')) return
+    await supabase.from('veiculos').delete().eq('id', id)
+    init()
+  }
+
+  // SAÍDA
   async function salvarSaida(veiculoId) {
     if (!formS.colaborador_id || !formS.data_saida) return
     setSalvando(true)
-    const { error } = await supabase.from('saidas_veiculos').insert({
-      veiculo_id: veiculoId,
-      colaborador_id: formS.colaborador_id,
-      empresa_destino: formS.empresa_destino,
-      local_destino: formS.local_destino,
-      periodo: formS.periodo,
-      data_saida: formS.data_saida,
-    })
-    if (!error) await supabase.from('veiculos').update({ status: 'em_uso' }).eq('id', veiculoId)
+    if (editandoSaida) {
+      await supabase.from('saidas_veiculos').update({ colaborador_id: formS.colaborador_id, empresa_destino: formS.empresa_destino, local_destino: formS.local_destino, periodo: formS.periodo, data_saida: formS.data_saida }).eq('id', editandoSaida.id)
+    } else {
+      const { error } = await supabase.from('saidas_veiculos').insert({ veiculo_id: veiculoId, colaborador_id: formS.colaborador_id, empresa_destino: formS.empresa_destino, local_destino: formS.local_destino, periodo: formS.periodo, data_saida: formS.data_saida })
+      if (!error) await supabase.from('veiculos').update({ status: 'em_uso' }).eq('id', veiculoId)
+    }
     setFormS({ colaborador_id: '', empresa_destino: '', local_destino: '', periodo: '', data_saida: '' })
-    setModalSaida(null); setSalvando(false); init()
+    setModalSaida(null); setEditandoSaida(null); setSalvando(false); init()
   }
 
+  async function excluirSaida(s) {
+    if (!confirm('Excluir este registro de saída?')) return
+    await supabase.from('saidas_veiculos').delete().eq('id', s.id)
+    if (!s.data_retorno) await supabase.from('veiculos').update({ status: 'disponivel' }).eq('id', s.veiculo_id)
+    init()
+  }
+
+  // RETORNO
   async function salvarRetorno(saida) {
     if (!formRet.data_retorno) return
     setSalvando(true)
     const km = parseInt(formRet.km_retorno) || null
-    await supabase.from('saidas_veiculos').update({
-      data_retorno: formRet.data_retorno,
-      km_retorno: km,
-      observacoes: formRet.observacoes,
-    }).eq('id', saida.id)
+    await supabase.from('saidas_veiculos').update({ data_retorno: formRet.data_retorno, km_retorno: km, observacoes: formRet.observacoes }).eq('id', saida.id)
     const veiculo = veiculos.find(v => v.id === saida.veiculo_id)
     const updates = { status: 'disponivel' }
-    if (km) {
-      updates.km_atual = km
-      updates.km_proxima_revisao = km + (veiculo?.intervalo_revisao_km || 10000)
-    }
+    if (km) { updates.km_atual = km; updates.km_proxima_revisao = km + (veiculo?.intervalo_revisao_km || 10000) }
     await supabase.from('veiculos').update(updates).eq('id', saida.veiculo_id)
     setFormRet({ data_retorno: '', km_retorno: '', observacoes: '' })
     setModalRetorno(null); setSalvando(false); init()
   }
 
+  // REVISÃO
   async function salvarRevisao(veiculo) {
     if (!formRev.tipo || !formRev.data_revisao) return
     setSalvando(true)
     const km = parseInt(formRev.km_revisao) || veiculo.km_atual || 0
     const proxKm = km + (veiculo.intervalo_revisao_km || 10000)
     const proxData = addMeses(formRev.data_revisao, veiculo.intervalo_revisao_meses || 6)
-    const { error } = await supabase.from('revisoes_veiculos').insert({
-      veiculo_id: veiculo.id,
-      tipo: formRev.tipo,
-      data_revisao: formRev.data_revisao,
-      km_revisao: km,
-      km_proxima_revisao: proxKm,
-      data_proxima_revisao: proxData,
-      oficina: formRev.oficina || null,
-      numero_chamado: formRev.numero_chamado || null,
-      responsavel_id: formRev.responsavel_id || null,
-      descricao: formRev.descricao || null,
-    })
-    if (!error) {
-      await supabase.from('veiculos').update({
-        km_atual: km,
-        km_proxima_revisao: proxKm,
-        data_proxima_revisao: proxData,
-      }).eq('id', veiculo.id)
+    if (editandoRevisao) {
+      await supabase.from('revisoes_veiculos').update({ tipo: formRev.tipo, data_revisao: formRev.data_revisao, km_revisao: km, km_proxima_revisao: proxKm, data_proxima_revisao: proxData, oficina: formRev.oficina || null, numero_chamado: formRev.numero_chamado || null, responsavel_id: formRev.responsavel_id || null, descricao: formRev.descricao || null }).eq('id', editandoRevisao.id)
+    } else {
+      const { error } = await supabase.from('revisoes_veiculos').insert({ veiculo_id: veiculo.id, tipo: formRev.tipo, data_revisao: formRev.data_revisao, km_revisao: km, km_proxima_revisao: proxKm, data_proxima_revisao: proxData, oficina: formRev.oficina || null, numero_chamado: formRev.numero_chamado || null, responsavel_id: formRev.responsavel_id || null, descricao: formRev.descricao || null })
+      if (!error) await supabase.from('veiculos').update({ km_atual: km, km_proxima_revisao: proxKm, data_proxima_revisao: proxData }).eq('id', veiculo.id)
+      if (error) alert('Erro: ' + error.message)
     }
-    if (error) alert('Erro: ' + error.message)
     setFormRev({ tipo: '', data_revisao: '', km_revisao: '', oficina: '', numero_chamado: '', responsavel_id: '', descricao: '' })
-    setModalRevisao(null); setSalvando(false); init()
+    setModalRevisao(null); setEditandoRevisao(null); setSalvando(false); init()
   }
 
+  async function excluirRevisao(id) {
+    if (!confirm('Excluir este registro de revisão?')) return
+    await supabase.from('revisoes_veiculos').delete().eq('id', id)
+    init()
+  }
+
+  // OCORRÊNCIA
   async function salvarOcorrencia(veiculoId) {
     if (!formOc.tipo || !formOc.data_ocorrencia) return
     setSalvando(true)
-    await supabase.from('ocorrencias_veiculos').insert({
-      veiculo_id: veiculoId,
-      colaborador_id: formOc.colaborador_id || null,
-      tipo: formOc.tipo,
-      data_ocorrencia: formOc.data_ocorrencia,
-      descricao: formOc.descricao,
-      valor: parseFloat(formOc.valor) || null,
-      status: 'Aberto',
-    })
+    await supabase.from('ocorrencias_veiculos').insert({ veiculo_id: veiculoId, colaborador_id: formOc.colaborador_id || null, tipo: formOc.tipo, data_ocorrencia: formOc.data_ocorrencia, descricao: formOc.descricao, valor: parseFloat(formOc.valor) || null, status: 'Aberto' })
     setFormOc({ colaborador_id: '', tipo: '', data_ocorrencia: '', descricao: '', valor: '' })
     setModalOcorrencia(null); setSalvando(false); init()
   }
 
   async function salvarDetalheOcorrencia(ocorrencia) {
     setSalvando(true)
-    await supabase.from('ocorrencias_veiculos').update({
-      autor_id: formOcDet.autor_id || null,
-      data_identificacao: formOcDet.data_identificacao || null,
-      data_pagamento: formOcDet.data_pagamento || null,
-      observacao_resolucao: formOcDet.observacao_resolucao || null,
-      status: formOcDet.status || ocorrencia.status,
-    }).eq('id', ocorrencia.id)
+    await supabase.from('ocorrencias_veiculos').update({ autor_id: formOcDet.autor_id || null, data_identificacao: formOcDet.data_identificacao || null, data_pagamento: formOcDet.data_pagamento || null, observacao_resolucao: formOcDet.observacao_resolucao || null, status: formOcDet.status || ocorrencia.status }).eq('id', ocorrencia.id)
     setModalOcorrenciaDetalhe(null); setSalvando(false); init()
+  }
+
+  async function excluirOcorrencia(id) {
+    if (!confirm('Excluir esta ocorrência?')) return
+    await supabase.from('ocorrencias_veiculos').delete().eq('id', id)
+    init()
   }
 
   const saidasAbertas = saidas.filter(s => !s.data_retorno)
@@ -245,11 +235,14 @@ export default function Veiculos() {
     return false
   })
 
+  // Veiculo de referencia para edição de revisão
+  const veiculoParaRevisao = editandoRevisao ? veiculos.find(v => v.id === editandoRevisao.veiculo_id) : modalRevisao
+
   return (
     <div style={S.wrap}>
       <div style={S.header}>
         <div style={S.title}>🚗 Gestão de Veículos</div>
-        <button style={S.btn} onClick={() => { setErro(''); setModalVeiculo(true) }}>+ Novo Veículo</button>
+        <button style={S.btn} onClick={abrirNovoVeiculo}>+ Novo Veículo</button>
       </div>
 
       <div style={S.stats}>
@@ -266,6 +259,7 @@ export default function Veiculos() {
         ))}
       </div>
 
+      {/* ABA VEÍCULOS */}
       {aba === 'veiculos' && (
         loading ? <div style={{ color: '#3d4d66', textAlign: 'center', padding: 40 }}>Carregando...</div> :
         veiculos.length === 0 ? <div style={{ color: '#3d4d66', textAlign: 'center', padding: 40 }}>Nenhum veículo cadastrado.</div> :
@@ -280,7 +274,11 @@ export default function Veiculos() {
                   <div style={S.placa}>{v.placa} {modalidadeBadge(v.modalidade)}</div>
                   <div style={S.modelo}>{v.marca} {v.modelo} {v.ano && `· ${v.ano}`} {v.cor && `· ${v.cor}`} {v.regiao && `· ${v.regiao}`}</div>
                 </div>
-                {badge(v.status)}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {badge(v.status)}
+                  <button style={S.btnSm} onClick={() => abrirEditarVeiculo(v)}>Editar</button>
+                  <button style={S.btnDanger} onClick={() => excluirVeiculo(v.id)}>Excluir</button>
+                </div>
               </div>
               <div style={S.cardInfo}>
                 <div style={S.infoBox}><div style={S.infoLbl}>KM Atual</div><div style={S.infoVal}>{fmtKm(v.km_atual)}</div></div>
@@ -295,9 +293,9 @@ export default function Veiculos() {
                 </div>
               )}
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {v.status === 'disponivel' && <button style={S.btnWarn} onClick={() => { setModalSaida(v); setFormS({ colaborador_id: '', empresa_destino: '', local_destino: '', periodo: '', data_saida: new Date().toISOString().split('T')[0] }) }}>Registrar Saída</button>}
+                {v.status === 'disponivel' && <button style={S.btnWarn} onClick={() => { setModalSaida(v); setEditandoSaida(null); setFormS({ colaborador_id: '', empresa_destino: '', local_destino: '', periodo: '', data_saida: new Date().toISOString().split('T')[0] }) }}>Registrar Saída</button>}
                 {saidaAberta && <button style={S.btnSuccess} onClick={() => { setModalRetorno(saidaAberta); setFormRet({ data_retorno: new Date().toISOString().split('T')[0], km_retorno: '', observacoes: '' }) }}>Registrar Retorno</button>}
-                <button style={S.btnSm} onClick={() => { setModalRevisao(v); setFormRev({ tipo: '', data_revisao: new Date().toISOString().split('T')[0], km_revisao: v.km_atual || '', oficina: '', numero_chamado: '', responsavel_id: '', descricao: '' }) }}>+ Revisão</button>
+                <button style={S.btnSm} onClick={() => { setModalRevisao(v); setEditandoRevisao(null); setFormRev({ tipo: '', data_revisao: new Date().toISOString().split('T')[0], km_revisao: v.km_atual || '', oficina: '', numero_chamado: '', responsavel_id: '', descricao: '' }) }}>+ Revisão</button>
                 <button style={S.btnSm} onClick={() => { setModalOcorrencia(v); setFormOc({ colaborador_id: '', tipo: '', data_ocorrencia: new Date().toISOString().split('T')[0], descricao: '', valor: '' }) }}>+ Ocorrência</button>
               </div>
             </div>
@@ -305,6 +303,7 @@ export default function Veiculos() {
         })
       )}
 
+      {/* ABA SAÍDAS */}
       {aba === 'saidas' && (
         <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #1e2535' }}>
           <table style={{ ...S.table, border: 'none' }}>
@@ -317,6 +316,7 @@ export default function Veiculos() {
               <th style={S.th}>Data Retorno</th>
               <th style={S.th}>KM Retorno</th>
               <th style={S.th}>Status</th>
+              <th style={S.th}></th>
             </tr></thead>
             <tbody>
               {saidas.map(s => (
@@ -329,14 +329,19 @@ export default function Veiculos() {
                   <td style={{ ...S.td, fontFamily: 'monospace', fontSize: 12 }}>{fmtData(s.data_retorno)}</td>
                   <td style={{ ...S.td, fontFamily: 'monospace', fontSize: 12 }}>{fmtKm(s.km_retorno)}</td>
                   <td style={S.td}>{s.data_retorno ? <span style={{ background: 'rgba(16,217,160,.12)', color: '#10d9a0', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>Retornado</span> : <span style={{ background: 'rgba(245,158,11,.12)', color: '#f59e0b', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>Em uso</span>}</td>
+                  <td style={{ ...S.td, display: 'flex', gap: 5 }}>
+                    <button style={S.btnSm} onClick={() => { setEditandoSaida(s); setModalSaida(veiculos.find(v => v.id === s.veiculo_id)); setFormS({ colaborador_id: s.colaborador_id || '', empresa_destino: s.empresa_destino || '', local_destino: s.local_destino || '', periodo: s.periodo || '', data_saida: s.data_saida || '' }) }}>Editar</button>
+                    <button style={S.btnDanger} onClick={() => excluirSaida(s)}>✕</button>
+                  </td>
                 </tr>
               ))}
-              {saidas.length === 0 && <tr><td colSpan={8} style={{ ...S.td, textAlign: 'center', padding: 40, color: '#3d4d66' }}>Nenhuma saída registrada.</td></tr>}
+              {saidas.length === 0 && <tr><td colSpan={9} style={{ ...S.td, textAlign: 'center', padding: 40, color: '#3d4d66' }}>Nenhuma saída registrada.</td></tr>}
             </tbody>
           </table>
         </div>
       )}
 
+      {/* ABA REVISÕES */}
       {aba === 'revisoes' && (
         <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #1e2535' }}>
           <table style={{ ...S.table, border: 'none' }}>
@@ -350,6 +355,7 @@ export default function Veiculos() {
               <th style={S.th}>Oficina</th>
               <th style={S.th}>Chamado</th>
               <th style={S.th}>Responsável</th>
+              <th style={S.th}></th>
             </tr></thead>
             <tbody>
               {revisoes.map(r => (
@@ -363,14 +369,19 @@ export default function Veiculos() {
                   <td style={S.td}>{r.oficina || '—'}</td>
                   <td style={{ ...S.td, fontFamily: 'monospace', fontSize: 12, color: '#a78bfa' }}>{r.numero_chamado || '—'}</td>
                   <td style={S.td}>{r.responsavel?.nome || '—'}</td>
+                  <td style={{ ...S.td, display: 'flex', gap: 5 }}>
+                    <button style={S.btnSm} onClick={() => { setEditandoRevisao(r); const v = veiculos.find(x => x.id === r.veiculo_id); setModalRevisao(v); setFormRev({ tipo: r.tipo, data_revisao: r.data_revisao, km_revisao: r.km_revisao || '', oficina: r.oficina || '', numero_chamado: r.numero_chamado || '', responsavel_id: r.responsavel_id || '', descricao: r.descricao || '' }) }}>Editar</button>
+                    <button style={S.btnDanger} onClick={() => excluirRevisao(r.id)}>✕</button>
+                  </td>
                 </tr>
               ))}
-              {revisoes.length === 0 && <tr><td colSpan={9} style={{ ...S.td, textAlign: 'center', padding: 40, color: '#3d4d66' }}>Nenhuma revisão registrada.</td></tr>}
+              {revisoes.length === 0 && <tr><td colSpan={10} style={{ ...S.td, textAlign: 'center', padding: 40, color: '#3d4d66' }}>Nenhuma revisão registrada.</td></tr>}
             </tbody>
           </table>
         </div>
       )}
 
+      {/* ABA OCORRÊNCIAS */}
       {aba === 'ocorrencias' && (
         <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #1e2535' }}>
           <table style={{ ...S.table, border: 'none' }}>
@@ -394,11 +405,12 @@ export default function Veiculos() {
                   <td style={S.td}>{o.autor?.nome || '—'}</td>
                   <td style={{ ...S.td, fontFamily: 'monospace', fontSize: 12, color: '#f43f5e' }}>{o.valor ? `R$ ${o.valor.toFixed(2)}` : '—'}</td>
                   <td style={S.td}>
-                    <span style={{ background: o.status === 'Resolvido' ? 'rgba(16,217,160,.12)' : o.status === 'Em andamento' ? 'rgba(245,158,11,.12)' : 'rgba(244,63,94,.12)', color: o.status === 'Resolvido' ? '#10d9a0' : o.status === 'Em andamento' ? '#f59e0b' : '#f43f5e', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>
-                      {o.status || 'Aberto'}
-                    </span>
+                    <span style={{ background: o.status === 'Resolvido' ? 'rgba(16,217,160,.12)' : o.status === 'Em andamento' ? 'rgba(245,158,11,.12)' : 'rgba(244,63,94,.12)', color: o.status === 'Resolvido' ? '#10d9a0' : o.status === 'Em andamento' ? '#f59e0b' : '#f43f5e', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{o.status || 'Aberto'}</span>
                   </td>
-                  <td style={S.td}><button style={S.btnSm} onClick={() => { setModalOcorrenciaDetalhe(o); setFormOcDet({ autor_id: o.autor_id || '', data_identificacao: o.data_identificacao || '', data_pagamento: o.data_pagamento || '', observacao_resolucao: o.observacao_resolucao || '', status: o.status || 'Aberto' }) }}>Acompanhar</button></td>
+                  <td style={{ ...S.td, display: 'flex', gap: 5 }}>
+                    <button style={S.btnSm} onClick={() => { setModalOcorrenciaDetalhe(o); setFormOcDet({ autor_id: o.autor_id || '', data_identificacao: o.data_identificacao || '', data_pagamento: o.data_pagamento || '', observacao_resolucao: o.observacao_resolucao || '', status: o.status || 'Aberto' }) }}>Acompanhar</button>
+                    <button style={S.btnDanger} onClick={() => excluirOcorrencia(o.id)}>✕</button>
+                  </td>
                 </tr>
               ))}
               {ocorrencias.length === 0 && <tr><td colSpan={8} style={{ ...S.td, textAlign: 'center', padding: 40, color: '#3d4d66' }}>Nenhuma ocorrência registrada.</td></tr>}
@@ -407,10 +419,11 @@ export default function Veiculos() {
         </div>
       )}
 
+      {/* MODAL VEÍCULO */}
       {modalVeiculo && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setModalVeiculo(false)}>
           <div style={S.modalBox}>
-            <div style={S.modalTitle}>Novo Veículo</div>
+            <div style={S.modalTitle}>{editandoVeiculo ? 'Editar Veículo' : 'Novo Veículo'}</div>
             {erro && <div style={S.erro}>{erro}</div>}
             <div style={S.fieldRow}>
               <div style={S.field}><label style={S.label}>Placa *</label><input style={S.input} value={formV.placa} onChange={e => setFormV({ ...formV, placa: e.target.value })} placeholder="ABC-1234" /></div>
@@ -444,17 +457,18 @@ export default function Veiculos() {
             </div>
             <div style={S.field}><label style={S.label}>Observações</label><textarea style={S.textarea} value={formV.observacoes} onChange={e => setFormV({ ...formV, observacoes: e.target.value })} /></div>
             <div style={S.row}>
-              <button style={S.btnSm} onClick={() => setModalVeiculo(false)}>Cancelar</button>
+              <button style={S.btnSm} onClick={() => { setModalVeiculo(false); setEditandoVeiculo(null) }}>Cancelar</button>
               <button style={S.btn} onClick={salvarVeiculo} disabled={salvando}>{salvando ? 'Salvando...' : 'Salvar'}</button>
             </div>
           </div>
         </div>
       )}
 
+      {/* MODAL SAÍDA */}
       {modalSaida && (
-        <div style={S.modal} onClick={e => e.target === e.currentTarget && setModalSaida(null)}>
+        <div style={S.modal} onClick={e => e.target === e.currentTarget && { setModalSaida: setModalSaida(null), setEditandoSaida: setEditandoSaida(null) }}>
           <div style={S.modalBox}>
-            <div style={S.modalTitle}>Registrar Saída</div>
+            <div style={S.modalTitle}>{editandoSaida ? 'Editar Saída' : 'Registrar Saída'}</div>
             <div style={S.modalSub}>{modalSaida.placa} · {modalSaida.marca} {modalSaida.modelo}</div>
             <div style={S.field}><label style={S.label}>Colaborador *</label>
               <select style={S.fsel} value={formS.colaborador_id} onChange={e => setFormS({ ...formS, colaborador_id: e.target.value })}>
@@ -472,13 +486,14 @@ export default function Veiculos() {
               </select>
             </div>
             <div style={S.row}>
-              <button style={S.btnSm} onClick={() => setModalSaida(null)}>Cancelar</button>
-              <button style={S.btn} onClick={() => salvarSaida(modalSaida.id)} disabled={salvando}>{salvando ? 'Salvando...' : 'Registrar Saída'}</button>
+              <button style={S.btnSm} onClick={() => { setModalSaida(null); setEditandoSaida(null) }}>Cancelar</button>
+              <button style={S.btn} onClick={() => salvarSaida(modalSaida.id)} disabled={salvando}>{salvando ? 'Salvando...' : editandoSaida ? 'Salvar' : 'Registrar Saída'}</button>
             </div>
           </div>
         </div>
       )}
 
+      {/* MODAL RETORNO */}
       {modalRetorno && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setModalRetorno(null)}>
           <div style={S.modalBox}>
@@ -503,10 +518,11 @@ export default function Veiculos() {
         </div>
       )}
 
+      {/* MODAL REVISÃO */}
       {modalRevisao && (
-        <div style={S.modal} onClick={e => e.target === e.currentTarget && setModalRevisao(null)}>
+        <div style={S.modal} onClick={e => e.target === e.currentTarget && { setModalRevisao: setModalRevisao(null), setEditandoRevisao: setEditandoRevisao(null) }}>
           <div style={S.modalBox}>
-            <div style={S.modalTitle}>Registrar Revisão</div>
+            <div style={S.modalTitle}>{editandoRevisao ? 'Editar Revisão' : 'Registrar Revisão'}</div>
             <div style={S.modalSub}>{modalRevisao.placa} · {modalRevisao.marca} {modalRevisao.modelo}</div>
             <div style={S.field}><label style={S.label}>Tipo *</label>
               <select style={S.fsel} value={formRev.tipo} onChange={e => setFormRev({ ...formRev, tipo: e.target.value })}>
@@ -537,13 +553,14 @@ export default function Veiculos() {
             </div>
             <div style={S.field}><label style={S.label}>Descrição dos serviços</label><textarea style={S.textarea} value={formRev.descricao} onChange={e => setFormRev({ ...formRev, descricao: e.target.value })} /></div>
             <div style={S.row}>
-              <button style={S.btnSm} onClick={() => setModalRevisao(null)}>Cancelar</button>
+              <button style={S.btnSm} onClick={() => { setModalRevisao(null); setEditandoRevisao(null) }}>Cancelar</button>
               <button style={S.btn} onClick={() => salvarRevisao(modalRevisao)} disabled={salvando}>{salvando ? 'Salvando...' : 'Salvar'}</button>
             </div>
           </div>
         </div>
       )}
 
+      {/* MODAL OCORRÊNCIA */}
       {modalOcorrencia && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setModalOcorrencia(null)}>
           <div style={S.modalBox}>
@@ -574,6 +591,7 @@ export default function Veiculos() {
         </div>
       )}
 
+      {/* MODAL ACOMPANHAMENTO OCORRÊNCIA */}
       {modalOcorrenciaDetalhe && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setModalOcorrenciaDetalhe(null)}>
           <div style={S.modalBox}>
