@@ -33,7 +33,6 @@ const S = {
   proxBox: { background: '#141824', border: '1px solid #10d9a033', borderRadius: 7, padding: '10px 14px', marginBottom: 14 },
   proxLbl: { fontSize: 11, color: '#10d9a0', fontWeight: 700, marginBottom: 4 },
   proxVal: { fontFamily: 'monospace', fontSize: 15, color: '#10d9a0', fontWeight: 700 },
-  // checklist
   colabCard: { background: '#0e1117', border: '1px solid #1e2535', borderRadius: 10, marginBottom: 12, overflow: 'hidden' },
   colabCardHeader: { padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', borderBottom: '1px solid #1e2535' },
   colabCardName: { fontWeight: 600, fontSize: 14, color: '#dde4f0' },
@@ -93,7 +92,7 @@ export default function Epis() {
   const [filtroColab, setFiltroColab] = useState('')
   const [buscaCheck, setBuscaCheck] = useState('')
   const [expandido, setExpandido] = useState(null)
-  const [form, setForm] = useState({ colaborador_id: '', catalogo_id: '', data_entrega: '', quantidade: 1, motivo: '' })
+  const [form, setForm] = useState({ colaborador_id: '', catalogo_id: '', data_entrega: '', quantidade: 1, motivo: '', ca: '' })
   const [proxEntrega, setProxEntrega] = useState(null)
   const [salvando, setSalvando] = useState(false)
 
@@ -144,9 +143,10 @@ export default function Epis() {
       data_vencimento: proxEntrega,
       data_prox_entrega: proxEntrega,
       motivo: form.motivo,
+      ca: form.ca || null,
       registrado_por: 'admin',
     })
-    setForm({ colaborador_id: '', catalogo_id: '', data_entrega: '', quantidade: 1, motivo: '' })
+    setForm({ colaborador_id: '', catalogo_id: '', data_entrega: '', quantidade: 1, motivo: '', ca: '' })
     setProxEntrega(null)
     setModal(false)
     setSalvando(false)
@@ -168,7 +168,6 @@ export default function Epis() {
     setHistorico(data || [])
   }
 
-  // Monta checklist por colaborador
   function montarChecklist() {
     return colaboradores
       .filter(c => c.epi_kits)
@@ -237,7 +236,6 @@ export default function Epis() {
         </button>
       </div>
 
-      {/* ABA ENTREGAS */}
       {aba === 'entregas' && (
         <>
           <div style={S.toolbar}>
@@ -263,6 +261,7 @@ export default function Epis() {
                   <tr>
                     <th style={S.th}>Colaborador</th>
                     <th style={S.th}>EPI</th>
+                    <th style={S.th}>CA</th>
                     <th style={S.th}>Qtd</th>
                     <th style={S.th}>Última Entrega</th>
                     <th style={S.th}>Próxima Entrega</th>
@@ -278,6 +277,7 @@ export default function Epis() {
                         <div style={{ fontSize: 11, color: '#3d4d66', fontFamily: 'monospace' }}>{e.colaboradores?.matricula}</div>
                       </td>
                       <td style={S.td}>{e.tipo}</td>
+                      <td style={{ ...S.td, fontFamily: 'monospace', fontSize: 12, color: '#f97316' }}>{e.ca || '—'}</td>
                       <td style={{ ...S.td, fontFamily: 'monospace' }}>{e.quantidade}</td>
                       <td style={{ ...S.td, fontFamily: 'monospace', fontSize: 12 }}>{fmtData(e.data_entrega)}</td>
                       <td style={{ ...S.td, fontFamily: 'monospace', fontSize: 12, color: calcStatus(e.data_prox_entrega) === 'VENCIDO' ? '#f43f5e' : calcStatus(e.data_prox_entrega) === 'VENCENDO' ? '#f59e0b' : '#8892a4' }}>
@@ -291,7 +291,7 @@ export default function Epis() {
                     </tr>
                   ))}
                   {filtrado.length === 0 && (
-                    <tr><td colSpan={7} style={{ ...S.td, textAlign: 'center', padding: 40, color: '#3d4d66' }}>
+                    <tr><td colSpan={8} style={{ ...S.td, textAlign: 'center', padding: 40, color: '#3d4d66' }}>
                       {epis.length === 0 ? 'Nenhuma entrega registrada ainda.' : 'Nenhum resultado para os filtros aplicados.'}
                     </td></tr>
                   )}
@@ -302,7 +302,6 @@ export default function Epis() {
         </>
       )}
 
-      {/* ABA CHECKLIST */}
       {aba === 'checklist' && (
         <>
           <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -366,7 +365,6 @@ export default function Epis() {
         </>
       )}
 
-      {/* MODAL REGISTRO */}
       {modal && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setModal(false)}>
           <div style={S.modalBox}>
@@ -403,6 +401,10 @@ export default function Epis() {
               </div>
             )}
             <div style={S.field}>
+              <label style={S.label}>Nº CA (Certificado de Aprovação)</label>
+              <input style={S.input} placeholder="Ex: CA-12345" value={form.ca || ''} onChange={e => setForm({ ...form, ca: e.target.value })} />
+            </div>
+            <div style={S.field}>
               <label style={S.label}>Motivo</label>
               <select style={S.fsel} value={form.motivo} onChange={e => setForm({ ...form, motivo: e.target.value })}>
                 <option value="">Selecione...</option>
@@ -421,7 +423,6 @@ export default function Epis() {
         </div>
       )}
 
-      {/* MODAL HISTÓRICO */}
       {modalHist && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setModalHist(null)}>
           <div style={{ ...S.modalBox, maxWidth: 620 }}>
@@ -433,6 +434,7 @@ export default function Epis() {
               <table style={{ ...S.table, border: 'none' }}>
                 <thead><tr>
                   <th style={S.th}>EPI</th>
+                  <th style={S.th}>CA</th>
                   <th style={S.th}>Entrega</th>
                   <th style={S.th}>Próxima</th>
                   <th style={S.th}>Motivo</th>
@@ -442,6 +444,7 @@ export default function Epis() {
                   {historico.map(h => (
                     <tr key={h.id}>
                       <td style={{ ...S.td, color: '#dde4f0' }}>{h.tipo}</td>
+                      <td style={{ ...S.td, fontFamily: 'monospace', fontSize: 12, color: '#f97316' }}>{h.ca || '—'}</td>
                       <td style={{ ...S.td, fontFamily: 'monospace', fontSize: 12 }}>{fmtData(h.data_entrega)}</td>
                       <td style={{ ...S.td, fontFamily: 'monospace', fontSize: 12 }}>{fmtData(h.data_prox_entrega)}</td>
                       <td style={{ ...S.td, fontSize: 12 }}>{h.motivo || '—'}</td>
