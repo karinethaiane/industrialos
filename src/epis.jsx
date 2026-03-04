@@ -6,54 +6,40 @@ const S = {
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   title: { fontSize: 21, fontWeight: 700, color: 'var(--text)', letterSpacing: '-.02em' },
   sub: { fontSize: 13, color: 'var(--muted)', marginTop: 3 },
-  stats: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 10, marginBottom: 22 },
-  statCard: (cor) => ({ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', position: 'relative', overflow: 'hidden', boxShadow: '0 1px 4px var(--shadow)', '--accent': cor }),
+  btn: { background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 12px var(--blue-glow)', whiteSpace: 'nowrap' },
+  btnSm: { background: 'var(--subtle)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 6, padding: '4px 9px', fontSize: 11, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' },
+  btnDanger: { background: 'var(--red-dim)', color: 'var(--red)', border: '1px solid transparent', borderRadius: 6, padding: '4px 8px', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' },
+  btnBlue: { background: 'var(--blue-dim)', color: 'var(--blue)', border: '1px solid transparent', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' },
+  btnGray: { background: 'var(--subtle)', border: '1px solid var(--border2)', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 500, color: 'var(--text2)', cursor: 'pointer', fontFamily: 'inherit' },
+  stats: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 10, marginBottom: 18 },
+  statCard: () => ({ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', position: 'relative', overflow: 'hidden', boxShadow: '0 1px 4px var(--shadow)' }),
   statBar: (cor) => ({ position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, background: cor, opacity: .5 }),
   statVal: (cor) => ({ fontFamily: 'DM Mono, monospace', fontSize: 26, fontWeight: 500, color: cor, lineHeight: 1, marginBottom: 5 }),
   statLbl: { fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.08em', fontWeight: 500 },
   tabs: { display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 16 },
   tab: (on) => ({ padding: '9px 18px', fontSize: 13, fontWeight: on ? 600 : 500, cursor: 'pointer', color: on ? 'var(--blue)' : 'var(--muted)', background: 'none', border: 'none', borderBottom: on ? '2px solid var(--blue)' : '2px solid transparent', marginBottom: -1, fontFamily: 'inherit', transition: 'all .15s' }),
-  toolbar: { display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' },
+  toolbar: { display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' },
   sbox: { display: 'flex', alignItems: 'center', gap: 7, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 7, padding: '7px 12px', flex: 1, minWidth: 180 },
   sinp: { background: 'none', border: 'none', outline: 'none', color: 'var(--text)', fontSize: 13, fontFamily: 'inherit', width: '100%' },
   sel: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 7, padding: '7px 10px', color: 'var(--text2)', fontSize: 13, outline: 'none', fontFamily: 'inherit', cursor: 'pointer' },
-  btn: { background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 12px var(--blue-glow)', whiteSpace: 'nowrap' },
-  btnSm: { background: 'var(--subtle)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 6, padding: '4px 9px', fontSize: 11, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' },
-  btnDanger: { background: 'var(--red-dim)', color: 'var(--red)', border: '1px solid transparent', borderRadius: 6, padding: '4px 8px', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' },
-  tableWrap: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 6px var(--shadow)' },
-  table: { width: '100%', borderCollapse: 'collapse' },
-  th: { textAlign: 'left', padding: '11px 16px', fontSize: 10.5, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.08em', borderBottom: '1px solid var(--border)', background: 'var(--surface2)' },
-  td: { padding: '12px 16px', fontSize: 13, color: 'var(--text2)', borderBottom: '1px solid var(--border)' },
   modal: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, backdropFilter: 'blur(4px)' },
   modalBox: { background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 12, padding: 28, width: '90%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 32px var(--shadow)' },
+  modalBoxLg: { background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 12, padding: 28, width: '90%', maxWidth: 640, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 32px var(--shadow)' },
   modalTitle: { fontSize: 16, fontWeight: 700, color: 'var(--text)', letterSpacing: '-.01em', marginBottom: 6 },
   modalSub: { fontSize: 12, color: 'var(--muted)', fontFamily: 'DM Mono, monospace', marginBottom: 18 },
   field: { display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 14 },
-  fieldRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 },
   label: { fontSize: 12, fontWeight: 500, color: 'var(--text2)' },
   input: { background: 'var(--surface2)', border: '1px solid var(--border2)', borderRadius: 7, padding: '9px 12px', color: 'var(--text)', fontSize: 13, outline: 'none', fontFamily: 'inherit', width: '100%' },
   fsel: { background: 'var(--surface2)', border: '1px solid var(--border2)', borderRadius: 7, padding: '9px 12px', color: 'var(--text)', fontSize: 13, outline: 'none', fontFamily: 'inherit', width: '100%', cursor: 'pointer' },
   row: { display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 18 },
   proxBox: { background: 'var(--surface2)', border: '1px solid rgba(59,130,246,.2)', borderRadius: 7, padding: '10px 14px', marginBottom: 14 },
   proxLbl: { fontSize: 11, color: 'var(--blue)', fontWeight: 700, marginBottom: 4 },
-  proxVal: { fontFamily: 'DM Mono, monospace', fontSize: 15, color: 'var(--blue)', fontWeight: 500 },
   colabCard: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, marginBottom: 10, overflow: 'hidden' },
   colabCardHeader: { padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' },
   colabCardName: { fontWeight: 600, fontSize: 14, color: 'var(--text)' },
   colabCardMat: { fontSize: 11, color: 'var(--muted)', fontFamily: 'DM Mono, monospace', marginTop: 2 },
   checkItem: (ok) => ({ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px', borderTop: '1px solid var(--border)', background: ok ? 'transparent' : 'rgba(239,68,68,.03)' }),
   checkIcon: (ok) => ({ width: 20, height: 20, borderRadius: '50%', background: ok ? 'var(--green-dim)' : 'var(--red-dim)', color: ok ? 'var(--green)' : 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, flexShrink: 0 }),
-  checkName: (ok) => ({ fontSize: 13, color: ok ? 'var(--text2)' : 'var(--text)', flex: 1 }),
-  checkDate: { fontSize: 11, fontFamily: 'DM Mono, monospace', color: 'var(--muted)' },
-}
-
-function badge(status) {
-  const cfg = {
-    VIGENTE: { bg: 'var(--green-dim)', c: 'var(--green)', l: '● Vigente' },
-    VENCENDO: { bg: 'var(--amber-dim)', c: 'var(--amber)', l: '⚠ Vencendo' },
-    VENCIDO: { bg: 'var(--red-dim)', c: 'var(--red)', l: '✕ Vencido' },
-  }[status] || { bg: 'var(--subtle)', c: 'var(--muted)', l: status }
-  return <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 8px', borderRadius: 5, fontSize: 11, fontWeight: 600, background: cfg.bg, color: cfg.c }}>{cfg.l}</span>
 }
 
 function calcStatus(dataProx) {
@@ -70,12 +56,30 @@ function fmtData(d) {
 }
 
 function normalizar(str) {
-  return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+  return (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
 }
 
-function epiMatch(entregue, kitItem) {
-  const a = normalizar(entregue), b = normalizar(kitItem)
-  return a.includes(b) || b.includes(a) || a === b
+function epiMatch(a, b) {
+  const na = normalizar(a), nb = normalizar(b)
+  return na.includes(nb) || nb.includes(na)
+}
+
+function Badge({ status }) {
+  const cfg = {
+    VIGENTE:  { bg: 'var(--green-dim)', c: 'var(--green)',  l: '● Vigente' },
+    VENCENDO: { bg: 'var(--amber-dim)', c: 'var(--amber)',  l: '⚠ Vencendo' },
+    VENCIDO:  { bg: 'var(--red-dim)',   c: 'var(--red)',    l: '✕ Vencido' },
+  }[status] || { bg: 'var(--subtle)', c: 'var(--muted)', l: status }
+  return <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 5, fontSize: 11, fontWeight: 600, background: cfg.bg, color: cfg.c, whiteSpace: 'nowrap' }}>{cfg.l}</span>
+}
+
+function ultimasEntregas(epis) {
+  const map = {}
+  epis.forEach(e => {
+    const key = `${e.colaborador_id}__${normalizar(e.tipo)}`
+    if (!map[key] || new Date(e.data_entrega) > new Date(map[key].data_entrega)) map[key] = e
+  })
+  return Object.values(map)
 }
 
 export default function Epis({ isAdmin = false }) {
@@ -91,9 +95,10 @@ export default function Epis({ isAdmin = false }) {
   const [historico, setHistorico] = useState([])
   const [busca, setBusca] = useState('')
   const [filtroStatus, setFiltroStatus] = useState('')
-  const [filtroColab, setFiltroColab] = useState('')
   const [buscaCheck, setBuscaCheck] = useState('')
   const [expandido, setExpandido] = useState(null)
+  const [expandidosOk, setExpandidosOk] = useState({})
+  const [almoExpanded, setAlmoExpanded] = useState(true)
   const [form, setForm] = useState({ colaborador_id: '', catalogo_id: '', data_entrega: '', quantidade: 1, motivo: '', ca: '' })
   const [editForm, setEditForm] = useState({ data_entrega: '', quantidade: 1, ca: '', motivo: '', data_prox_entrega: '' })
   const [proxEntrega, setProxEntrega] = useState(null)
@@ -104,7 +109,7 @@ export default function Epis({ isAdmin = false }) {
   async function init() {
     setLoading(true)
     const [e, cat, col, ki] = await Promise.all([
-      supabase.from('epis').select('*, colaboradores(nome, matricula)').order('data_prox_entrega'),
+      supabase.from('epis').select('*, colaboradores(nome, matricula)').order('data_entrega', { ascending: false }),
       supabase.from('epis_catalogo').select('*').eq('ativo', true).order('nome'),
       supabase.from('colaboradores').select('*, epi_kits(id, nome)').eq('ativo', true).order('nome'),
       supabase.from('epi_kit_itens').select('*'),
@@ -124,92 +129,187 @@ export default function Epis({ isAdmin = false }) {
     return d.toISOString().split('T')[0]
   }
 
-  function onChangeCatalogo(id) {
-    setForm(f => ({ ...f, catalogo_id: id }))
-    if (form.data_entrega) setProxEntrega(calcProxEntrega(id, form.data_entrega))
-  }
-
-  function onChangeData(d) {
-    setForm(f => ({ ...f, data_entrega: d }))
-    if (form.catalogo_id) setProxEntrega(calcProxEntrega(form.catalogo_id, d))
-  }
-
-  function abrirEditar(epi) {
-    setEditando(epi)
-    setEditForm({ data_entrega: epi.data_entrega || '', quantidade: epi.quantidade || 1, ca: epi.ca || '', motivo: epi.motivo || '', data_prox_entrega: epi.data_prox_entrega || '' })
+  async function salvar() {
+    if (!form.colaborador_id || !form.catalogo_id || !form.data_entrega) return
+    setSalvando(true)
+    const item = catalogo.find(c => c.id === form.catalogo_id)
+    await supabase.from('epis').insert({
+      colaborador_id: form.colaborador_id, tipo: item.nome,
+      quantidade: form.quantidade, data_entrega: form.data_entrega,
+      data_vencimento: proxEntrega, data_prox_entrega: proxEntrega,
+      motivo: form.motivo, ca: form.ca || null, registrado_por: 'admin'
+    })
+    setForm({ colaborador_id: '', catalogo_id: '', data_entrega: '', quantidade: 1, motivo: '', ca: '' })
+    setProxEntrega(null); setModal(false); setSalvando(false); init()
   }
 
   async function salvarEdicao() {
     if (!editando) return
     setSalvando(true)
-    await supabase.from('epis').update({ data_entrega: editForm.data_entrega, quantidade: editForm.quantidade, ca: editForm.ca || null, motivo: editForm.motivo, data_prox_entrega: editForm.data_prox_entrega, data_vencimento: editForm.data_prox_entrega }).eq('id', editando.id)
+    await supabase.from('epis').update({
+      data_entrega: editForm.data_entrega, quantidade: editForm.quantidade,
+      ca: editForm.ca || null, motivo: editForm.motivo,
+      data_prox_entrega: editForm.data_prox_entrega, data_vencimento: editForm.data_prox_entrega
+    }).eq('id', editando.id)
     setEditando(null); setSalvando(false); init()
   }
 
-  async function salvar() {
-    if (!form.colaborador_id || !form.catalogo_id || !form.data_entrega) return
-    setSalvando(true)
-    const item = catalogo.find(c => c.id === form.catalogo_id)
-    await supabase.from('epis').insert({ colaborador_id: form.colaborador_id, tipo: item.nome, quantidade: form.quantidade, data_entrega: form.data_entrega, data_vencimento: proxEntrega, data_prox_entrega: proxEntrega, motivo: form.motivo, ca: form.ca || null, registrado_por: 'admin' })
-    setForm({ colaborador_id: '', catalogo_id: '', data_entrega: '', quantidade: 1, motivo: '', ca: '' })
-    setProxEntrega(null); setModal(false); setSalvando(false); init()
-  }
-
-  async function excluirEpi(id) {
+  async function excluir(id) {
     if (!confirm('Excluir este registro?')) return
     await supabase.from('epis').delete().eq('id', id)
     init()
   }
 
-  async function verHistorico(epi) {
-    setModalHist(epi)
-    const { data } = await supabase.from('epis').select('*').eq('colaborador_id', epi.colaborador_id).order('data_entrega', { ascending: false })
+  async function verHistorico(colab) {
+    setModalHist(colab)
+    const { data } = await supabase.from('epis')
+      .select('*, colaboradores(nome, matricula)')
+      .eq('colaborador_id', colab.id)
+      .order('data_entrega', { ascending: false })
     setHistorico(data || [])
   }
 
-  function montarChecklist() {
-    return colaboradores.filter(c => c.epi_kits).filter(c => !buscaCheck || normalizar(c.nome).includes(normalizar(buscaCheck))).map(c => {
-      const itensDoKit = kitItens.filter(k => k.kit_id === c.epi_kits.id)
-      const episDoColab = epis.filter(e => e.colaborador_id === c.id)
-      const itens = itensDoKit.map(kitItem => {
-        const entrega = episDoColab.find(e => epiMatch(e.tipo, kitItem.epi_nome))
-        return { nome: kitItem.epi_nome, entregue: !!entrega, dataEntrega: entrega?.data_entrega, dataProx: entrega?.data_prox_entrega, status: entrega ? calcStatus(entrega.data_prox_entrega) : null }
-      })
-      return { ...c, itens, pendentes: itens.filter(i => !i.entregue).length, vencidos: itens.filter(i => i.status === 'VENCIDO').length, vencendo: itens.filter(i => i.status === 'VENCENDO').length }
+  const ultimas = ultimasEntregas(epis)
+
+  const porColab = colaboradores.map(c => {
+    const itens = ultimas.filter(e => e.colaborador_id === c.id)
+    if (!busca && itens.length === 0) return null
+    if (busca && !normalizar(c.nome).includes(normalizar(busca)) && !itens.some(e => normalizar(e.tipo).includes(normalizar(busca)))) return null
+    const comProblema = itens.filter(e => calcStatus(e.data_prox_entrega) !== 'VIGENTE')
+    const vigentes = itens.filter(e => calcStatus(e.data_prox_entrega) === 'VIGENTE')
+    if (filtroStatus === 'PROBLEMAS' && comProblema.length === 0) return null
+    if (filtroStatus === 'VIGENTE' && comProblema.length > 0) return null
+    return { colab: c, itens, comProblema, vigentes }
+  }).filter(Boolean)
+
+  const necessidades = (() => {
+    const vencidos = {}, vencendo = {}
+    ultimas.forEach(e => {
+      const s = calcStatus(e.data_prox_entrega)
+      const colab = colaboradores.find(c => c.id === e.colaborador_id)
+      if (!colab) return
+      if (s === 'VENCIDO') { if (!vencidos[e.tipo]) vencidos[e.tipo] = []; vencidos[e.tipo].push({ colab: colab.nome, data: e.data_prox_entrega }) }
+      if (s === 'VENCENDO') { if (!vencendo[e.tipo]) vencendo[e.tipo] = []; vencendo[e.tipo].push({ colab: colab.nome, data: e.data_prox_entrega }) }
     })
+    return { vencidos, vencendo }
+  })()
+
+  const totalNecessidades = Object.keys(necessidades.vencidos).length + Object.keys(necessidades.vencendo).length
+
+  const stats = {
+    vigente: ultimas.filter(e => calcStatus(e.data_prox_entrega) === 'VIGENTE').length,
+    vencendo: ultimas.filter(e => calcStatus(e.data_prox_entrega) === 'VENCENDO').length,
+    vencido: ultimas.filter(e => calcStatus(e.data_prox_entrega) === 'VENCIDO').length,
   }
 
-  const checklist = montarChecklist()
-  const totalPendentes = checklist.reduce((a, c) => a + c.pendentes, 0)
-  const totalVencidos = checklist.reduce((a, c) => a + c.vencidos, 0)
-  const colabsOk = checklist.filter(c => c.pendentes === 0 && c.vencidos === 0 && c.vencendo === 0).length
-
-  const filtrado = epis.filter(e => {
-    const nome = e.colaboradores?.nome || '', tipo = e.tipo || '', status = calcStatus(e.data_prox_entrega)
-    return (!busca || nome.toLowerCase().includes(busca.toLowerCase()) || tipo.toLowerCase().includes(busca.toLowerCase())) && (!filtroStatus || status === filtroStatus) && (!filtroColab || e.colaborador_id === filtroColab)
+  const checklist = colaboradores.filter(c => c.epi_kits).filter(c => !buscaCheck || normalizar(c.nome).includes(normalizar(buscaCheck))).map(c => {
+    const itensDoKit = kitItens.filter(k => k.kit_id === c.epi_kits.id)
+    const episDoColab = ultimas.filter(e => e.colaborador_id === c.id)
+    const itens = itensDoKit.map(kitItem => {
+      const entrega = episDoColab.find(e => epiMatch(e.tipo, kitItem.epi_nome))
+      return { nome: kitItem.epi_nome, entregue: !!entrega, dataEntrega: entrega?.data_entrega, dataProx: entrega?.data_prox_entrega, status: entrega ? calcStatus(entrega.data_prox_entrega) : null }
+    })
+    return { ...c, itens, pendentes: itens.filter(i => !i.entregue).length, vencidos: itens.filter(i => i.status === 'VENCIDO').length, vencendo: itens.filter(i => i.status === 'VENCENDO').length }
   })
+  const totalPendentes = checklist.reduce((a, c) => a + c.pendentes, 0)
 
-  const stats = { total: epis.length, vigente: epis.filter(e => calcStatus(e.data_prox_entrega) === 'VIGENTE').length, vencendo: epis.filter(e => calcStatus(e.data_prox_entrega) === 'VENCENDO').length, vencido: epis.filter(e => calcStatus(e.data_prox_entrega) === 'VENCIDO').length }
+  function initials(nome) { return (nome || '').split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase() }
+  function avatarColor(st) {
+    if (st === 'bad') return 'linear-gradient(135deg,#ef4444,#f97316)'
+    if (st === 'warn') return 'linear-gradient(135deg,#f59e0b,#f97316)'
+    return 'linear-gradient(135deg,#3b82f6,#06b6d4)'
+  }
+  function cardStatus(comProblema) {
+    if (comProblema.some(e => calcStatus(e.data_prox_entrega) === 'VENCIDO')) return 'bad'
+    if (comProblema.some(e => calcStatus(e.data_prox_entrega) === 'VENCENDO')) return 'warn'
+    return 'ok'
+  }
+  const cardBorder = { bad: 'rgba(239,68,68,.5)', warn: 'rgba(245,158,11,.4)', ok: 'rgba(16,185,129,.4)' }
+
+  const histPorTipo = historico.reduce((acc, h) => {
+    if (!acc[h.tipo]) acc[h.tipo] = []
+    acc[h.tipo].push(h)
+    return acc
+  }, {})
 
   return (
     <div style={S.wrap}>
       <div style={S.header}>
-        <div>
-          <div style={S.title}>Gestão de EPIs</div>
-          <div style={S.sub}>Controle de entregas e validades</div>
-        </div>
+        <div><div style={S.title}>Gestão de EPIs</div><div style={S.sub}>Controle de entregas e validades</div></div>
         {isAdmin && <button style={S.btn} onClick={() => setModal(true)}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Registrar Entrega</button>}
       </div>
 
       <div style={S.stats}>
-        {[['var(--blue)', stats.total, 'Entregas'], ['var(--green)', stats.vigente, 'Vigentes'], ['var(--amber)', stats.vencendo, 'Vencendo 30d'], ['var(--red)', stats.vencido, 'Vencidos'], ['var(--purple)', totalPendentes, 'Pendências Kit']].map(([cor, val, lbl]) => (
-          <div key={lbl} style={S.statCard(cor)}>
+        {[['var(--blue)', porColab.length, 'Colaboradores'], ['var(--green)', stats.vigente, 'Vigentes'], ['var(--amber)', stats.vencendo, 'Vencendo 30d'], ['var(--red)', stats.vencido, 'Vencidos'], ['var(--purple)', totalPendentes, 'Pendências Kit']].map(([cor, val, lbl]) => (
+          <div key={lbl} style={S.statCard()}>
             <div style={S.statVal(cor)}>{val}</div>
             <div style={S.statLbl}>{lbl}</div>
             <div style={S.statBar(cor)} />
           </div>
         ))}
       </div>
+
+      {totalNecessidades > 0 && (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, marginBottom: 18, overflow: 'hidden', boxShadow: '0 1px 6px var(--shadow)' }}>
+          <div onClick={() => setAlmoExpanded(x => !x)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', cursor: 'pointer', borderBottom: almoExpanded ? '1px solid var(--border)' : 'none' }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Necessidades de Reposição</span>
+            <span style={{ fontSize: 12, color: 'var(--muted)' }}>— itens que precisam de nova entrega</span>
+            <span style={{ background: 'var(--red-dim)', color: 'var(--red)', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, marginLeft: 'auto' }}>{totalNecessidades} {totalNecessidades === 1 ? 'tipo' : 'tipos'}</span>
+            <span style={{ color: 'var(--muted)', fontSize: 11, display: 'inline-block', transform: almoExpanded ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▼</span>
+          </div>
+          {almoExpanded && (
+            <div>
+              {Object.keys(necessidades.vencidos).length > 0 && (
+                <div style={{ padding: '14px 18px', borderBottom: Object.keys(necessidades.vencendo).length > 0 ? '1px solid var(--border)' : 'none' }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--red)', display: 'inline-block' }} /> Vencidos — entrega urgente
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {Object.entries(necessidades.vencidos).map(([tipo, colabs]) => (
+                      <div key={tipo} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'var(--surface2)', border: '1px solid rgba(239,68,68,.2)', borderRadius: 8 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>{tipo}</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                            {colabs.map((c, i) => <span key={i} style={{ background: 'var(--subtle)', border: '1px solid var(--border2)', borderRadius: 4, padding: '2px 8px', fontSize: 11, color: 'var(--text2)' }}>{c.colab}</span>)}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 22, fontWeight: 500, color: 'var(--red)', lineHeight: 1 }}>{colabs.length}</div>
+                          <div style={{ fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginTop: 2 }}>{colabs.length === 1 ? 'unidade' : 'unidades'}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {Object.keys(necessidades.vencendo).length > 0 && (
+                <div style={{ padding: '14px 18px' }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--amber)', display: 'inline-block' }} /> Vencendo em 30 dias — providenciar em breve
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {Object.entries(necessidades.vencendo).map(([tipo, colabs]) => (
+                      <div key={tipo} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'var(--surface2)', border: '1px solid rgba(245,158,11,.2)', borderRadius: 8 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>{tipo}</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                            {colabs.map((c, i) => <span key={i} style={{ background: 'var(--subtle)', border: '1px solid var(--border2)', borderRadius: 4, padding: '2px 8px', fontSize: 11, color: 'var(--text2)' }}>{c.colab} <span style={{ color: 'var(--amber)', fontFamily: 'DM Mono, monospace', fontSize: 10 }}>vence {fmtData(c.data)}</span></span>)}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 22, fontWeight: 500, color: 'var(--amber)', lineHeight: 1 }}>{colabs.length}</div>
+                          <div style={{ fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginTop: 2 }}>{colabs.length === 1 ? 'unidade' : 'unidades'}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={S.tabs}>
         <button style={S.tab(aba === 'entregas')} onClick={() => setAba('entregas')}>Entregas</button>
@@ -227,45 +327,92 @@ export default function Epis({ isAdmin = false }) {
             </div>
             <select style={S.sel} value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}>
               <option value="">Todos os Status</option>
-              <option value="VIGENTE">Vigente</option>
-              <option value="VENCENDO">Vencendo</option>
-              <option value="VENCIDO">Vencido</option>
-            </select>
-            <select style={S.sel} value={filtroColab} onChange={e => setFiltroColab(e.target.value)}>
-              <option value="">Todos os Colaboradores</option>
-              {colaboradores.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+              <option value="PROBLEMAS">Com problemas</option>
+              <option value="VIGENTE">Todos vigentes</option>
             </select>
           </div>
+
           {loading ? <div style={{ color: 'var(--muted)', textAlign: 'center', padding: 40 }}>Carregando...</div> : (
-            <div style={S.tableWrap}>
-              <table style={S.table}>
-                <thead>
-                  <tr>
-                    <th style={S.th}>Colaborador</th><th style={S.th}>EPI</th><th style={S.th}>CA</th>
-                    <th style={S.th}>Qtd</th><th style={S.th}>Última Entrega</th>
-                    <th style={S.th}>Próxima Entrega</th><th style={S.th}>Status</th>
-                    {isAdmin && <th style={S.th}></th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtrado.map(e => (
-                    <tr key={e.id} onMouseEnter={ev => ev.currentTarget.style.background = 'var(--subtle)'} onMouseLeave={ev => ev.currentTarget.style.background = 'transparent'}>
-                      <td style={{ ...S.td, color: 'var(--text)', fontWeight: 500 }}>
-                        {e.colaboradores?.nome}
-                        <div style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'DM Mono, monospace', marginTop: 2 }}>{e.colaboradores?.matricula}</div>
-                      </td>
-                      <td style={S.td}>{e.tipo}</td>
-                      <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--blue)' }}>{e.ca || '—'}</td>
-                      <td style={{ ...S.td, fontFamily: 'DM Mono, monospace' }}>{e.quantidade}</td>
-                      <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12 }}>{fmtData(e.data_entrega)}</td>
-                      <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12, color: calcStatus(e.data_prox_entrega) === 'VENCIDO' ? 'var(--red)' : calcStatus(e.data_prox_entrega) === 'VENCENDO' ? 'var(--amber)' : 'var(--text2)' }}>{fmtData(e.data_prox_entrega)}</td>
-                      <td style={S.td}>{badge(calcStatus(e.data_prox_entrega))}</td>
-                      {isAdmin && <td style={{ ...S.td }}><div style={{ display: 'flex', gap: 4 }}><button style={S.btnSm} onClick={() => abrirEditar(e)}>Editar</button><button style={S.btnSm} onClick={() => verHistorico(e)}>Histórico</button><button style={S.btnDanger} onClick={() => excluirEpi(e.id)}>✕</button></div></td>}
-                    </tr>
-                  ))}
-                  {filtrado.length === 0 && <tr><td colSpan={isAdmin ? 8 : 7} style={{ ...S.td, textAlign: 'center', padding: 40, color: 'var(--muted)' }}>{epis.length === 0 ? 'Nenhuma entrega registrada ainda.' : 'Nenhum resultado.'}</td></tr>}
-                </tbody>
-              </table>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+              {porColab.map(({ colab, comProblema, vigentes }) => {
+                const st = cardStatus(comProblema)
+                const expanded = expandidosOk[colab.id]
+                return (
+                  <div key={colab.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: `3px solid ${cardBorder[st]}`, borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 4px var(--shadow)' }}>
+                    {/* Header */}
+                    <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)' }}>
+                      <div style={{ width: 36, height: 36, borderRadius: '50%', background: avatarColor(st), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{initials(colab.nome)}</div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{colab.nome}</div>
+                        <div style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'DM Mono, monospace', marginTop: 1 }}>{colab.matricula}</div>
+                      </div>
+                      <div style={{ marginLeft: 'auto', textAlign: 'right', flexShrink: 0 }}>
+                        {comProblema.length > 0
+                          ? <><div style={{ fontFamily: 'DM Mono, monospace', fontSize: 20, fontWeight: 500, color: st === 'bad' ? 'var(--red)' : 'var(--amber)', lineHeight: 1 }}>{comProblema.length}</div><div style={{ fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em' }}>{st === 'bad' ? 'vencidos' : 'vencendo'}</div></>
+                          : <><div style={{ fontFamily: 'DM Mono, monospace', fontSize: 20, fontWeight: 500, color: 'var(--green)', lineHeight: 1 }}>{vigentes.length}</div><div style={{ fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em' }}>vigentes</div></>
+                        }
+                      </div>
+                    </div>
+
+                    {/* Itens com problema */}
+                    {comProblema.length > 0 ? comProblema.map(e => (
+                      <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: '1px solid var(--border)' }}
+                        onMouseEnter={ev => ev.currentTarget.style.background = 'var(--subtle)'}
+                        onMouseLeave={ev => ev.currentTarget.style.background = 'transparent'}>
+                        <div style={{ width: 7, height: 7, borderRadius: '50%', background: calcStatus(e.data_prox_entrega) === 'VENCIDO' ? 'var(--red)' : 'var(--amber)', flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, color: 'var(--text2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.tipo}</div>
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: calcStatus(e.data_prox_entrega) === 'VENCIDO' ? 'var(--red)' : 'var(--amber)', fontWeight: 600, marginTop: 2 }}>{fmtData(e.data_prox_entrega)}</div>
+                        </div>
+                        <Badge status={calcStatus(e.data_prox_entrega)} />
+                        {isAdmin && <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                          <button style={S.btnSm} onClick={() => { setEditando(e); setEditForm({ data_entrega: e.data_entrega || '', quantidade: e.quantidade || 1, ca: e.ca || '', motivo: e.motivo || '', data_prox_entrega: e.data_prox_entrega || '' }) }}>Editar</button>
+                          <button style={S.btnDanger} onClick={() => excluir(e.id)}>✕</button>
+                        </div>}
+                      </div>
+                    )) : (
+                      <div style={{ padding: '12px 16px', textAlign: 'center', fontSize: 12, color: 'var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        Todos os EPIs em dia
+                      </div>
+                    )}
+
+                    {/* Vigentes expandíveis */}
+                    {vigentes.length > 0 && expanded && vigentes.map(e => (
+                      <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px', borderBottom: '1px solid var(--border)', opacity: .75 }}
+                        onMouseEnter={ev => ev.currentTarget.style.background = 'var(--subtle)'}
+                        onMouseLeave={ev => ev.currentTarget.style.background = 'transparent'}>
+                        <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--green)', flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, color: 'var(--text2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.tipo}</div>
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{fmtData(e.data_prox_entrega)}</div>
+                        </div>
+                        <Badge status="VIGENTE" />
+                        {isAdmin && <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                          <button style={S.btnSm} onClick={() => { setEditando(e); setEditForm({ data_entrega: e.data_entrega || '', quantidade: e.quantidade || 1, ca: e.ca || '', motivo: e.motivo || '', data_prox_entrega: e.data_prox_entrega || '' }) }}>Editar</button>
+                          <button style={S.btnDanger} onClick={() => excluir(e.id)}>✕</button>
+                        </div>}
+                      </div>
+                    ))}
+
+                    {vigentes.length > 0 && (
+                      <button onClick={() => setExpandidosOk(x => ({ ...x, [colab.id]: !x[colab.id] }))}
+                        style={{ width: '100%', padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, cursor: 'pointer', fontSize: 11, fontWeight: 500, color: 'var(--muted)', background: 'var(--surface2)', border: 'none', borderTop: '1px solid var(--border)', fontFamily: 'inherit' }}
+                        onMouseEnter={e => { e.currentTarget.style.color = 'var(--blue)'; e.currentTarget.style.background = 'var(--blue-dim)' }}
+                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--muted)'; e.currentTarget.style.background = 'var(--surface2)' }}>
+                        <span style={{ display: 'inline-block', transition: 'transform .2s', transform: expanded ? 'rotate(180deg)' : 'none' }}>▼</span>
+                        {expanded ? 'recolher itens vigentes' : `ver ${vigentes.length} ${vigentes.length === 1 ? 'item vigente' : 'itens vigentes'}`}
+                      </button>
+                    )}
+
+                    <div style={{ padding: '10px 16px', display: 'flex', gap: 6, background: 'var(--surface2)', borderTop: '1px solid var(--border)' }}>
+                      {isAdmin && <button style={S.btnBlue} onClick={() => { setForm({ colaborador_id: colab.id, catalogo_id: '', data_entrega: '', quantidade: 1, motivo: '', ca: '' }); setModal(true) }}>+ Entrega</button>}
+                      <button style={S.btnGray} onClick={() => verHistorico(colab)}>Histórico</button>
+                    </div>
+                  </div>
+                )
+              })}
+              {porColab.length === 0 && <div style={{ gridColumn: '1/-1', color: 'var(--muted)', textAlign: 'center', padding: 40 }}>Nenhum resultado encontrado.</div>}
             </div>
           )}
         </>
@@ -273,26 +420,17 @@ export default function Epis({ isAdmin = false }) {
 
       {aba === 'checklist' && (
         <>
-          <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-            {[['var(--red)', totalPendentes, 'itens sem registro'], ['var(--amber)', totalVencidos, 'itens vencidos'], ['var(--green)', colabsOk, 'colaboradores 100% ok']].map(([cor, val, lbl]) => (
-              <div key={lbl} style={{ background: 'var(--surface)', border: `1px solid ${cor}33`, borderRadius: 8, padding: '10px 16px', fontSize: 13 }}>
-                <span style={{ color: cor, fontWeight: 700, fontFamily: 'DM Mono, monospace', fontSize: 18 }}>{val}</span>
-                <span style={{ color: 'var(--text2)', marginLeft: 6 }}>{lbl}</span>
-              </div>
-            ))}
-          </div>
           <div style={S.toolbar}>
             <div style={S.sbox}>
               <svg width="13" height="13" fill="none" stroke="var(--muted)" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               <input style={S.sinp} placeholder="Buscar colaborador..." value={buscaCheck} onChange={e => setBuscaCheck(e.target.value)} />
             </div>
           </div>
-          {checklist.length === 0 && <div style={{ color: 'var(--muted)', textAlign: 'center', padding: 40 }}>Nenhum colaborador com kit atribuído.</div>}
           {checklist.map(c => (
             <div key={c.id} style={S.colabCard}>
               <div style={S.colabCardHeader} onClick={() => setExpandido(expandido === c.id ? null : c.id)}>
                 <div><div style={S.colabCardName}>{c.nome}</div><div style={S.colabCardMat}>{c.matricula} · {c.epi_kits?.nome}</div></div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   {c.pendentes > 0 && <span style={{ background: 'var(--red-dim)', color: 'var(--red)', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{c.pendentes} pendente{c.pendentes > 1 ? 's' : ''}</span>}
                   {c.vencidos > 0 && <span style={{ background: 'var(--red-dim)', color: 'var(--red)', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{c.vencidos} vencido{c.vencidos > 1 ? 's' : ''}</span>}
                   {c.vencendo > 0 && <span style={{ background: 'var(--amber-dim)', color: 'var(--amber)', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{c.vencendo} vencendo</span>}
@@ -303,20 +441,20 @@ export default function Epis({ isAdmin = false }) {
               {expandido === c.id && c.itens.map((item, i) => (
                 <div key={i} style={S.checkItem(item.entregue)}>
                   <div style={S.checkIcon(item.entregue)}>{item.entregue ? '✓' : '!'}</div>
-                  <div style={S.checkName(item.entregue)}>{item.nome}</div>
-                  {item.entregue ? (
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={S.checkDate}>Entregue: {fmtData(item.dataEntrega)}</div>
-                      <div style={{ marginTop: 2 }}>{badge(item.status)}</div>
-                    </div>
-                  ) : <span style={{ background: 'var(--red-dim)', color: 'var(--red)', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>Sem registro</span>}
+                  <div style={{ flex: 1, fontSize: 13, color: 'var(--text2)' }}>{item.nome}</div>
+                  {item.entregue
+                    ? <div style={{ textAlign: 'right' }}><div style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'DM Mono, monospace' }}>Entregue: {fmtData(item.dataEntrega)}</div><div style={{ marginTop: 2 }}><Badge status={item.status} /></div></div>
+                    : <span style={{ background: 'var(--red-dim)', color: 'var(--red)', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>Sem registro</span>
+                  }
                 </div>
               ))}
             </div>
           ))}
+          {checklist.length === 0 && <div style={{ color: 'var(--muted)', textAlign: 'center', padding: 40 }}>Nenhum colaborador com kit atribuído.</div>}
         </>
       )}
 
+      {/* Modal nova entrega */}
       {modal && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setModal(false)}>
           <div style={S.modalBox}>
@@ -328,21 +466,26 @@ export default function Epis({ isAdmin = false }) {
               </select>
             </div>
             <div style={S.field}><label style={S.label}>EPI *</label>
-              <select style={S.fsel} value={form.catalogo_id} onChange={e => onChangeCatalogo(e.target.value)}>
+              <select style={S.fsel} value={form.catalogo_id} onChange={e => { setForm({ ...form, catalogo_id: e.target.value }); if (form.data_entrega) setProxEntrega(calcProxEntrega(e.target.value, form.data_entrega)) }}>
                 <option value="">Selecione...</option>
                 {catalogo.map(c => <option key={c.id} value={c.id}>{c.nome} ({c.prazo_dias}d)</option>)}
               </select>
             </div>
-            <div style={S.field}><label style={S.label}>Data da Entrega *</label><input type="date" style={S.input} value={form.data_entrega} onChange={e => onChangeData(e.target.value)} /></div>
-            <div style={S.field}><label style={S.label}>Quantidade</label><input type="number" min="1" style={S.input} value={form.quantidade} onChange={e => setForm({ ...form, quantidade: e.target.value })} /></div>
+            <div style={S.field}><label style={S.label}>Data da Entrega *</label>
+              <input type="date" style={S.input} value={form.data_entrega} onChange={e => { setForm({ ...form, data_entrega: e.target.value }); if (form.catalogo_id) setProxEntrega(calcProxEntrega(form.catalogo_id, e.target.value)) }} />
+            </div>
+            <div style={S.field}><label style={S.label}>Quantidade</label>
+              <input type="number" min="1" style={S.input} value={form.quantidade} onChange={e => setForm({ ...form, quantidade: e.target.value })} />
+            </div>
             {proxEntrega && (
               <div style={S.proxBox}>
                 <div style={S.proxLbl}>Próxima entrega calculada automaticamente</div>
-                <div style={S.proxVal}>{fmtData(proxEntrega)}</div>
-                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>{catalogo.find(c => c.id === form.catalogo_id)?.prazo_dias} dias a partir da entrega</div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 15, color: 'var(--blue)', fontWeight: 500 }}>{fmtData(proxEntrega)}</div>
               </div>
             )}
-            <div style={S.field}><label style={S.label}>Nº CA</label><input style={S.input} placeholder="Ex: CA-12345" value={form.ca || ''} onChange={e => setForm({ ...form, ca: e.target.value })} /></div>
+            <div style={S.field}><label style={S.label}>Nº CA</label>
+              <input style={S.input} placeholder="Ex: CA-12345" value={form.ca || ''} onChange={e => setForm({ ...form, ca: e.target.value })} />
+            </div>
             <div style={S.field}><label style={S.label}>Motivo</label>
               <select style={S.fsel} value={form.motivo} onChange={e => setForm({ ...form, motivo: e.target.value })}>
                 <option value="">Selecione...</option>
@@ -354,6 +497,7 @@ export default function Epis({ isAdmin = false }) {
         </div>
       )}
 
+      {/* Modal editar */}
       {editando && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setEditando(null)}>
           <div style={S.modalBox}>
@@ -374,28 +518,53 @@ export default function Epis({ isAdmin = false }) {
         </div>
       )}
 
+      {/* Modal histórico em cards por tipo */}
       {modalHist && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setModalHist(null)}>
-          <div style={{ ...S.modalBox, maxWidth: 620 }}>
-            <div style={S.modalTitle}>Histórico — {modalHist.colaboradores?.nome}</div>
-            <div style={S.modalSub}>{modalHist.colaboradores?.matricula}</div>
-            {historico.length === 0 ? <div style={{ color: 'var(--muted)', textAlign: 'center', padding: 24 }}>Nenhum registro encontrado</div> : (
-              <table style={{ ...S.table, border: 'none' }}>
-                <thead><tr><th style={S.th}>EPI</th><th style={S.th}>CA</th><th style={S.th}>Entrega</th><th style={S.th}>Próxima</th><th style={S.th}>Motivo</th><th style={S.th}>Status</th></tr></thead>
-                <tbody>
-                  {historico.map(h => (
-                    <tr key={h.id}>
-                      <td style={{ ...S.td, color: 'var(--text)' }}>{h.tipo}</td>
-                      <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--blue)' }}>{h.ca || '—'}</td>
-                      <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12 }}>{fmtData(h.data_entrega)}</td>
-                      <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12 }}>{fmtData(h.data_prox_entrega)}</td>
-                      <td style={{ ...S.td, fontSize: 12 }}>{h.motivo || '—'}</td>
-                      <td style={S.td}>{badge(calcStatus(h.data_prox_entrega))}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+          <div style={S.modalBoxLg}>
+            <div style={S.modalTitle}>Histórico de Entregas</div>
+            <div style={S.modalSub}>{modalHist.nome} · {modalHist.matricula}</div>
+            {historico.length === 0
+              ? <div style={{ color: 'var(--muted)', textAlign: 'center', padding: 24 }}>Nenhuma entrega registrada.</div>
+              : Object.entries(histPorTipo).map(([tipo, entregas]) => (
+                <div key={tipo} style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.08em', paddingBottom: 8, borderBottom: '1px solid var(--border)', marginBottom: 10 }}>{tipo}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {entregas.map((h, i) => (
+                      <div key={h.id} style={{ background: i === 0 ? 'rgba(59,130,246,.04)' : 'var(--surface2)', border: `1px solid ${i === 0 ? 'rgba(59,130,246,.2)' : 'var(--border)'}`, borderRadius: 9, padding: '14px 16px' }}>
+                        {i === 0 && <div style={{ marginBottom: 10 }}><span style={{ background: 'var(--blue-dim)', color: 'var(--blue)', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '.06em' }}>Última entrega</span></div>}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px 16px' }}>
+                          <div>
+                            <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }}>Data Entrega</div>
+                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--text)', fontWeight: 500 }}>{fmtData(h.data_entrega)}</div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }}>Próxima Entrega</div>
+                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--text)', fontWeight: 500 }}>{fmtData(h.data_prox_entrega)}</div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }}>Status</div>
+                            <Badge status={calcStatus(h.data_prox_entrega)} />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }}>Nº CA</div>
+                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--blue)', fontWeight: 500 }}>{h.ca || '—'}</div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }}>Quantidade</div>
+                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--text)' }}>{h.quantidade}</div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }}>Motivo</div>
+                            <div style={{ fontSize: 12, color: 'var(--text2)' }}>{h.motivo || '—'}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))
+            }
             <div style={S.row}><button style={S.btnSm} onClick={() => setModalHist(null)}>Fechar</button></div>
           </div>
         </div>
