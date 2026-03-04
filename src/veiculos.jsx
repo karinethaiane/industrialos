@@ -22,7 +22,7 @@ const S = {
   table: { width: '100%', borderCollapse: 'collapse' },
   th: { textAlign: 'left', padding: '11px 16px', fontSize: 10.5, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.08em', borderBottom: '1px solid var(--border)', background: 'var(--surface2)' },
   td: { padding: '12px 16px', fontSize: 13, color: 'var(--text2)', borderBottom: '1px solid var(--border)' },
-  card: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: 18, marginBottom: 12, boxShadow: '0 1px 4px var(--shadow)' },
+  card: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: 18, boxShadow: '0 1px 4px var(--shadow)' },
   cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
   placa: { fontFamily: 'DM Mono, monospace', fontWeight: 500, fontSize: 16, color: 'var(--blue)', letterSpacing: '.06em', display: 'flex', alignItems: 'center', gap: 6 },
   modelo: { fontSize: 12, color: 'var(--muted)', marginTop: 3 },
@@ -48,6 +48,19 @@ const S = {
   proxLbl: { fontSize: 11, color: 'var(--blue)', fontWeight: 700, marginBottom: 4 },
   infoBoxWarn: { background: 'var(--amber-dim)', border: '1px solid rgba(245,158,11,.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--amber)', marginBottom: 14 },
 }
+
+const IconRegiao = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2">
+    <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+    <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+  </svg>
+)
+
+const IconSem = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round">
+    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+  </svg>
+)
 
 function badge(s) {
   const cfg = {
@@ -92,6 +105,7 @@ export default function Veiculos({ isAdmin = false }) {
   const [modalOcorrenciaDetalhe, setModalOcorrenciaDetalhe] = useState(null)
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
+  const [regioesFechadas, setRegioesFechadas] = useState({})
   const [formV, setFormV] = useState({ placa: '', modelo: '', marca: '', ano: '', cor: '', km_atual: '', intervalo_revisao_km: 10000, intervalo_revisao_meses: 6, regiao: '', modalidade: '', observacoes: '' })
   const [formS, setFormS] = useState({ colaborador_id: '', empresa_destino: '', local_destino: '', periodo: '', data_saida: '' })
   const [formRet, setFormRet] = useState({ data_retorno: '', km_retorno: '', observacoes: '' })
@@ -114,6 +128,8 @@ export default function Veiculos({ isAdmin = false }) {
     setLoading(false)
   }
 
+  function toggleRegiao(r) { setRegioesFechadas(x => ({ ...x, [r]: !x[r] })) }
+
   function abrirNovoVeiculo() { setEditandoVeiculo(null); setErro(''); setFormV({ placa: '', modelo: '', marca: '', ano: '', cor: '', km_atual: '', intervalo_revisao_km: 10000, intervalo_revisao_meses: 6, regiao: '', modalidade: '', observacoes: '' }); setModalVeiculo(true) }
   function abrirEditarVeiculo(v) { setEditandoVeiculo(v); setErro(''); setFormV({ placa: v.placa, modelo: v.modelo, marca: v.marca || '', ano: v.ano || '', cor: v.cor || '', km_atual: v.km_atual || '', intervalo_revisao_km: v.intervalo_revisao_km || 10000, intervalo_revisao_meses: v.intervalo_revisao_meses || 6, regiao: v.regiao || '', modalidade: v.modalidade || '', observacoes: v.observacoes || '' }); setModalVeiculo(true) }
 
@@ -130,7 +146,7 @@ export default function Veiculos({ isAdmin = false }) {
     setModalVeiculo(false); setEditandoVeiculo(null); init()
   }
 
-  async function excluirVeiculo(id) { if (!confirm('Excluir este veículo? Todos os registros associados serão removidos.')) return; await supabase.from('veiculos').delete().eq('id', id); init() }
+  async function excluirVeiculo(id) { if (!confirm('Excluir este veículo?')) return; await supabase.from('veiculos').delete().eq('id', id); init() }
 
   async function salvarSaida(veiculoId) {
     if (!formS.colaborador_id || !formS.data_saida) return
@@ -195,13 +211,9 @@ export default function Veiculos({ isAdmin = false }) {
     if (!formOc.tipo || !formOc.data_ocorrencia) return
     setSalvando(true)
     const payload = {
-      veiculo_id: veiculoId,
-      tipo: formOc.tipo,
-      data_ocorrencia: formOc.data_ocorrencia,
-      descricao: formOc.descricao || null,
-      valor: formOc.valor ? parseFloat(formOc.valor) : null,
-      status: 'aberto',
-      colaborador_id: formOc.colaborador_id || null,
+      veiculo_id: veiculoId, tipo: formOc.tipo, data_ocorrencia: formOc.data_ocorrencia,
+      descricao: formOc.descricao || null, valor: formOc.valor ? parseFloat(formOc.valor) : null,
+      status: 'aberto', colaborador_id: formOc.colaborador_id || null,
     }
     const { error } = await supabase.from('ocorrencias_veiculos').insert(payload)
     if (error) { alert('Erro ao salvar: ' + error.message); setSalvando(false); return }
@@ -212,10 +224,8 @@ export default function Veiculos({ isAdmin = false }) {
   async function salvarDetalheOcorrencia(ocorrencia) {
     setSalvando(true)
     const { error } = await supabase.from('ocorrencias_veiculos').update({
-      autor_id: formOcDet.autor_id || null,
-      data_identificacao: formOcDet.data_identificacao || null,
-      data_pagamento: formOcDet.data_pagamento || null,
-      observacao_resolucao: formOcDet.observacao_resolucao || null,
+      autor_id: formOcDet.autor_id || null, data_identificacao: formOcDet.data_identificacao || null,
+      data_pagamento: formOcDet.data_pagamento || null, observacao_resolucao: formOcDet.observacao_resolucao || null,
       status: formOcDet.status || ocorrencia.status
     }).eq('id', ocorrencia.id)
     if (error) { alert('Erro: ' + error.message); setSalvando(false); return }
@@ -232,6 +242,49 @@ export default function Veiculos({ isAdmin = false }) {
   })
 
   const trHover = { onMouseEnter: e => e.currentTarget.style.background = 'var(--subtle)', onMouseLeave: e => e.currentTarget.style.background = 'transparent' }
+
+  const REGIOES = ['RMR', 'Araripina', 'Caruaru']
+
+  function renderVeiculoCard(v) {
+    const pct = v.km_proxima_revisao ? ((v.km_atual - (v.km_proxima_revisao - v.intervalo_revisao_km)) / v.intervalo_revisao_km) * 100 : 0
+    const cor = pct >= 90 ? 'var(--red)' : pct >= 70 ? 'var(--amber)' : 'linear-gradient(90deg, var(--blue), var(--teal))'
+    const saidaAberta = saidas.find(s => s.veiculo_id === v.id && !s.data_retorno)
+    return (
+      <div key={v.id} style={S.card}>
+        <div style={S.cardHeader}>
+          <div>
+            <div style={S.placa}>{v.placa} {v.modalidade && badgeSm(v.modalidade, v.modalidade === 'Frota' ? 'var(--teal)' : 'var(--blue)')}</div>
+            <div style={S.modelo}>{v.marca} {v.modelo} {v.ano && `· ${v.ano}`} {v.cor && `· ${v.cor}`}</div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {badge(v.status)}
+            {isAdmin && <button style={S.btnSm} onClick={() => abrirEditarVeiculo(v)}>Editar</button>}
+            {isAdmin && <button style={S.btnDanger} onClick={() => excluirVeiculo(v.id)}>Excluir</button>}
+          </div>
+        </div>
+        <div style={S.cardInfo}>
+          <div style={S.infoBox}><div style={S.infoLbl}>KM Atual</div><div style={S.infoVal}>{fmtKm(v.km_atual)}</div></div>
+          <div style={S.infoBox}><div style={S.infoLbl}>Próxima Revisão KM</div><div style={{ ...S.infoVal, color: v.km_atual >= (v.km_proxima_revisao - 500) ? 'var(--red)' : 'var(--text)' }}>{fmtKm(v.km_proxima_revisao)}</div></div>
+          <div style={S.infoBox}><div style={S.infoLbl}>Próxima Revisão Data</div><div style={{ ...S.infoVal, color: v.data_proxima_revisao && new Date(v.data_proxima_revisao) <= new Date(Date.now() + 30*86400000) ? 'var(--red)' : 'var(--text)' }}>{fmtData(v.data_proxima_revisao)}</div></div>
+          {saidaAberta && <div style={{ ...S.infoBox, borderColor: 'rgba(245,158,11,.3)' }}><div style={S.infoLbl}>Em uso por</div><div style={{ ...S.infoVal, color: 'var(--amber)' }}>{saidaAberta.colaboradores?.nome}</div></div>}
+        </div>
+        {v.km_proxima_revisao > 0 && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>Progresso até próxima revisão: {fmtKm(v.km_proxima_revisao - v.km_atual)} restantes</div>
+            <div style={S.kmBar}><div style={S.kmFill(pct, cor)} /></div>
+          </div>
+        )}
+        {isAdmin && (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {v.status === 'disponivel' && <button style={S.btnWarn} onClick={() => { setModalSaida(v); setEditandoSaida(null); setFormS({ colaborador_id: '', empresa_destino: '', local_destino: '', periodo: '', data_saida: new Date().toISOString().split('T')[0] }) }}>Registrar Saída</button>}
+            {saidaAberta && <button style={S.btnTeal} onClick={() => { setModalRetorno(saidaAberta); setFormRet({ data_retorno: new Date().toISOString().split('T')[0], km_retorno: '', observacoes: '' }) }}>Registrar Retorno</button>}
+            <button style={S.btnSm} onClick={() => { setModalRevisao(v); setEditandoRevisao(null); setFormRev({ tipo: '', data_revisao: new Date().toISOString().split('T')[0], km_revisao: v.km_atual || '', oficina: '', numero_chamado: '', responsavel_id: '', descricao: '' }) }}>+ Revisão</button>
+            <button style={S.btnSm} onClick={() => { setModalOcorrencia(v); setFormOc({ colaborador_id: '', tipo: '', data_ocorrencia: new Date().toISOString().split('T')[0], descricao: '', valor: '' }) }}>+ Ocorrência</button>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div style={S.wrap}>
@@ -259,46 +312,42 @@ export default function Veiculos({ isAdmin = false }) {
       {aba === 'veiculos' && (
         loading ? <div style={{ color: 'var(--muted)', textAlign: 'center', padding: 40 }}>Carregando...</div> :
         veiculos.length === 0 ? <div style={{ color: 'var(--muted)', textAlign: 'center', padding: 40 }}>Nenhum veículo cadastrado.</div> :
-        veiculos.map(v => {
-          const pct = v.km_proxima_revisao ? ((v.km_atual - (v.km_proxima_revisao - v.intervalo_revisao_km)) / v.intervalo_revisao_km) * 100 : 0
-          const cor = pct >= 90 ? 'var(--red)' : pct >= 70 ? 'var(--amber)' : 'linear-gradient(90deg, var(--blue), var(--teal))'
-          const saidaAberta = saidas.find(s => s.veiculo_id === v.id && !s.data_retorno)
-          return (
-            <div key={v.id} style={S.card}>
-              <div style={S.cardHeader}>
-                <div>
-                  <div style={S.placa}>{v.placa} {v.modalidade && badgeSm(v.modalidade, v.modalidade === 'Frota' ? 'var(--teal)' : 'var(--blue)')}</div>
-                  <div style={S.modelo}>{v.marca} {v.modelo} {v.ano && `· ${v.ano}`} {v.cor && `· ${v.cor}`} {v.regiao && `· ${v.regiao}`}</div>
+        (() => {
+          const grupos = {}
+          REGIOES.forEach(r => { grupos[r] = veiculos.filter(v => v.regiao === r) })
+          grupos['Sem região'] = veiculos.filter(v => !v.regiao || !REGIOES.includes(v.regiao))
+          return Object.entries(grupos).map(([regiao, lista]) => {
+            if (lista.length === 0) return null
+            const isSem = regiao === 'Sem região'
+            const fechado = regioesFechadas[regiao]
+            const revPend = lista.filter(v => {
+              if (v.km_proxima_revisao && v.km_atual >= v.km_proxima_revisao - 500) return true
+              if (v.data_proxima_revisao && new Date(v.data_proxima_revisao) <= new Date(Date.now() + 30*86400000)) return true
+              return false
+            })
+            return (
+              <div key={regiao} style={{ marginBottom: 28 }}>
+                <div onClick={() => toggleRegiao(regiao)} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: fechado ? 0 : 12, cursor: 'pointer', userSelect: 'none' }}>
+                  <div style={{ width: 30, height: 30, borderRadius: 8, background: isSem ? 'rgba(100,116,139,.1)' : 'rgba(148,163,184,.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {isSem ? <IconSem /> : <IconRegiao />}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: isSem ? 'var(--muted)' : 'var(--text)' }}>{regiao}</div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)' }}>{lista.length} {lista.length === 1 ? 'veículo' : 'veículos'}</div>
+                  </div>
+                  {revPend.length > 0 && <span style={{ background: 'var(--red-dim)', color: 'var(--red)', padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>{revPend.length} revisão próxima</span>}
+                  <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                  <span style={{ color: 'var(--muted)', fontSize: 11, display: 'inline-block', transform: fechado ? 'rotate(-90deg)' : 'none', transition: 'transform .2s' }}>▼</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {badge(v.status)}
-                  {isAdmin && <button style={S.btnSm} onClick={() => abrirEditarVeiculo(v)}>Editar</button>}
-                  {isAdmin && <button style={S.btnDanger} onClick={() => excluirVeiculo(v.id)}>Excluir</button>}
-                </div>
+                {!fechado && (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(380px,1fr))', gap: 12 }}>
+                    {lista.map(v => renderVeiculoCard(v))}
+                  </div>
+                )}
               </div>
-              <div style={S.cardInfo}>
-                <div style={S.infoBox}><div style={S.infoLbl}>KM Atual</div><div style={S.infoVal}>{fmtKm(v.km_atual)}</div></div>
-                <div style={S.infoBox}><div style={S.infoLbl}>Próxima Revisão KM</div><div style={{ ...S.infoVal, color: v.km_atual >= (v.km_proxima_revisao - 500) ? 'var(--red)' : 'var(--text)' }}>{fmtKm(v.km_proxima_revisao)}</div></div>
-                <div style={S.infoBox}><div style={S.infoLbl}>Próxima Revisão Data</div><div style={{ ...S.infoVal, color: v.data_proxima_revisao && new Date(v.data_proxima_revisao) <= new Date(Date.now() + 30*86400000) ? 'var(--red)' : 'var(--text)' }}>{fmtData(v.data_proxima_revisao)}</div></div>
-                {saidaAberta && <div style={{ ...S.infoBox, borderColor: 'rgba(245,158,11,.3)' }}><div style={S.infoLbl}>Em uso por</div><div style={{ ...S.infoVal, color: 'var(--amber)' }}>{saidaAberta.colaboradores?.nome}</div></div>}
-              </div>
-              {v.km_proxima_revisao > 0 && (
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>Progresso até próxima revisão: {fmtKm(v.km_proxima_revisao - v.km_atual)} restantes</div>
-                  <div style={S.kmBar}><div style={S.kmFill(pct, cor)} /></div>
-                </div>
-              )}
-              {isAdmin && (
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {v.status === 'disponivel' && <button style={S.btnWarn} onClick={() => { setModalSaida(v); setEditandoSaida(null); setFormS({ colaborador_id: '', empresa_destino: '', local_destino: '', periodo: '', data_saida: new Date().toISOString().split('T')[0] }) }}>Registrar Saída</button>}
-                  {saidaAberta && <button style={S.btnTeal} onClick={() => { setModalRetorno(saidaAberta); setFormRet({ data_retorno: new Date().toISOString().split('T')[0], km_retorno: '', observacoes: '' }) }}>Registrar Retorno</button>}
-                  <button style={S.btnSm} onClick={() => { setModalRevisao(v); setEditandoRevisao(null); setFormRev({ tipo: '', data_revisao: new Date().toISOString().split('T')[0], km_revisao: v.km_atual || '', oficina: '', numero_chamado: '', responsavel_id: '', descricao: '' }) }}>+ Revisão</button>
-                  <button style={S.btnSm} onClick={() => { setModalOcorrencia(v); setFormOc({ colaborador_id: '', tipo: '', data_ocorrencia: new Date().toISOString().split('T')[0], descricao: '', valor: '' }) }}>+ Ocorrência</button>
-                </div>
-              )}
-            </div>
-          )
-        })
+            )
+          })
+        })()
       )}
 
       {aba === 'saidas' && (
