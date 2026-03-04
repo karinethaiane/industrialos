@@ -46,6 +46,7 @@ const S = {
   erro: { background: 'var(--red-dim)', border: '1px solid rgba(239,68,68,.25)', borderRadius: 6, padding: '8px 12px', color: 'var(--red)', fontSize: 12, marginBottom: 10 },
   proxBox: { background: 'var(--surface2)', border: '1px solid rgba(59,130,246,.2)', borderRadius: 7, padding: '10px 14px', marginBottom: 14 },
   proxLbl: { fontSize: 11, color: 'var(--blue)', fontWeight: 700, marginBottom: 4 },
+  infoBoxWarn: { background: 'var(--amber-dim)', border: '1px solid rgba(245,158,11,.25)', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: 'var(--amber)', marginBottom: 14 },
 }
 
 function badge(s) {
@@ -62,8 +63,10 @@ function badgeSm(label, cor) {
 }
 
 function ocBadge(s) {
-  const cfg = { Resolvido: 'var(--green)', 'Em andamento': 'var(--amber)', Aberto: 'var(--red)' }[s] || 'var(--muted)'
-  return <span style={{ background: `${cfg}18`, color: cfg, padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{s || 'Aberto'}</span>
+  const sl = (s || '').toLowerCase()
+  const cfg = { resolvido: 'var(--green)', 'em andamento': 'var(--amber)', aberto: 'var(--red)' }[sl] || 'var(--muted)'
+  const label = { resolvido: 'Resolvido', 'em andamento': 'Em andamento', aberto: 'Aberto' }[sl] || s || 'Aberto'
+  return <span style={{ background: `${cfg}18`, color: cfg, padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{label}</span>
 }
 
 function fmtData(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) }
@@ -132,8 +135,12 @@ export default function Veiculos({ isAdmin = false }) {
   async function salvarSaida(veiculoId) {
     if (!formS.colaborador_id || !formS.data_saida) return
     setSalvando(true)
-    if (editandoSaida) { await supabase.from('saidas_veiculos').update({ colaborador_id: formS.colaborador_id, empresa_destino: formS.empresa_destino, local_destino: formS.local_destino, periodo: formS.periodo, data_saida: formS.data_saida }).eq('id', editandoSaida.id) }
-    else { const { error } = await supabase.from('saidas_veiculos').insert({ veiculo_id: veiculoId, colaborador_id: formS.colaborador_id, empresa_destino: formS.empresa_destino, local_destino: formS.local_destino, periodo: formS.periodo, data_saida: formS.data_saida }); if (!error) await supabase.from('veiculos').update({ status: 'em_uso' }).eq('id', veiculoId) }
+    if (editandoSaida) {
+      await supabase.from('saidas_veiculos').update({ colaborador_id: formS.colaborador_id, empresa_destino: formS.empresa_destino, local_destino: formS.local_destino, periodo: formS.periodo, data_saida: formS.data_saida }).eq('id', editandoSaida.id)
+    } else {
+      const { error } = await supabase.from('saidas_veiculos').insert({ veiculo_id: veiculoId, colaborador_id: formS.colaborador_id, empresa_destino: formS.empresa_destino, local_destino: formS.local_destino, periodo: formS.periodo, data_saida: formS.data_saida })
+      if (!error) await supabase.from('veiculos').update({ status: 'em_uso' }).eq('id', veiculoId)
+    }
     setFormS({ colaborador_id: '', empresa_destino: '', local_destino: '', periodo: '', data_saida: '' }); setModalSaida(null); setEditandoSaida(null); setSalvando(false); init()
   }
 
@@ -144,9 +151,8 @@ export default function Veiculos({ isAdmin = false }) {
     setSalvando(true)
     const km = parseInt(formRet.km_retorno) || null
     await supabase.from('saidas_veiculos').update({ data_retorno: formRet.data_retorno, km_retorno: km, observacoes: formRet.observacoes }).eq('id', saida.id)
-    const veiculo = veiculos.find(v => v.id === saida.veiculo_id)
     const updates = { status: 'disponivel' }
-    if (km) { updates.km_atual = km; updates.km_proxima_revisao = km + (veiculo?.intervalo_revisao_km || 10000) }
+    if (km) { updates.km_atual = km }
     await supabase.from('veiculos').update(updates).eq('id', saida.veiculo_id)
     setFormRet({ data_retorno: '', km_retorno: '', observacoes: '' }); setModalRetorno(null); setSalvando(false); init()
   }
@@ -155,11 +161,32 @@ export default function Veiculos({ isAdmin = false }) {
     if (!formRev.tipo || !formRev.data_revisao) return
     setSalvando(true)
     const km = parseInt(formRev.km_revisao) || veiculo.km_atual || 0
+    const isPreventiva = formRev.tipo === 'Preventiva'
     const proxKm = km + (veiculo.intervalo_revisao_km || 10000)
     const proxData = addMeses(formRev.data_revisao, veiculo.intervalo_revisao_meses || 6)
-    if (editandoRevisao) { await supabase.from('revisoes_veiculos').update({ tipo: formRev.tipo, data_revisao: formRev.data_revisao, km_revisao: km, km_proxima_revisao: proxKm, data_proxima_revisao: proxData, oficina: formRev.oficina || null, numero_chamado: formRev.numero_chamado || null, responsavel_id: formRev.responsavel_id || null, descricao: formRev.descricao || null }).eq('id', editandoRevisao.id) }
-    else { const { error } = await supabase.from('revisoes_veiculos').insert({ veiculo_id: veiculo.id, tipo: formRev.tipo, data_revisao: formRev.data_revisao, km_revisao: km, km_proxima_revisao: proxKm, data_proxima_revisao: proxData, oficina: formRev.oficina || null, numero_chamado: formRev.numero_chamado || null, responsavel_id: formRev.responsavel_id || null, descricao: formRev.descricao || null }); if (!error) await supabase.from('veiculos').update({ km_atual: km, km_proxima_revisao: proxKm, data_proxima_revisao: proxData }).eq('id', veiculo.id); if (error) alert('Erro: ' + error.message) }
-    setFormRev({ tipo: '', data_revisao: '', km_revisao: '', oficina: '', numero_chamado: '', responsavel_id: '', descricao: '' }); setModalRevisao(null); setEditandoRevisao(null); setSalvando(false); init()
+    if (editandoRevisao) {
+      await supabase.from('revisoes_veiculos').update({
+        tipo: formRev.tipo, data_revisao: formRev.data_revisao, km_revisao: km,
+        km_proxima_revisao: isPreventiva ? proxKm : editandoRevisao.km_proxima_revisao,
+        data_proxima_revisao: isPreventiva ? proxData : editandoRevisao.data_proxima_revisao,
+        oficina: formRev.oficina || null, numero_chamado: formRev.numero_chamado || null,
+        responsavel_id: formRev.responsavel_id || null, descricao: formRev.descricao || null
+      }).eq('id', editandoRevisao.id)
+    } else {
+      const { error } = await supabase.from('revisoes_veiculos').insert({
+        veiculo_id: veiculo.id, tipo: formRev.tipo, data_revisao: formRev.data_revisao, km_revisao: km,
+        km_proxima_revisao: isPreventiva ? proxKm : veiculo.km_proxima_revisao,
+        data_proxima_revisao: isPreventiva ? proxData : veiculo.data_proxima_revisao,
+        oficina: formRev.oficina || null, numero_chamado: formRev.numero_chamado || null,
+        responsavel_id: formRev.responsavel_id || null, descricao: formRev.descricao || null
+      })
+      if (error) { alert('Erro: ' + error.message); setSalvando(false); return }
+      const veiculoUpdate = { km_atual: km }
+      if (isPreventiva) { veiculoUpdate.km_proxima_revisao = proxKm; veiculoUpdate.data_proxima_revisao = proxData }
+      await supabase.from('veiculos').update(veiculoUpdate).eq('id', veiculo.id)
+    }
+    setFormRev({ tipo: '', data_revisao: '', km_revisao: '', oficina: '', numero_chamado: '', responsavel_id: '', descricao: '' })
+    setModalRevisao(null); setEditandoRevisao(null); setSalvando(false); init()
   }
 
   async function excluirRevisao(id) { if (!confirm('Excluir este registro?')) return; await supabase.from('revisoes_veiculos').delete().eq('id', id); init() }
@@ -167,13 +194,31 @@ export default function Veiculos({ isAdmin = false }) {
   async function salvarOcorrencia(veiculoId) {
     if (!formOc.tipo || !formOc.data_ocorrencia) return
     setSalvando(true)
-    await supabase.from('ocorrencias_veiculos').insert({ veiculo_id: veiculoId, colaborador_id: formOc.colaborador_id || null, tipo: formOc.tipo, data_ocorrencia: formOc.data_ocorrencia, descricao: formOc.descricao, valor: parseFloat(formOc.valor) || null, status: 'Aberto' })
-    setFormOc({ colaborador_id: '', tipo: '', data_ocorrencia: '', descricao: '', valor: '' }); setModalOcorrencia(null); setSalvando(false); init()
+    const payload = {
+      veiculo_id: veiculoId,
+      tipo: formOc.tipo,
+      data_ocorrencia: formOc.data_ocorrencia,
+      descricao: formOc.descricao || null,
+      valor: formOc.valor ? parseFloat(formOc.valor) : null,
+      status: 'aberto',
+      colaborador_id: formOc.colaborador_id || null,
+    }
+    const { error } = await supabase.from('ocorrencias_veiculos').insert(payload)
+    if (error) { alert('Erro ao salvar: ' + error.message); setSalvando(false); return }
+    setFormOc({ colaborador_id: '', tipo: '', data_ocorrencia: '', descricao: '', valor: '' })
+    setModalOcorrencia(null); setSalvando(false); init()
   }
 
   async function salvarDetalheOcorrencia(ocorrencia) {
     setSalvando(true)
-    await supabase.from('ocorrencias_veiculos').update({ autor_id: formOcDet.autor_id || null, data_identificacao: formOcDet.data_identificacao || null, data_pagamento: formOcDet.data_pagamento || null, observacao_resolucao: formOcDet.observacao_resolucao || null, status: formOcDet.status || ocorrencia.status }).eq('id', ocorrencia.id)
+    const { error } = await supabase.from('ocorrencias_veiculos').update({
+      autor_id: formOcDet.autor_id || null,
+      data_identificacao: formOcDet.data_identificacao || null,
+      data_pagamento: formOcDet.data_pagamento || null,
+      observacao_resolucao: formOcDet.observacao_resolucao || null,
+      status: formOcDet.status || ocorrencia.status
+    }).eq('id', ocorrencia.id)
+    if (error) { alert('Erro: ' + error.message); setSalvando(false); return }
     setModalOcorrenciaDetalhe(null); setSalvando(false); init()
   }
 
@@ -196,7 +241,7 @@ export default function Veiculos({ isAdmin = false }) {
       </div>
 
       <div style={S.stats}>
-        {[['var(--blue)', veiculos.length, 'Veículos'], ['var(--green)', veiculos.filter(v => v.status === 'disponivel').length, 'Disponíveis'], ['var(--amber)', saidasAbertas.length, 'Em Uso'], ['var(--red)', revisoesPendentes.length, 'Revisão Próxima'], ['var(--purple)', ocorrencias.filter(o => o.status === 'Aberto').length, 'Ocorrências']].map(([cor, val, lbl]) => (
+        {[['var(--blue)', veiculos.length, 'Veículos'], ['var(--green)', veiculos.filter(v => v.status === 'disponivel').length, 'Disponíveis'], ['var(--amber)', saidasAbertas.length, 'Em Uso'], ['var(--red)', revisoesPendentes.length, 'Revisão Próxima'], ['var(--purple)', ocorrencias.filter(o => (o.status||'').toLowerCase() === 'aberto').length, 'Ocorrências']].map(([cor, val, lbl]) => (
           <div key={lbl} style={S.statCard(cor)}>
             <div style={S.statVal(cor)}>{val}</div>
             <div style={S.statLbl}>{lbl}</div>
@@ -295,8 +340,8 @@ export default function Veiculos({ isAdmin = false }) {
             {revisoes.map(r => (
               <tr key={r.id} {...trHover}>
                 <td style={{ ...S.td, color: 'var(--blue)', fontFamily: 'DM Mono, monospace', fontWeight: 500 }}>{r.veiculos?.placa}<div style={{ fontSize: 11, color: 'var(--muted)' }}>{r.veiculos?.modelo}</div></td>
-                <td style={{ ...S.td, color: 'var(--text)' }}>{r.tipo}</td>
-                <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--green)', fontWeight: 600 }}>{fmtData(r.data_revisao)}</td>
+                <td style={S.td}><span style={{ background: r.tipo === 'Preventiva' ? 'var(--green-dim)' : 'var(--amber-dim)', color: r.tipo === 'Preventiva' ? 'var(--green)' : 'var(--amber)', padding: '2px 7px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{r.tipo}</span></td>
+                <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12 }}>{fmtData(r.data_revisao)}</td>
                 <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12 }}>{fmtKm(r.km_revisao)}</td>
                 <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12 }}>{fmtKm(r.km_proxima_revisao)}</td>
                 <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--amber)', fontWeight: 600 }}>{fmtData(r.data_proxima_revisao)}</td>
@@ -329,7 +374,7 @@ export default function Veiculos({ isAdmin = false }) {
                 <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--red)' }}>{o.valor ? `R$ ${o.valor.toFixed(2)}` : '—'}</td>
                 <td style={S.td}>{ocBadge(o.status)}</td>
                 <td style={S.td}><div style={{ display: 'flex', gap: 4 }}>
-                  {isAdmin && <button style={S.btnSm} onClick={() => { setModalOcorrenciaDetalhe(o); setFormOcDet({ autor_id: o.autor_id || '', data_identificacao: o.data_identificacao || '', data_pagamento: o.data_pagamento || '', observacao_resolucao: o.observacao_resolucao || '', status: o.status || 'Aberto' }) }}>Acompanhar</button>}
+                  {isAdmin && <button style={S.btnSm} onClick={() => { setModalOcorrenciaDetalhe(o); setFormOcDet({ autor_id: o.autor_id || '', data_identificacao: o.data_identificacao || '', data_pagamento: o.data_pagamento || '', observacao_resolucao: o.observacao_resolucao || '', status: o.status || 'aberto' }) }}>Acompanhar</button>}
                   {isAdmin && <button style={S.btnDanger} onClick={() => excluirOcorrencia(o.id)}>✕</button>}
                 </div></td>
               </tr>
@@ -413,7 +458,7 @@ export default function Veiculos({ isAdmin = false }) {
             <div style={S.field}><label style={S.label}>Observações</label><textarea style={S.textarea} value={formRet.observacoes} onChange={e => setFormRet({ ...formRet, observacoes: e.target.value })} /></div>
             <div style={S.proxBox}>
               <div style={S.proxLbl}>Ao salvar:</div>
-              <div style={{ fontSize: 12, color: 'var(--blue)' }}>✓ KM atual atualizado · ✓ Próxima revisão recalculada · ✓ Status volta para Disponível</div>
+              <div style={{ fontSize: 12, color: 'var(--blue)' }}>✓ KM atual atualizado · ✓ Status volta para Disponível</div>
             </div>
             <div style={S.row}><button style={S.btnSm} onClick={() => setModalRetorno(null)}>Cancelar</button><button style={S.btn} onClick={() => salvarRetorno(modalRetorno)} disabled={salvando}>{salvando ? 'Salvando...' : 'Registrar Retorno'}</button></div>
           </div>
@@ -430,13 +475,16 @@ export default function Veiculos({ isAdmin = false }) {
                 <option value="">Selecione...</option><option>Preventiva</option><option>Corretiva</option>
               </select>
             </div>
+            {formRev.tipo === 'Corretiva' && (
+              <div style={S.infoBoxWarn}>⚠ Revisão corretiva não altera a data/km da próxima preventiva agendada.</div>
+            )}
             <div style={S.fieldRow}>
               <div style={S.field}><label style={S.label}>Data *</label><input type="date" style={S.input} value={formRev.data_revisao} onChange={e => setFormRev({ ...formRev, data_revisao: e.target.value })} /></div>
               <div style={S.field}><label style={S.label}>KM na Revisão</label><input type="number" style={S.input} value={formRev.km_revisao} onChange={e => setFormRev({ ...formRev, km_revisao: e.target.value })} /></div>
             </div>
-            {formRev.data_revisao && (
+            {formRev.data_revisao && formRev.tipo === 'Preventiva' && (
               <div style={S.proxBox}>
-                <div style={S.proxLbl}>Próxima revisão calculada automaticamente</div>
+                <div style={S.proxLbl}>Próxima revisão preventiva calculada automaticamente</div>
                 <div style={{ fontSize: 12, color: 'var(--blue)' }}>📅 {fmtData(addMeses(formRev.data_revisao, modalRevisao.intervalo_revisao_meses || 6))} · 🔧 {fmtKm((parseInt(formRev.km_revisao) || modalRevisao.km_atual || 0) + (modalRevisao.intervalo_revisao_km || 10000))}</div>
               </div>
             )}
@@ -462,12 +510,15 @@ export default function Veiculos({ isAdmin = false }) {
             <div style={S.modalSub}>{modalOcorrencia.placa} · {modalOcorrencia.marca} {modalOcorrencia.modelo}</div>
             <div style={S.field}><label style={S.label}>Tipo *</label>
               <select style={S.fsel} value={formOc.tipo} onChange={e => setFormOc({ ...formOc, tipo: e.target.value })}>
-                <option value="">Selecione...</option><option>Auto de Infração (Multa)</option><option>Acidente</option><option>Avaria Identificada</option>
+                <option value="">Selecione...</option>
+                <option>Auto de Infração (Multa)</option>
+                <option>Acidente</option>
+                <option>Avaria Identificada</option>
               </select>
             </div>
             <div style={S.fieldRow}>
               <div style={S.field}><label style={S.label}>Data *</label><input type="date" style={S.input} value={formOc.data_ocorrencia} onChange={e => setFormOc({ ...formOc, data_ocorrencia: e.target.value })} /></div>
-              <div style={S.field}><label style={S.label}>Valor (R$)</label><input type="number" style={S.input} value={formOc.valor} onChange={e => setFormOc({ ...formOc, valor: e.target.value })} /></div>
+              <div style={S.field}><label style={S.label}>Valor (R$)</label><input type="number" step="0.01" style={S.input} value={formOc.valor} onChange={e => setFormOc({ ...formOc, valor: e.target.value })} placeholder="0,00" /></div>
             </div>
             <div style={S.field}><label style={S.label}>Colaborador envolvido</label>
               <select style={S.fsel} value={formOc.colaborador_id} onChange={e => setFormOc({ ...formOc, colaborador_id: e.target.value })}>
@@ -488,7 +539,9 @@ export default function Veiculos({ isAdmin = false }) {
             {modalOcorrenciaDetalhe.descricao && <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 16, background: 'var(--surface2)', borderRadius: 6, padding: '8px 12px' }}>{modalOcorrenciaDetalhe.descricao}</div>}
             <div style={S.field}><label style={S.label}>Status</label>
               <select style={S.fsel} value={formOcDet.status} onChange={e => setFormOcDet({ ...formOcDet, status: e.target.value })}>
-                <option>Aberto</option><option>Em andamento</option><option>Resolvido</option>
+                <option value="aberto">Aberto</option>
+                <option value="em andamento">Em andamento</option>
+                <option value="resolvido">Resolvido</option>
               </select>
             </div>
             <div style={S.field}><label style={S.label}>Autor identificado</label>
