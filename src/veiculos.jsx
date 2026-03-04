@@ -7,10 +7,11 @@ const S = {
   title: { fontSize: 21, fontWeight: 700, color: 'var(--text)', letterSpacing: '-.02em' },
   sub: { fontSize: 13, color: 'var(--muted)', marginTop: 3 },
   stats: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 10, marginBottom: 22 },
-  statCard: (cor) => ({ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', position: 'relative', overflow: 'hidden', boxShadow: '0 1px 4px var(--shadow)' }),
+  statCard: (cor, clickable) => ({ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', position: 'relative', overflow: 'hidden', boxShadow: '0 1px 4px var(--shadow)', cursor: clickable ? 'pointer' : 'default' }),
   statBar: (cor) => ({ position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, background: cor, opacity: .5 }),
   statVal: (cor) => ({ fontFamily: 'DM Mono, monospace', fontSize: 26, fontWeight: 500, color: cor, lineHeight: 1, marginBottom: 5 }),
   statLbl: { fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.08em', fontWeight: 500 },
+  statHint: { fontSize: 10, color: 'var(--red)', marginTop: 4, opacity: .8 },
   tabs: { display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 16 },
   tab: (on) => ({ padding: '9px 18px', fontSize: 13, fontWeight: on ? 600 : 500, cursor: 'pointer', color: on ? 'var(--blue)' : 'var(--muted)', background: 'none', border: 'none', borderBottom: on ? '2px solid var(--blue)' : '2px solid transparent', marginBottom: -1, fontFamily: 'inherit', transition: 'all .15s' }),
   btn: { background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 12px var(--blue-glow)', whiteSpace: 'nowrap' },
@@ -18,6 +19,7 @@ const S = {
   btnDanger: { background: 'var(--red-dim)', color: 'var(--red)', border: '1px solid transparent', borderRadius: 6, padding: '4px 8px', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' },
   btnWarn: { background: 'var(--amber-dim)', color: 'var(--amber)', border: '1px solid transparent', borderRadius: 6, padding: '5px 11px', fontSize: 11, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' },
   btnTeal: { background: 'var(--teal-dim)', color: 'var(--teal)', border: '1px solid transparent', borderRadius: 6, padding: '5px 11px', fontSize: 11, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' },
+  btnBlue: { background: 'var(--blue-dim)', color: 'var(--blue)', border: '1px solid rgba(59,130,246,.2)', borderRadius: 6, padding: '5px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
   tableWrap: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 6px var(--shadow)' },
   table: { width: '100%', borderCollapse: 'collapse' },
   th: { textAlign: 'left', padding: '11px 16px', fontSize: 10.5, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.08em', borderBottom: '1px solid var(--border)', background: 'var(--surface2)' },
@@ -55,7 +57,6 @@ const IconRegiao = () => (
     <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
   </svg>
 )
-
 const IconSem = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round">
     <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
@@ -70,11 +71,9 @@ function badge(s) {
   }[s] || { bg: 'var(--subtle)', c: 'var(--muted)', l: s }
   return <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 8px', borderRadius: 5, fontSize: 11, fontWeight: 600, background: cfg.bg, color: cfg.c }}>{cfg.l}</span>
 }
-
 function badgeSm(label, cor) {
   return <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 7px', borderRadius: 4, fontSize: 10, fontWeight: 600, background: `${cor}18`, color: cor }}>{label}</span>
 }
-
 function ocBadge(s) {
   const sl = (s || '').toLowerCase()
   const cfg = { resolvido: 'var(--green)', 'em andamento': 'var(--amber)', aberto: 'var(--red)' }[sl] || 'var(--muted)'
@@ -86,6 +85,12 @@ function fmtData(d) { if (!d) return '—'; return new Date(d).toLocaleDateStrin
 function fmtKm(k) { if (!k && k !== 0) return '—'; return Number(k).toLocaleString('pt-BR') + ' km' }
 function addMeses(data, meses) { const d = new Date(data); d.setMonth(d.getMonth() + meses); return d.toISOString().split('T')[0] }
 
+function diasDiff(dataStr) {
+  const hoje = new Date(); hoje.setHours(0,0,0,0)
+  const d = new Date(dataStr); d.setHours(0,0,0,0)
+  return Math.round((d - hoje) / 86400000)
+}
+
 export default function Veiculos({ isAdmin = false }) {
   const [veiculos, setVeiculos] = useState([])
   const [colaboradores, setColaboradores] = useState([])
@@ -94,6 +99,9 @@ export default function Veiculos({ isAdmin = false }) {
   const [ocorrencias, setOcorrencias] = useState([])
   const [loading, setLoading] = useState(true)
   const [aba, setAba] = useState('veiculos')
+  const [mostrarRevisoes, setMostrarRevisoes] = useState(false)
+  const [filtroRevTipo, setFiltroRevTipo] = useState('todas')
+  const [filtroRevRegiao, setFiltroRevRegiao] = useState('todas')
   const [modalVeiculo, setModalVeiculo] = useState(false)
   const [editandoVeiculo, setEditandoVeiculo] = useState(null)
   const [modalSaida, setModalSaida] = useState(null)
@@ -129,7 +137,6 @@ export default function Veiculos({ isAdmin = false }) {
   }
 
   function toggleRegiao(r) { setRegioesFechadas(x => ({ ...x, [r]: !x[r] })) }
-
   function abrirNovoVeiculo() { setEditandoVeiculo(null); setErro(''); setFormV({ placa: '', modelo: '', marca: '', ano: '', cor: '', km_atual: '', intervalo_revisao_km: 10000, intervalo_revisao_meses: 6, regiao: '', modalidade: '', observacoes: '' }); setModalVeiculo(true) }
   function abrirEditarVeiculo(v) { setEditandoVeiculo(v); setErro(''); setFormV({ placa: v.placa, modelo: v.modelo, marca: v.marca || '', ano: v.ano || '', cor: v.cor || '', km_atual: v.km_atual || '', intervalo_revisao_km: v.intervalo_revisao_km || 10000, intervalo_revisao_meses: v.intervalo_revisao_meses || 6, regiao: v.regiao || '', modalidade: v.modalidade || '', observacoes: v.observacoes || '' }); setModalVeiculo(true) }
 
@@ -210,11 +217,7 @@ export default function Veiculos({ isAdmin = false }) {
   async function salvarOcorrencia(veiculoId) {
     if (!formOc.tipo || !formOc.data_ocorrencia) return
     setSalvando(true)
-    const payload = {
-      veiculo_id: veiculoId, tipo: formOc.tipo, data_ocorrencia: formOc.data_ocorrencia,
-      descricao: formOc.descricao || null, valor: formOc.valor ? parseFloat(formOc.valor) : null,
-      status: 'aberto', colaborador_id: formOc.colaborador_id || null,
-    }
+    const payload = { veiculo_id: veiculoId, tipo: formOc.tipo, data_ocorrencia: formOc.data_ocorrencia, descricao: formOc.descricao || null, valor: formOc.valor ? parseFloat(formOc.valor) : null, status: 'aberto', colaborador_id: formOc.colaborador_id || null }
     const { error } = await supabase.from('ocorrencias_veiculos').insert(payload)
     if (error) { alert('Erro ao salvar: ' + error.message); setSalvando(false); return }
     setFormOc({ colaborador_id: '', tipo: '', data_ocorrencia: '', descricao: '', valor: '' })
@@ -235,15 +238,41 @@ export default function Veiculos({ isAdmin = false }) {
   async function excluirOcorrencia(id) { if (!confirm('Excluir esta ocorrência?')) return; await supabase.from('ocorrencias_veiculos').delete().eq('id', id); init() }
 
   const saidasAbertas = saidas.filter(s => !s.data_retorno)
-  const revisoesPendentes = veiculos.filter(v => {
+  const REGIOES = ['RMR', 'Araripina', 'Caruaru']
+
+  function veiculoPrecisaRevisao(v) {
     if (v.km_proxima_revisao && v.km_atual >= v.km_proxima_revisao - 500) return true
     if (v.data_proxima_revisao && new Date(v.data_proxima_revisao) <= new Date(Date.now() + 30 * 86400000)) return true
     return false
+  }
+
+  const revisoesPendentes = veiculos.filter(veiculoPrecisaRevisao)
+
+  function getStatusRevisao(v) {
+    const vencidaData = v.data_proxima_revisao && new Date(v.data_proxima_revisao) < new Date()
+    const vencidaKm = v.km_proxima_revisao && v.km_atual >= v.km_proxima_revisao
+    if (vencidaData || vencidaKm) return 'vencida'
+    return 'proxima'
+  }
+
+  function getTipoAlerta(v) {
+    const porData = v.data_proxima_revisao && new Date(v.data_proxima_revisao) <= new Date(Date.now() + 30 * 86400000)
+    const porKm = v.km_proxima_revisao && v.km_atual >= v.km_proxima_revisao - 500
+    if (porData && porKm) return 'ambos'
+    if (porData) return 'data'
+    return 'km'
+  }
+
+  const revisoesFiltradas = revisoesPendentes.filter(v => {
+    if (filtroRevTipo === 'vencida' && getStatusRevisao(v) !== 'vencida') return false
+    if (filtroRevTipo === 'proxima' && getStatusRevisao(v) !== 'proxima') return false
+    if (filtroRevTipo === 'data' && getTipoAlerta(v) === 'km') return false
+    if (filtroRevTipo === 'km' && getTipoAlerta(v) === 'data') return false
+    if (filtroRevRegiao !== 'todas' && v.regiao !== filtroRevRegiao) return false
+    return true
   })
 
   const trHover = { onMouseEnter: e => e.currentTarget.style.background = 'var(--subtle)', onMouseLeave: e => e.currentTarget.style.background = 'transparent' }
-
-  const REGIOES = ['RMR', 'Araripina', 'Caruaru']
 
   function renderVeiculoCard(v) {
     const pct = v.km_proxima_revisao ? ((v.km_atual - (v.km_proxima_revisao - v.intervalo_revisao_km)) / v.intervalo_revisao_km) * 100 : 0
@@ -294,14 +323,103 @@ export default function Veiculos({ isAdmin = false }) {
       </div>
 
       <div style={S.stats}>
-        {[['var(--blue)', veiculos.length, 'Veículos'], ['var(--green)', veiculos.filter(v => v.status === 'disponivel').length, 'Disponíveis'], ['var(--amber)', saidasAbertas.length, 'Em Uso'], ['var(--red)', revisoesPendentes.length, 'Revisão Próxima'], ['var(--purple)', ocorrencias.filter(o => (o.status||'').toLowerCase() === 'aberto').length, 'Ocorrências']].map(([cor, val, lbl]) => (
-          <div key={lbl} style={S.statCard(cor)}>
+        {[
+          ['var(--blue)', veiculos.length, 'Veículos', false],
+          ['var(--green)', veiculos.filter(v => v.status === 'disponivel').length, 'Disponíveis', false],
+          ['var(--amber)', saidasAbertas.length, 'Em Uso', false],
+          ['var(--red)', revisoesPendentes.length, 'Revisão Próxima', true],
+          ['var(--purple)', ocorrencias.filter(o => (o.status||'').toLowerCase() === 'aberto').length, 'Ocorrências', false],
+        ].map(([cor, val, lbl, clickable]) => (
+          <div key={lbl} style={{ ...S.statCard(cor, clickable), border: clickable && mostrarRevisoes ? `1px solid ${cor}` : '1px solid var(--border)' }}
+            onClick={() => clickable && setMostrarRevisoes(x => !x)}>
             <div style={S.statVal(cor)}>{val}</div>
             <div style={S.statLbl}>{lbl}</div>
+            {clickable && <div style={S.statHint}>{mostrarRevisoes ? '▲ ocultar' : '▼ ver detalhes'}</div>}
             <div style={S.statBar(cor)} />
           </div>
         ))}
       </div>
+
+      {/* PAINEL REVISÕES PRÓXIMAS */}
+      {mostrarRevisoes && (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', marginBottom: 22, boxShadow: '0 2px 12px var(--shadow)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                Revisões Próximas / Vencidas
+                <span style={{ background: 'var(--red-dim)', color: 'var(--red)', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700 }}>{revisoesPendentes.length}</span>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>Veículos que precisam de atenção nos próximos 30 dias ou já ultrapassaram o prazo</div>
+            </div>
+          </div>
+
+          {/* FILTROS */}
+          <div style={{ display: 'flex', gap: 6, padding: '10px 20px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap', alignItems: 'center' }}>
+            {[['todas', `Todas (${revisoesPendentes.length})`], ['vencida', 'Vencidas'], ['proxima', 'Próximas'], ['data', 'Por data'], ['km', 'Por KM']].map(([val, lbl]) => (
+              <button key={val} onClick={() => setFiltroRevTipo(val)} style={{ padding: '4px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: '1px solid', fontFamily: 'inherit', background: filtroRevTipo === val ? 'var(--red-dim)' : 'var(--subtle)', color: filtroRevTipo === val ? 'var(--red)' : 'var(--text2)', borderColor: filtroRevTipo === val ? 'rgba(239,68,68,.25)' : 'var(--border2)' }}>{lbl}</button>
+            ))}
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+              <span style={{ fontSize: 11, color: 'var(--muted)' }}>Região:</span>
+              {['todas', ...REGIOES].map(r => (
+                <button key={r} onClick={() => setFiltroRevRegiao(r)} style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: '1px solid', fontFamily: 'inherit', background: filtroRevRegiao === r ? 'var(--blue-dim)' : 'var(--subtle)', color: filtroRevRegiao === r ? 'var(--blue)' : 'var(--text2)', borderColor: filtroRevRegiao === r ? 'rgba(59,130,246,.2)' : 'var(--border2)' }}>{r === 'todas' ? 'Todas' : r}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* LISTA */}
+          {revisoesFiltradas.length === 0 ? (
+            <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Nenhum veículo para o filtro selecionado.</div>
+          ) : (
+            <table style={S.table}>
+              <thead>
+                <tr>
+                  <th style={S.th}>Veículo</th>
+                  <th style={S.th}>Próxima Data</th>
+                  <th style={S.th}>Próxima KM</th>
+                  <th style={S.th}>Status</th>
+                  {isAdmin && <th style={S.th}></th>}
+                </tr>
+              </thead>
+              <tbody>
+                {revisoesFiltradas.map(v => {
+                  const status = getStatusRevisao(v)
+                  const dias = v.data_proxima_revisao ? diasDiff(v.data_proxima_revisao) : null
+                  const kmFalta = v.km_proxima_revisao ? v.km_proxima_revisao - v.km_atual : null
+                  return (
+                    <tr key={v.id} {...trHover}>
+                      <td style={S.td}>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, fontWeight: 500, color: 'var(--blue)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {v.placa} {v.modalidade && badgeSm(v.modalidade, v.modalidade === 'Frota' ? 'var(--teal)' : 'var(--blue)')}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{v.marca} {v.modelo} {v.regiao && `· ${v.regiao}`}</div>
+                      </td>
+                      <td style={S.td}>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, fontWeight: 500, color: dias !== null && dias <= 0 ? 'var(--red)' : dias !== null && dias <= 30 ? 'var(--amber)' : 'var(--text2)' }}>{fmtData(v.data_proxima_revisao)}</div>
+                        {dias !== null && <div style={{ fontSize: 10, color: dias <= 0 ? 'var(--red)' : 'var(--amber)', marginTop: 2 }}>{dias <= 0 ? `${Math.abs(dias)} dias vencida` : `em ${dias} dias`}</div>}
+                      </td>
+                      <td style={S.td}>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, fontWeight: 500, color: kmFalta !== null && kmFalta <= 500 ? 'var(--amber)' : 'var(--text2)' }}>{fmtKm(v.km_proxima_revisao)}</div>
+                        {kmFalta !== null && <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>faltam {fmtKm(kmFalta)}</div>}
+                      </td>
+                      <td style={S.td}>
+                        <span style={{ background: status === 'vencida' ? 'var(--red-dim)' : 'var(--amber-dim)', color: status === 'vencida' ? 'var(--red)' : 'var(--amber)', padding: '3px 9px', borderRadius: 6, fontSize: 11, fontWeight: 600 }}>
+                          {status === 'vencida' ? '● Vencida' : '● Próxima'}
+                        </span>
+                      </td>
+                      {isAdmin && (
+                        <td style={S.td}>
+                          <button style={S.btnBlue} onClick={() => { setModalRevisao(v); setEditandoRevisao(null); setFormRev({ tipo: '', data_revisao: new Date().toISOString().split('T')[0], km_revisao: v.km_atual || '', oficina: '', numero_chamado: '', responsavel_id: '', descricao: '' }) }}>+ Revisão</button>
+                        </td>
+                      )}
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
 
       <div style={S.tabs}>
         {[['veiculos','Veículos'],['saidas','Saídas/Retornos'],['revisoes','Revisões'],['ocorrencias','Ocorrências']].map(([id, lbl]) => (
@@ -320,11 +438,7 @@ export default function Veiculos({ isAdmin = false }) {
             if (lista.length === 0) return null
             const isSem = regiao === 'Sem região'
             const fechado = regioesFechadas[regiao]
-            const revPend = lista.filter(v => {
-              if (v.km_proxima_revisao && v.km_atual >= v.km_proxima_revisao - 500) return true
-              if (v.data_proxima_revisao && new Date(v.data_proxima_revisao) <= new Date(Date.now() + 30*86400000)) return true
-              return false
-            })
+            const revPend = lista.filter(veiculoPrecisaRevisao)
             return (
               <div key={regiao} style={{ marginBottom: 28 }}>
                 <div onClick={() => toggleRegiao(regiao)} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: fechado ? 0 : 12, cursor: 'pointer', userSelect: 'none' }}>
@@ -505,10 +619,7 @@ export default function Veiculos({ isAdmin = false }) {
               <div style={S.field}><label style={S.label}>KM Retorno</label><input type="number" style={S.input} value={formRet.km_retorno} onChange={e => setFormRet({ ...formRet, km_retorno: e.target.value })} /></div>
             </div>
             <div style={S.field}><label style={S.label}>Observações</label><textarea style={S.textarea} value={formRet.observacoes} onChange={e => setFormRet({ ...formRet, observacoes: e.target.value })} /></div>
-            <div style={S.proxBox}>
-              <div style={S.proxLbl}>Ao salvar:</div>
-              <div style={{ fontSize: 12, color: 'var(--blue)' }}>✓ KM atual atualizado · ✓ Status volta para Disponível</div>
-            </div>
+            <div style={S.proxBox}><div style={S.proxLbl}>Ao salvar:</div><div style={{ fontSize: 12, color: 'var(--blue)' }}>✓ KM atual atualizado · ✓ Status volta para Disponível</div></div>
             <div style={S.row}><button style={S.btnSm} onClick={() => setModalRetorno(null)}>Cancelar</button><button style={S.btn} onClick={() => salvarRetorno(modalRetorno)} disabled={salvando}>{salvando ? 'Salvando...' : 'Registrar Retorno'}</button></div>
           </div>
         </div>
@@ -524,9 +635,7 @@ export default function Veiculos({ isAdmin = false }) {
                 <option value="">Selecione...</option><option>Preventiva</option><option>Corretiva</option>
               </select>
             </div>
-            {formRev.tipo === 'Corretiva' && (
-              <div style={S.infoBoxWarn}>⚠ Revisão corretiva não altera a data/km da próxima preventiva agendada.</div>
-            )}
+            {formRev.tipo === 'Corretiva' && <div style={S.infoBoxWarn}>⚠ Revisão corretiva não altera a data/km da próxima preventiva agendada.</div>}
             <div style={S.fieldRow}>
               <div style={S.field}><label style={S.label}>Data *</label><input type="date" style={S.input} value={formRev.data_revisao} onChange={e => setFormRev({ ...formRev, data_revisao: e.target.value })} /></div>
               <div style={S.field}><label style={S.label}>KM na Revisão</label><input type="number" style={S.input} value={formRev.km_revisao} onChange={e => setFormRev({ ...formRev, km_revisao: e.target.value })} /></div>
@@ -560,9 +669,7 @@ export default function Veiculos({ isAdmin = false }) {
             <div style={S.field}><label style={S.label}>Tipo *</label>
               <select style={S.fsel} value={formOc.tipo} onChange={e => setFormOc({ ...formOc, tipo: e.target.value })}>
                 <option value="">Selecione...</option>
-                <option>Auto de Infração (Multa)</option>
-                <option>Acidente</option>
-                <option>Avaria Identificada</option>
+                <option>Auto de Infração (Multa)</option><option>Acidente</option><option>Avaria Identificada</option>
               </select>
             </div>
             <div style={S.fieldRow}>
@@ -588,9 +695,7 @@ export default function Veiculos({ isAdmin = false }) {
             {modalOcorrenciaDetalhe.descricao && <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 16, background: 'var(--surface2)', borderRadius: 6, padding: '8px 12px' }}>{modalOcorrenciaDetalhe.descricao}</div>}
             <div style={S.field}><label style={S.label}>Status</label>
               <select style={S.fsel} value={formOcDet.status} onChange={e => setFormOcDet({ ...formOcDet, status: e.target.value })}>
-                <option value="aberto">Aberto</option>
-                <option value="em andamento">Em andamento</option>
-                <option value="resolvido">Resolvido</option>
+                <option value="aberto">Aberto</option><option value="em andamento">Em andamento</option><option value="resolvido">Resolvido</option>
               </select>
             </div>
             <div style={S.field}><label style={S.label}>Autor identificado</label>
