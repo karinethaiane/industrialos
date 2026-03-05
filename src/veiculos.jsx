@@ -84,12 +84,7 @@ function ocBadge(s) {
 function fmtData(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) }
 function fmtKm(k) { if (!k && k !== 0) return '—'; return Number(k).toLocaleString('pt-BR') + ' km' }
 function addMeses(data, meses) { const d = new Date(data); d.setMonth(d.getMonth() + meses); return d.toISOString().split('T')[0] }
-
-function diasDiff(dataStr) {
-  const hoje = new Date(); hoje.setHours(0,0,0,0)
-  const d = new Date(dataStr); d.setHours(0,0,0,0)
-  return Math.round((d - hoje) / 86400000)
-}
+function diasDiff(dataStr) { const hoje = new Date(); hoje.setHours(0,0,0,0); const d = new Date(dataStr); d.setHours(0,0,0,0); return Math.round((d - hoje) / 86400000) }
 
 export default function Veiculos({ isAdmin = false }) {
   const [veiculos, setVeiculos] = useState([])
@@ -102,6 +97,8 @@ export default function Veiculos({ isAdmin = false }) {
   const [mostrarRevisoes, setMostrarRevisoes] = useState(false)
   const [filtroRevTipo, setFiltroRevTipo] = useState('todas')
   const [filtroRevRegiao, setFiltroRevRegiao] = useState('todas')
+  const [filtroRevVeiculo, setFiltroRevVeiculo] = useState('')
+  const [filtroRevTipoAba, setFiltroRevTipoAba] = useState('')
   const [modalVeiculo, setModalVeiculo] = useState(false)
   const [editandoVeiculo, setEditandoVeiculo] = useState(null)
   const [modalSaida, setModalSaida] = useState(null)
@@ -272,6 +269,12 @@ export default function Veiculos({ isAdmin = false }) {
     return true
   })
 
+  const revisoesFiltradas2 = revisoes.filter(r => {
+    if (filtroRevVeiculo && r.veiculo_id !== filtroRevVeiculo) return false
+    if (filtroRevTipoAba && r.tipo !== filtroRevTipoAba) return false
+    return true
+  })
+
   const trHover = { onMouseEnter: e => e.currentTarget.style.background = 'var(--subtle)', onMouseLeave: e => e.currentTarget.style.background = 'transparent' }
 
   function renderVeiculoCard(v) {
@@ -340,7 +343,6 @@ export default function Veiculos({ isAdmin = false }) {
         ))}
       </div>
 
-      {/* PAINEL REVISÕES PRÓXIMAS */}
       {mostrarRevisoes && (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', marginBottom: 22, boxShadow: '0 2px 12px var(--shadow)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
@@ -353,8 +355,6 @@ export default function Veiculos({ isAdmin = false }) {
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>Veículos que precisam de atenção nos próximos 30 dias ou já ultrapassaram o prazo</div>
             </div>
           </div>
-
-          {/* FILTROS */}
           <div style={{ display: 'flex', gap: 6, padding: '10px 20px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap', alignItems: 'center' }}>
             {[['todas', `Todas (${revisoesPendentes.length})`], ['vencida', 'Vencidas'], ['proxima', 'Próximas'], ['data', 'Por data'], ['km', 'Por KM']].map(([val, lbl]) => (
               <button key={val} onClick={() => setFiltroRevTipo(val)} style={{ padding: '4px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: '1px solid', fontFamily: 'inherit', background: filtroRevTipo === val ? 'var(--red-dim)' : 'var(--subtle)', color: filtroRevTipo === val ? 'var(--red)' : 'var(--text2)', borderColor: filtroRevTipo === val ? 'rgba(239,68,68,.25)' : 'var(--border2)' }}>{lbl}</button>
@@ -366,18 +366,13 @@ export default function Veiculos({ isAdmin = false }) {
               ))}
             </div>
           </div>
-
-          {/* LISTA */}
           {revisoesFiltradas.length === 0 ? (
             <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Nenhum veículo para o filtro selecionado.</div>
           ) : (
             <table style={S.table}>
               <thead>
                 <tr>
-                  <th style={S.th}>Veículo</th>
-                  <th style={S.th}>Próxima Data</th>
-                  <th style={S.th}>Próxima KM</th>
-                  <th style={S.th}>Status</th>
+                  <th style={S.th}>Veículo</th><th style={S.th}>Próxima Data</th><th style={S.th}>Próxima KM</th><th style={S.th}>Status</th>
                   {isAdmin && <th style={S.th}></th>}
                 </tr>
               </thead>
@@ -492,31 +487,82 @@ export default function Veiculos({ isAdmin = false }) {
       )}
 
       {aba === 'revisoes' && (
-        <div style={S.tableWrap}><table style={S.table}>
-          <thead><tr>
-            <th style={S.th}>Veículo</th><th style={S.th}>Tipo</th><th style={S.th}>Data</th>
-            <th style={S.th}>KM</th><th style={S.th}>Próxima KM</th><th style={S.th}>Próxima Data</th>
-            <th style={S.th}>Oficina</th><th style={S.th}>Chamado</th><th style={S.th}>Responsável</th>
-            {isAdmin && <th style={S.th}></th>}
-          </tr></thead>
-          <tbody>
-            {revisoes.map(r => (
-              <tr key={r.id} {...trHover}>
-                <td style={{ ...S.td, color: 'var(--blue)', fontFamily: 'DM Mono, monospace', fontWeight: 500 }}>{r.veiculos?.placa}<div style={{ fontSize: 11, color: 'var(--muted)' }}>{r.veiculos?.modelo}</div></td>
-                <td style={S.td}><span style={{ background: r.tipo === 'Preventiva' ? 'var(--green-dim)' : 'var(--amber-dim)', color: r.tipo === 'Preventiva' ? 'var(--green)' : 'var(--amber)', padding: '2px 7px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{r.tipo}</span></td>
-                <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12 }}>{fmtData(r.data_revisao)}</td>
-                <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12 }}>{fmtKm(r.km_revisao)}</td>
-                <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12 }}>{fmtKm(r.km_proxima_revisao)}</td>
-                <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--amber)', fontWeight: 600 }}>{fmtData(r.data_proxima_revisao)}</td>
-                <td style={S.td}>{r.oficina || '—'}</td>
-                <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--purple)' }}>{r.numero_chamado || '—'}</td>
-                <td style={S.td}>{r.responsavel?.nome || '—'}</td>
-                {isAdmin && <td style={S.td}><div style={{ display: 'flex', gap: 4 }}><button style={S.btnSm} onClick={() => { setEditandoRevisao(r); const v = veiculos.find(x => x.id === r.veiculo_id); setModalRevisao(v); setFormRev({ tipo: r.tipo, data_revisao: r.data_revisao, km_revisao: r.km_revisao || '', oficina: r.oficina || '', numero_chamado: r.numero_chamado || '', responsavel_id: r.responsavel_id || '', descricao: r.descricao || '' }) }}>Editar</button><button style={S.btnDanger} onClick={() => excluirRevisao(r.id)}>✕</button></div></td>}
-              </tr>
+        <>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+              <select
+                style={{ background: filtroRevVeiculo ? 'var(--blue-dim)' : 'var(--surface2)', border: `1px solid ${filtroRevVeiculo ? 'rgba(59,130,246,.4)' : 'var(--border2)'}`, borderRadius: 7, padding: '8px 12px 8px 30px', color: filtroRevVeiculo ? 'var(--blue)' : 'var(--text)', fontSize: 13, outline: 'none', fontFamily: 'inherit', cursor: 'pointer', minWidth: 220 }}
+                value={filtroRevVeiculo}
+                onChange={e => setFiltroRevVeiculo(e.target.value)}
+              >
+                <option value="">Todos os veículos</option>
+                {veiculos.map(v => <option key={v.id} value={v.id}>{v.placa} · {v.marca} {v.modelo}</option>)}
+              </select>
+            </div>
+            {[['', 'Todos'], ['Preventiva', 'Preventiva'], ['Corretiva', 'Corretiva']].map(([val, lbl]) => (
+              <button key={val} onClick={() => setFiltroRevTipoAba(val)} style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: '1px solid', fontFamily: 'inherit', background: filtroRevTipoAba === val ? 'var(--blue-dim)' : 'var(--subtle)', color: filtroRevTipoAba === val ? 'var(--blue)' : 'var(--text2)', borderColor: filtroRevTipoAba === val ? 'rgba(59,130,246,.25)' : 'var(--border2)' }}>{lbl}</button>
             ))}
-            {revisoes.length === 0 && <tr><td colSpan={isAdmin ? 10 : 9} style={{ ...S.td, textAlign: 'center', padding: 40, color: 'var(--muted)' }}>Nenhuma revisão registrada.</td></tr>}
-          </tbody>
-        </table></div>
+            {(filtroRevVeiculo || filtroRevTipoAba) && (
+              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--muted)' }}>
+                Exibindo <span style={{ background: 'var(--blue-dim)', color: 'var(--blue)', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700 }}>{revisoesFiltradas2.length}</span> revisões
+                <button onClick={() => { setFiltroRevVeiculo(''); setFiltroRevTipoAba('') }} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 11, textDecoration: 'underline', fontFamily: 'inherit' }}>limpar</button>
+              </div>
+            )}
+          </div>
+
+          {filtroRevVeiculo && (() => {
+            const v = veiculos.find(x => x.id === filtroRevVeiculo)
+            if (!v) return null
+            const revDoVeiculo = revisoes.filter(r => r.veiculo_id === filtroRevVeiculo)
+            const prev = revDoVeiculo.filter(r => r.tipo === 'Preventiva').length
+            const corr = revDoVeiculo.filter(r => r.tipo === 'Corretiva').length
+            return (
+              <div style={{ background: 'var(--surface)', border: '1px solid rgba(59,130,246,.2)', borderRadius: 10, padding: '14px 18px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+                <div>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 16, fontWeight: 500, color: 'var(--blue)' }}>{v.placa}</div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{v.marca} {v.modelo} {v.ano && `· ${v.ano}`}</div>
+                </div>
+                {[['Total', revDoVeiculo.length, 'var(--text)'], ['Preventivas', prev, 'var(--green)'], ['Corretivas', corr, 'var(--amber)']].map(([lbl, val, cor]) => (
+                  <div key={lbl} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 7, padding: '8px 16px', textAlign: 'center' }}>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 18, fontWeight: 500, color: cor }}>{val}</div>
+                    <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginTop: 2 }}>{lbl}</div>
+                  </div>
+                ))}
+                <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 3 }}>Próxima revisão</div>
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--amber)', fontWeight: 500 }}>{fmtData(v.data_proxima_revisao)} · {fmtKm(v.km_proxima_revisao)}</div>
+                </div>
+              </div>
+            )
+          })()}
+
+          <div style={S.tableWrap}><table style={S.table}>
+            <thead><tr>
+              <th style={S.th}>Veículo</th><th style={S.th}>Tipo</th><th style={S.th}>Data</th>
+              <th style={S.th}>KM</th><th style={S.th}>Próxima KM</th><th style={S.th}>Próxima Data</th>
+              <th style={S.th}>Oficina</th><th style={S.th}>Chamado</th><th style={S.th}>Responsável</th>
+              {isAdmin && <th style={S.th}></th>}
+            </tr></thead>
+            <tbody>
+              {revisoesFiltradas2.map(r => (
+                <tr key={r.id} {...trHover}>
+                  <td style={{ ...S.td, color: 'var(--blue)', fontFamily: 'DM Mono, monospace', fontWeight: 500 }}>{r.veiculos?.placa}<div style={{ fontSize: 11, color: 'var(--muted)' }}>{r.veiculos?.modelo}</div></td>
+                  <td style={S.td}><span style={{ background: r.tipo === 'Preventiva' ? 'var(--green-dim)' : 'var(--amber-dim)', color: r.tipo === 'Preventiva' ? 'var(--green)' : 'var(--amber)', padding: '2px 7px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{r.tipo}</span></td>
+                  <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12 }}>{fmtData(r.data_revisao)}</td>
+                  <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12 }}>{fmtKm(r.km_revisao)}</td>
+                  <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12 }}>{fmtKm(r.km_proxima_revisao)}</td>
+                  <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--amber)', fontWeight: 600 }}>{fmtData(r.data_proxima_revisao)}</td>
+                  <td style={S.td}>{r.oficina || '—'}</td>
+                  <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--purple)' }}>{r.numero_chamado || '—'}</td>
+                  <td style={S.td}>{r.responsavel?.nome || '—'}</td>
+                  {isAdmin && <td style={S.td}><div style={{ display: 'flex', gap: 4 }}><button style={S.btnSm} onClick={() => { setEditandoRevisao(r); const v = veiculos.find(x => x.id === r.veiculo_id); setModalRevisao(v); setFormRev({ tipo: r.tipo, data_revisao: r.data_revisao, km_revisao: r.km_revisao || '', oficina: r.oficina || '', numero_chamado: r.numero_chamado || '', responsavel_id: r.responsavel_id || '', descricao: r.descricao || '' }) }}>Editar</button><button style={S.btnDanger} onClick={() => excluirRevisao(r.id)}>✕</button></div></td>}
+                </tr>
+              ))}
+              {revisoesFiltradas2.length === 0 && <tr><td colSpan={isAdmin ? 10 : 9} style={{ ...S.td, textAlign: 'center', padding: 40, color: 'var(--muted)' }}>Nenhuma revisão encontrada.</td></tr>}
+            </tbody>
+          </table></div>
+        </>
       )}
 
       {aba === 'ocorrencias' && (
