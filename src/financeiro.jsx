@@ -21,6 +21,7 @@ const S = {
   btnSm: { background: 'var(--subtle)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 6, padding: '4px 9px', fontSize: 11, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' },
   btnDanger: { background: 'var(--red-dim)', color: 'var(--red)', border: '1px solid transparent', borderRadius: 6, padding: '4px 8px', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' },
   btnObs: { background: 'rgba(167,139,250,.1)', color: '#a78bfa', border: '1px solid rgba(167,139,250,.2)', borderRadius: 6, padding: '4px 9px', fontSize: 11, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' },
+  btnDet: { background: 'var(--blue-dim)', color: 'var(--blue)', border: '1px solid rgba(59,130,246,.2)', borderRadius: 6, padding: '4px 9px', fontSize: 11, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' },
   tableWrap: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 6px var(--shadow)' },
   table: { width: '100%', borderCollapse: 'collapse' },
   th: { textAlign: 'left', padding: '11px 16px', fontSize: 10.5, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.08em', borderBottom: '1px solid var(--border)', background: 'var(--surface2)', whiteSpace: 'nowrap' },
@@ -28,6 +29,7 @@ const S = {
   modal: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, backdropFilter: 'blur(4px)' },
   modalBox: { background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 12, padding: 28, width: '90%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 32px var(--shadow)' },
   modalBoxSm: { background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 12, padding: 24, width: '90%', maxWidth: 420, boxShadow: '0 8px 32px var(--shadow)' },
+  modalBoxDet: { background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 14, padding: 28, width: '90%', maxWidth: 480, boxShadow: '0 8px 40px var(--shadow)' },
   modalTitle: { fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 18 },
   field: { display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 14 },
   fieldRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 },
@@ -41,47 +43,20 @@ const S = {
 }
 
 const STATUS_NF = ['Em execução', 'Concluído']
-
 const STATUS_PAG = ['em_andamento', 'ajustes', 'aguardando_desbloqueio', 'concluido', 'cancelado']
-const STATUS_PAG_LABEL = {
-  em_andamento: 'Em andamento',
-  ajustes: 'Ajustes',
-  aguardando_desbloqueio: 'Aguard. Desbloqueio',
-  concluido: 'Concluído',
-  cancelado: 'Cancelado',
-}
-const STATUS_PAG_COR = {
-  em_andamento: 'var(--blue)',
-  ajustes: 'var(--amber)',
-  aguardando_desbloqueio: 'var(--red)',
-  concluido: 'var(--green)',
-  cancelado: 'var(--muted)',
-}
-const STATUS_RESPONSAVEL = {
-  em_andamento: 'Financeiro',
-  ajustes: 'Solicitante',
-  aguardando_desbloqueio: 'Gerência',
-  concluido: 'Financeiro',
-  cancelado: 'Financeiro',
-}
-const RESPONSAVEL_COR = {
-  Financeiro: 'var(--blue)',
-  Solicitante: 'var(--amber)',
-  Gerência: 'var(--red)',
-}
+const STATUS_PAG_LABEL = { em_andamento: 'Em andamento', ajustes: 'Ajustes', aguardando_desbloqueio: 'Aguard. Desbloqueio', concluido: 'Concluído', cancelado: 'Cancelado' }
+const STATUS_PAG_COR = { em_andamento: 'var(--blue)', ajustes: 'var(--amber)', aguardando_desbloqueio: 'var(--red)', concluido: 'var(--green)', cancelado: 'var(--muted)' }
+const STATUS_RESPONSAVEL = { em_andamento: 'Financeiro', ajustes: 'Solicitante', aguardando_desbloqueio: 'Gerência', concluido: 'Financeiro', cancelado: 'Financeiro' }
+const RESPONSAVEL_COR = { Financeiro: 'var(--blue)', Solicitante: 'var(--amber)', Gerência: 'var(--red)' }
 
 function statusNfBadge(s) {
-  const cfg = {
-    'Em execução': ['var(--blue-dim)', 'var(--blue)'],
-    'Concluído': ['var(--green-dim)', 'var(--green)'],
-  }[s] || ['var(--subtle)', 'var(--muted)']
+  const cfg = { 'Em execução': ['var(--blue-dim)', 'var(--blue)'], 'Concluído': ['var(--green-dim)', 'var(--green)'] }[s] || ['var(--subtle)', 'var(--muted)']
   return <span style={{ background: cfg[0], color: cfg[1], padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>● {s}</span>
 }
 
 function statusPagBadge(s) {
   const cor = STATUS_PAG_COR[s] || 'var(--muted)'
-  const label = STATUS_PAG_LABEL[s] || s
-  return <span style={{ background: `${cor}18`, color: cor, padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>● {label}</span>
+  return <span style={{ background: `${cor}18`, color: cor, padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>● {STATUS_PAG_LABEL[s] || s}</span>
 }
 
 function responsavelBadge(s) {
@@ -103,21 +78,14 @@ export default function Financeiro({ isAdmin = false }) {
   const [modalNF, setModalNF] = useState(false)
   const [modalPag, setModalPag] = useState(false)
   const [modalObs, setModalObs] = useState(null)
+  const [modalDet, setModalDet] = useState(null)
   const [editandoNF, setEditandoNF] = useState(null)
   const [editandoPag, setEditandoPag] = useState(null)
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
 
-  const [formNF, setFormNF] = useState({
-    id_sgt: '', empresa: '', status_sgt: 'Em execução', data_conclusao_sgt: '',
-    consultor: '', nf_boleto_enviado: false, data_solicitacao_envio: '',
-    numero_nf: '', valor_parcela: '', numero_parcelas: 1, observacoes: ''
-  })
-  const [formPag, setFormPag] = useState({
-    numero_chamado: '', tipo_tarefa: 'Solicitação de Pagamento', solicitante: '',
-    numero_nf_boleto_al: '', descricao: '', razao_social: '',
-    status: 'em_andamento', valor: '', previsao_pagamento: '', observacoes: ''
-  })
+  const [formNF, setFormNF] = useState({ id_sgt: '', empresa: '', status_sgt: 'Em execução', data_conclusao_sgt: '', consultor: '', nf_boleto_enviado: false, data_solicitacao_envio: '', numero_nf: '', valor_parcela: '', numero_parcelas: 1, observacoes: '' })
+  const [formPag, setFormPag] = useState({ numero_chamado: '', tipo_tarefa: 'Solicitação de Pagamento', solicitante: '', numero_nf_boleto_al: '', descricao: '', razao_social: '', status: 'em_andamento', valor: '', previsao_pagamento: '', observacoes: '' })
 
   useEffect(() => { init() }, [])
 
@@ -132,46 +100,17 @@ export default function Financeiro({ isAdmin = false }) {
     setLoading(false)
   }
 
-  function abrirNovoNF() {
-    setEditandoNF(null); setErro('')
-    setFormNF({ id_sgt: '', empresa: '', status_sgt: 'Em execução', data_conclusao_sgt: '', consultor: '', nf_boleto_enviado: false, data_solicitacao_envio: '', numero_nf: '', valor_parcela: '', numero_parcelas: 1, observacoes: '' })
-    setModalNF(true)
-  }
-
-  function abrirEditarNF(r) {
-    setEditandoNF(r); setErro('')
-    setFormNF({ id_sgt: r.id_sgt, empresa: r.empresa, status_sgt: r.status_sgt || 'Em execução', data_conclusao_sgt: r.data_conclusao_sgt || '', consultor: r.consultor || '', nf_boleto_enviado: r.nf_boleto_enviado || false, data_solicitacao_envio: r.data_solicitacao_envio || '', numero_nf: r.numero_nf || '', valor_parcela: r.valor_parcela || '', numero_parcelas: r.numero_parcelas || 1, observacoes: r.observacoes || '' })
-    setModalNF(true)
-  }
-
-  function abrirNovoPag() {
-    setEditandoPag(null); setErro('')
-    setFormPag({ numero_chamado: '', tipo_tarefa: 'Solicitação de Pagamento', solicitante: '', numero_nf_boleto_al: '', descricao: '', razao_social: '', status: 'em_andamento', observacoes: '' })
-    setModalPag(true)
-  }
-
-  function abrirEditarPag(r) {
-    setEditandoPag(r); setErro('')
-setFormPag({ numero_chamado: r.numero_chamado, tipo_tarefa: r.tipo_tarefa || 'Solicitação de Pagamento', solicitante: r.solicitante || '', numero_nf_boleto_al: r.numero_nf_boleto_al || '', descricao: r.descricao || '', razao_social: r.razao_social || '', status: r.status || 'em_andamento', valor: r.valor || '', previsao_pagamento: r.previsao_pagamento || '', observacoes: r.observacoes || '' })
-    setModalPag(true)
-  }
+  function abrirNovoNF() { setEditandoNF(null); setErro(''); setFormNF({ id_sgt: '', empresa: '', status_sgt: 'Em execução', data_conclusao_sgt: '', consultor: '', nf_boleto_enviado: false, data_solicitacao_envio: '', numero_nf: '', valor_parcela: '', numero_parcelas: 1, observacoes: '' }); setModalNF(true) }
+  function abrirEditarNF(r) { setEditandoNF(r); setErro(''); setFormNF({ id_sgt: r.id_sgt, empresa: r.empresa, status_sgt: r.status_sgt || 'Em execução', data_conclusao_sgt: r.data_conclusao_sgt || '', consultor: r.consultor || '', nf_boleto_enviado: r.nf_boleto_enviado || false, data_solicitacao_envio: r.data_solicitacao_envio || '', numero_nf: r.numero_nf || '', valor_parcela: r.valor_parcela || '', numero_parcelas: r.numero_parcelas || 1, observacoes: r.observacoes || '' }); setModalNF(true) }
+  function abrirNovoPag() { setEditandoPag(null); setErro(''); setFormPag({ numero_chamado: '', tipo_tarefa: 'Solicitação de Pagamento', solicitante: '', numero_nf_boleto_al: '', descricao: '', razao_social: '', status: 'em_andamento', valor: '', previsao_pagamento: '', observacoes: '' }); setModalPag(true) }
+  function abrirEditarPag(r) { setEditandoPag(r); setErro(''); setFormPag({ numero_chamado: r.numero_chamado, tipo_tarefa: r.tipo_tarefa || 'Solicitação de Pagamento', solicitante: r.solicitante || '', numero_nf_boleto_al: r.numero_nf_boleto_al || '', descricao: r.descricao || '', razao_social: r.razao_social || '', status: r.status || 'em_andamento', valor: r.valor || '', previsao_pagamento: r.previsao_pagamento || '', observacoes: r.observacoes || '' }); setModalPag(true) }
 
   async function salvarNF() {
     if (!formNF.id_sgt || !formNF.empresa) { setErro('ID SGT e Empresa são obrigatórios.'); return }
     setSalvando(true); setErro('')
     const parcelas = parseInt(formNF.numero_parcelas) || 1
     const valorParcela = parseFloat(formNF.valor_parcela) || 0
-    const dados = {
-      id_sgt: formNF.id_sgt.trim(), empresa: formNF.empresa.trim(),
-      status_sgt: formNF.status_sgt, data_conclusao_sgt: formNF.data_conclusao_sgt || null,
-      consultor: formNF.consultor || null, nf_boleto_enviado: formNF.nf_boleto_enviado,
-      data_solicitacao_envio: formNF.data_solicitacao_envio || null,
-      numero_nf: formNF.numero_nf || null,
-      valor_parcela: valorParcela,
-      numero_parcelas: parcelas,
-      valor_total: valorParcela * parcelas,
-      observacoes: formNF.observacoes || null
-    }
+    const dados = { id_sgt: formNF.id_sgt.trim(), empresa: formNF.empresa.trim(), status_sgt: formNF.status_sgt, data_conclusao_sgt: formNF.data_conclusao_sgt || null, consultor: formNF.consultor || null, nf_boleto_enviado: formNF.nf_boleto_enviado, data_solicitacao_envio: formNF.data_solicitacao_envio || null, numero_nf: formNF.numero_nf || null, valor_parcela: valorParcela, numero_parcelas: parcelas, valor_total: valorParcela * parcelas, observacoes: formNF.observacoes || null }
     let error
     if (editandoNF) { ({ error } = await supabase.from('emissoes_nf').update(dados).eq('id', editandoNF.id)) }
     else { ({ error } = await supabase.from('emissoes_nf').insert(dados)) }
@@ -183,14 +122,7 @@ setFormPag({ numero_chamado: r.numero_chamado, tipo_tarefa: r.tipo_tarefa || 'So
   async function salvarPag() {
     if (!formPag.numero_chamado) { setErro('Número do chamado é obrigatório.'); return }
     setSalvando(true); setErro('')
-const dados = {
-      numero_chamado: formPag.numero_chamado.trim(), tipo_tarefa: formPag.tipo_tarefa,
-      solicitante: formPag.solicitante || null, numero_nf_boleto_al: formPag.numero_nf_boleto_al || null,
-      descricao: formPag.descricao || null, razao_social: formPag.razao_social || null,
-      status: formPag.status, valor: parseFloat(formPag.valor) || null,
-      previsao_pagamento: formPag.previsao_pagamento || null,
-      observacoes: formPag.observacoes || null
-    }   
+    const dados = { numero_chamado: formPag.numero_chamado.trim(), tipo_tarefa: formPag.tipo_tarefa, solicitante: formPag.solicitante || null, numero_nf_boleto_al: formPag.numero_nf_boleto_al || null, descricao: formPag.descricao || null, razao_social: formPag.razao_social || null, status: formPag.status, valor: parseFloat(formPag.valor) || null, previsao_pagamento: formPag.previsao_pagamento || null, observacoes: formPag.observacoes || null }
     let error
     if (editandoPag) { ({ error } = await supabase.from('solicitacoes_pagamento').update(dados).eq('id', editandoPag.id)) }
     else { ({ error } = await supabase.from('solicitacoes_pagamento').insert(dados)) }
@@ -217,7 +149,6 @@ const dados = {
   })
 
   const trHover = { onMouseEnter: e => e.currentTarget.style.background = 'var(--subtle)', onMouseLeave: e => e.currentTarget.style.background = 'transparent' }
-
   const valorTotalNFs = emissoes.reduce((acc, r) => acc + totalNF(r), 0)
   const totalParcelas = (parseFloat(formNF.valor_parcela) || 0) * (parseInt(formNF.numero_parcelas) || 1)
 
@@ -288,11 +219,7 @@ const dados = {
                   <td style={S.td}>{statusNfBadge(r.status_sgt)}</td>
                   <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12 }}>{fmtData(r.data_conclusao_sgt)}</td>
                   <td style={S.td}>{r.consultor || '—'}</td>
-                  <td style={S.td}>
-                    <span style={{ background: r.nf_boleto_enviado ? 'var(--green-dim)' : 'var(--red-dim)', color: r.nf_boleto_enviado ? 'var(--green)' : 'var(--red)', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>
-                      {r.nf_boleto_enviado ? 'SIM' : 'NÃO'}
-                    </span>
-                  </td>
+                  <td style={S.td}><span style={{ background: r.nf_boleto_enviado ? 'var(--green-dim)' : 'var(--red-dim)', color: r.nf_boleto_enviado ? 'var(--green)' : 'var(--red)', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{r.nf_boleto_enviado ? 'SIM' : 'NÃO'}</span></td>
                   <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12 }}>{fmtData(r.data_solicitacao_envio)}</td>
                   <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--purple)' }}>{r.numero_nf || '—'}</td>
                   <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12 }}>{fmtVal(r.valor_parcela)}</td>
@@ -316,9 +243,14 @@ const dados = {
           </div>
           <div style={S.tableWrap}><table style={S.table}>
             <thead><tr>
-              <th style={S.th}>Chamado</th><th style={S.th}>Tipo de Tarefa</th><th style={S.th}>Solicitante</th>
-              <th style={S.th}>Nº NF / Boleto / AL</th><th style={S.th}>Descrição</th><th style={S.th}>Razão Social</th>
-              <th style={S.th}>Status</th><th style={S.th}>Responsável</th>
+              <th style={S.th}>Chamado</th>
+              <th style={S.th}>Tipo de Tarefa</th>
+              <th style={S.th}>Solicitante</th>
+              <th style={S.th}>Nº NF / Boleto / AL</th>
+              <th style={S.th}>Razão Social</th>
+              <th style={S.th}>Status</th>
+              <th style={S.th}>Responsável</th>
+              <th style={S.th}>Valor / Previsão</th>
               {isAdmin && <th style={S.th}></th>}
             </tr></thead>
             <tbody>
@@ -328,13 +260,25 @@ const dados = {
                   <td style={S.td}>{r.tipo_tarefa}</td>
                   <td style={S.td}>{r.solicitante || '—'}</td>
                   <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--purple)' }}>{r.numero_nf_boleto_al || '—'}</td>
-                  <td style={{ ...S.td, maxWidth: 180, fontSize: 12 }}>{r.descricao || '—'}</td>
                   <td style={{ ...S.td, color: 'var(--text)', fontWeight: 500, maxWidth: 180 }}>{r.razao_social || '—'}</td>
                   <td style={S.td}>{statusPagBadge(r.status)}</td>
                   <td style={S.td}>{responsavelBadge(r.status)}</td>
+                  <td style={S.td}>
+                    {r.valor ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 12.5, color: 'var(--green)', fontWeight: 500 }}>{fmtVal(r.valor)}</span>
+                        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: r.previsao_pagamento ? 'var(--muted)' : 'var(--border2)' }}>
+                          {r.previsao_pagamento ? `Prev. ${fmtData(r.previsao_pagamento)}` : 'Sem previsão'}
+                        </span>
+                      </div>
+                    ) : (
+                      <span style={{ color: 'var(--border2)', fontSize: 12 }}>—</span>
+                    )}
+                  </td>
                   {isAdmin && (
                     <td style={S.td}>
                       <div style={{ display: 'flex', gap: 4 }}>
+                        <button style={S.btnDet} onClick={() => setModalDet(r)}>Detalhes</button>
                         {r.observacoes && <button style={S.btnObs} onClick={() => setModalObs(r)}>Obs.</button>}
                         <button style={S.btnSm} onClick={() => abrirEditarPag(r)}>Editar</button>
                         <button style={S.btnDanger} onClick={() => excluirPag(r.id)}>✕</button>
@@ -349,6 +293,64 @@ const dados = {
         </>
       )}
 
+      {/* MODAL DETALHES */}
+      {modalDet && (
+        <div style={S.modal} onClick={e => e.target === e.currentTarget && setModalDet(null)}>
+          <div style={S.modalBoxDet}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>Detalhes da Solicitação</div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--blue)', fontWeight: 500 }}>Chamado #{modalDet.numero_chamado}</div>
+              </div>
+              <button onClick={() => setModalDet(null)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 22, lineHeight: 1, padding: 0 }}>×</button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 5 }}>Solicitante</div>
+                <div style={{ fontSize: 13, color: 'var(--text)' }}>{modalDet.solicitante || '—'}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 5 }}>Nº NF / Boleto / AL</div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: '#a78bfa' }}>{modalDet.numero_nf_boleto_al || '—'}</div>
+              </div>
+              <div style={{ gridColumn: 'span 2' }}>
+                <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 5 }}>Razão Social</div>
+                <div style={{ fontSize: 13, color: 'var(--text)' }}>{modalDet.razao_social || '—'}</div>
+              </div>
+            </div>
+
+            <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 8 }}>Descrição</div>
+            <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px', fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 16 }}>
+              {modalDet.descricao || '—'}
+            </div>
+
+            <div style={{ background: 'linear-gradient(135deg, rgba(59,130,246,.07), rgba(6,182,212,.04))', border: '1px solid rgba(59,130,246,.2)', borderRadius: 10, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 6 }}>Valor</div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 22, fontWeight: 500, color: 'var(--blue)' }}>{fmtVal(modalDet.valor)}</div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>
+                  {modalDet.previsao_pagamento ? `Previsão: ${fmtData(modalDet.previsao_pagamento)}` : 'Sem previsão de pagamento'}
+                </div>
+              </div>
+              <div>{statusPagBadge(modalDet.status)}</div>
+            </div>
+
+            {modalDet.observacoes && (
+              <div style={{ background: 'rgba(167,139,250,.06)', border: '1px solid rgba(167,139,250,.2)', borderRadius: 8, padding: '12px 14px', marginTop: 14 }}>
+                <div style={{ fontSize: 10, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 6 }}>Observações</div>
+                <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6 }}>{modalDet.observacoes}</div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
+              <button style={S.btnSm} onClick={() => setModalDet(null)}>Fechar</button>
+              {isAdmin && <button style={S.btn} onClick={() => { setModalDet(null); abrirEditarPag(modalDet) }}>Editar</button>}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL OBSERVAÇÕES */}
       {modalObs && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setModalObs(null)}>
@@ -360,15 +362,9 @@ const dados = {
               </div>
               <button onClick={() => setModalObs(null)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: 0 }}>×</button>
             </div>
-            {modalObs.observacoes ? (
-              <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px', fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-                {modalObs.observacoes}
-              </div>
-            ) : (
-              <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '20px 14px', fontSize: 13, color: 'var(--muted)', textAlign: 'center' }}>
-                Nenhuma observação registrada.
-              </div>
-            )}
+            <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px', fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+              {modalObs.observacoes}
+            </div>
             <div style={{ marginTop: 14, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               {statusPagBadge(modalObs.status)}
               {responsavelBadge(modalObs.status)}
@@ -385,34 +381,21 @@ const dados = {
             {erro && <div style={S.erro}>{erro}</div>}
             <div style={S.fieldRow}>
               <div style={S.field}><label style={S.label}>ID SGT *</label><input style={S.input} value={formNF.id_sgt} onChange={e => setFormNF({ ...formNF, id_sgt: e.target.value })} placeholder="713154" /></div>
-              <div style={S.field}><label style={S.label}>Status SGT</label>
-                <select style={S.fsel} value={formNF.status_sgt} onChange={e => setFormNF({ ...formNF, status_sgt: e.target.value })}>
-                  {STATUS_NF.map(s => <option key={s}>{s}</option>)}
-                </select>
-              </div>
+              <div style={S.field}><label style={S.label}>Status SGT</label><select style={S.fsel} value={formNF.status_sgt} onChange={e => setFormNF({ ...formNF, status_sgt: e.target.value })}>{STATUS_NF.map(s => <option key={s}>{s}</option>)}</select></div>
             </div>
-            <div style={S.field}><label style={S.label}>Empresa *</label><input style={S.input} value={formNF.empresa} onChange={e => setFormNF({ ...formNF, empresa: e.target.value })} placeholder="Razão social ou nome" /></div>
+            <div style={S.field}><label style={S.label}>Empresa *</label><input style={S.input} value={formNF.empresa} onChange={e => setFormNF({ ...formNF, empresa: e.target.value })} /></div>
             <div style={S.field}><label style={S.label}>Consultor</label><input style={S.input} value={formNF.consultor} onChange={e => setFormNF({ ...formNF, consultor: e.target.value })} /></div>
             <div style={S.fieldRow}>
               <div style={S.field}><label style={S.label}>Data Conclusão SGT</label><input type="date" style={S.input} value={formNF.data_conclusao_sgt} onChange={e => setFormNF({ ...formNF, data_conclusao_sgt: e.target.value })} /></div>
               <div style={S.field}><label style={S.label}>Data Solicitação Envio</label><input type="date" style={S.input} value={formNF.data_solicitacao_envio} onChange={e => setFormNF({ ...formNF, data_solicitacao_envio: e.target.value })} /></div>
             </div>
-            <div style={S.field}><label style={S.label}>NF e Boleto Enviados?</label>
-              <select style={S.fsel} value={formNF.nf_boleto_enviado ? 'sim' : 'nao'} onChange={e => setFormNF({ ...formNF, nf_boleto_enviado: e.target.value === 'sim' })}>
-                <option value="nao">NÃO</option><option value="sim">SIM</option>
-              </select>
-            </div>
+            <div style={S.field}><label style={S.label}>NF e Boleto Enviados?</label><select style={S.fsel} value={formNF.nf_boleto_enviado ? 'sim' : 'nao'} onChange={e => setFormNF({ ...formNF, nf_boleto_enviado: e.target.value === 'sim' })}><option value="nao">NÃO</option><option value="sim">SIM</option></select></div>
             <div style={S.fieldRow}>
-              <div style={S.field}><label style={S.label}>Nº NF</label><input style={S.input} value={formNF.numero_nf} onChange={e => setFormNF({ ...formNF, numero_nf: e.target.value })} placeholder="NF-2026-001" /></div>
+              <div style={S.field}><label style={S.label}>Nº NF</label><input style={S.input} value={formNF.numero_nf} onChange={e => setFormNF({ ...formNF, numero_nf: e.target.value })} /></div>
               <div style={S.field}><label style={S.label}>Nº de Parcelas</label><input type="number" min="1" style={S.input} value={formNF.numero_parcelas} onChange={e => setFormNF({ ...formNF, numero_parcelas: e.target.value })} /></div>
             </div>
             <div style={S.field}><label style={S.label}>Valor por Parcela (R$)</label><input type="number" step="0.01" style={S.input} value={formNF.valor_parcela} onChange={e => setFormNF({ ...formNF, valor_parcela: e.target.value })} placeholder="0,00" /></div>
-            {totalParcelas > 0 && (
-              <div style={S.totalBox}>
-                <span style={{ fontSize: 12, color: 'var(--blue)', fontWeight: 600 }}>Valor total do serviço</span>
-                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 16, fontWeight: 600, color: 'var(--blue)' }}>{fmtVal(totalParcelas)}</span>
-              </div>
-            )}
+            {totalParcelas > 0 && <div style={S.totalBox}><span style={{ fontSize: 12, color: 'var(--blue)', fontWeight: 600 }}>Valor total do serviço</span><span style={{ fontFamily: 'DM Mono, monospace', fontSize: 16, fontWeight: 600, color: 'var(--blue)' }}>{fmtVal(totalParcelas)}</span></div>}
             <div style={S.field}><label style={S.label}>Observações</label><textarea style={S.textarea} value={formNF.observacoes} onChange={e => setFormNF({ ...formNF, observacoes: e.target.value })} /></div>
             <div style={S.row}><button style={S.btnSm} onClick={() => setModalNF(false)}>Cancelar</button><button style={S.btn} onClick={salvarNF} disabled={salvando}>{salvando ? 'Salvando...' : 'Salvar'}</button></div>
           </div>
@@ -427,11 +410,7 @@ const dados = {
             {erro && <div style={S.erro}>{erro}</div>}
             <div style={S.fieldRow}>
               <div style={S.field}><label style={S.label}>Nº Chamado *</label><input style={S.input} value={formPag.numero_chamado} onChange={e => setFormPag({ ...formPag, numero_chamado: e.target.value })} placeholder="1346676" /></div>
-              <div style={S.field}><label style={S.label}>Status</label>
-                <select style={S.fsel} value={formPag.status} onChange={e => setFormPag({ ...formPag, status: e.target.value })}>
-                  {STATUS_PAG.map(s => <option key={s} value={s}>{STATUS_PAG_LABEL[s]}</option>)}
-                </select>
-              </div>
+              <div style={S.field}><label style={S.label}>Status</label><select style={S.fsel} value={formPag.status} onChange={e => setFormPag({ ...formPag, status: e.target.value })}>{STATUS_PAG.map(s => <option key={s} value={s}>{STATUS_PAG_LABEL[s]}</option>)}</select></div>
             </div>
             <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 7, padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 12, color: 'var(--muted)' }}>Responsável atual</span>
@@ -445,9 +424,9 @@ const dados = {
             </div>
             <div style={S.field}><label style={S.label}>Descrição</label><textarea style={S.textarea} value={formPag.descricao} onChange={e => setFormPag({ ...formPag, descricao: e.target.value })} /></div>
             <div style={S.fieldRow}>
-  <div style={S.field}><label style={S.label}>Valor (R$)</label><input type="number" step="0.01" style={S.input} value={formPag.valor} onChange={e => setFormPag({ ...formPag, valor: e.target.value })} placeholder="0,00" /></div>
-  <div style={S.field}><label style={S.label}>Previsão de Pagamento</label><input type="date" style={S.input} value={formPag.previsao_pagamento} onChange={e => setFormPag({ ...formPag, previsao_pagamento: e.target.value })} /></div>
-</div>
+              <div style={S.field}><label style={S.label}>Valor (R$)</label><input type="number" step="0.01" style={S.input} value={formPag.valor} onChange={e => setFormPag({ ...formPag, valor: e.target.value })} placeholder="0,00" /></div>
+              <div style={S.field}><label style={S.label}>Previsão de Pagamento</label><input type="date" style={S.input} value={formPag.previsao_pagamento} onChange={e => setFormPag({ ...formPag, previsao_pagamento: e.target.value })} /></div>
+            </div>
             <div style={S.field}><label style={S.label}>Observações</label><textarea style={S.textarea} value={formPag.observacoes} onChange={e => setFormPag({ ...formPag, observacoes: e.target.value })} /></div>
             <div style={S.row}><button style={S.btnSm} onClick={() => setModalPag(false)}>Cancelar</button><button style={S.btn} onClick={salvarPag} disabled={salvando}>{salvando ? 'Salvando...' : 'Salvar'}</button></div>
           </div>
