@@ -17,12 +17,19 @@ const ICONS = {
   sair: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
 }
 
+const navLabelStyle = {
+  fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap',
+  overflow: 'hidden', transition: 'opacity .15s .05s',
+  opacity: 0, pointerEvents: 'none',
+}
+
 export default function App() {
   const [session, setSession] = useState(null)
   const [perfil, setPerfil] = useState(null)
   const [loading, setLoading] = useState(true)
   const [pagina, setPagina] = useState('inicio')
   const [tema, setTema] = useState(() => localStorage.getItem('tema') || 'dark')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-tema', tema)
@@ -69,54 +76,85 @@ export default function App() {
     ...(isAdmin ? [{ id: 'colaboradores', label: 'Colaboradores', icon: ICONS.colaboradores }] : []),
   ]
 
-  const navBtn = (item) => ({
-    width: 40, height: 40, borderRadius: 10,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    cursor: 'pointer', border: 'none', transition: 'all .15s', position: 'relative',
-    color: pagina === item.id ? 'var(--blue)' : 'var(--muted)',
-    background: pagina === item.id ? 'var(--blue-dim)' : 'none',
-  })
-
   const iconBtn = {
     width: 32, height: 32, borderRadius: 8,
     background: 'var(--subtle)', border: '1px solid var(--border)',
     color: 'var(--muted)', display: 'flex', alignItems: 'center',
-    justifyContent: 'center', cursor: 'pointer', transition: 'all .15s',
+    justifyContent: 'center', cursor: 'pointer', transition: 'all .15s', flexShrink: 0,
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '64px 1fr', minHeight: '100vh', fontFamily: 'DM Sans, sans-serif', background: 'var(--bg)', color: 'var(--text)' }}>
-      <aside style={{ background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100vh', position: 'sticky', top: 0, padding: '16px 0', boxShadow: '2px 0 12px var(--shadow)', zIndex: 10 }}>
+    <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'DM Sans, sans-serif', background: 'var(--bg)', color: 'var(--text)' }}>
 
-        <div style={{ width: 36, height: 36, background: 'linear-gradient(135deg,#3b82f6,#06b6d4)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, boxShadow: '0 0 18px rgba(59,130,246,.25)', flexShrink: 0 }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <aside
+        style={{
+          background: 'var(--surface)', borderRight: '1px solid var(--border)',
+          display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+          height: '100vh', position: 'sticky', top: 0, padding: '16px 0',
+          boxShadow: '2px 0 12px var(--shadow)', zIndex: 10,
+          width: sidebarOpen ? 210 : 64,
+          transition: 'width .25s cubic-bezier(.4,0,.2,1)',
+          overflow: 'hidden', flexShrink: 0,
+        }}
+        onMouseEnter={() => setSidebarOpen(true)}
+        onMouseLeave={() => setSidebarOpen(false)}
+      >
+        {/* Logo */}
+        <div style={{ paddingLeft: 14, marginBottom: 16, flexShrink: 0 }}>
+          <div style={{ width: 36, height: 36, background: 'linear-gradient(135deg,#3b82f6,#06b6d4)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 18px rgba(59,130,246,.25)', flexShrink: 0 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flex: 1, width: '100%', padding: '0 8px' }}>
+        {/* Nav */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1, width: '100%', padding: '0 8px' }}>
           {navItems.map(item => (
-            <button key={item.id} onClick={() => setPagina(item.id)} style={navBtn(item)}
-              onMouseEnter={e => { if (pagina !== item.id) e.currentTarget.style.background = 'var(--subtle)'; e.currentTarget.querySelector('.tip').style.opacity = '1' }}
-              onMouseLeave={e => { if (pagina !== item.id) e.currentTarget.style.background = 'none'; e.currentTarget.querySelector('.tip').style.opacity = '0' }}>
-              {item.icon}
-              <span className="tip" style={{ position: 'absolute', left: 52, background: 'var(--surface2)', border: '1px solid var(--border2)', color: 'var(--text)', fontSize: 11, fontWeight: 500, padding: '4px 10px', borderRadius: 6, whiteSpace: 'nowrap', opacity: 0, pointerEvents: 'none', transition: 'opacity .15s', boxShadow: '0 4px 12px var(--shadow)', zIndex: 100 }}>{item.label}</span>
+            <button
+              key={item.id}
+              onClick={() => setPagina(item.id)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '10px 12px', borderRadius: 8, cursor: 'pointer',
+                border: 'none', width: '100%', fontFamily: 'inherit',
+                background: pagina === item.id ? 'var(--blue-dim)' : 'none',
+                color: pagina === item.id ? 'var(--blue)' : 'var(--muted)',
+                transition: 'all .15s',
+              }}
+              onMouseEnter={e => { if (pagina !== item.id) e.currentTarget.style.background = 'var(--subtle)' }}
+              onMouseLeave={e => { if (pagina !== item.id) e.currentTarget.style.background = 'none' }}
+            >
+              <div style={{ flexShrink: 0, width: 17, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {item.icon}
+              </div>
+              <span style={{ ...navLabelStyle, opacity: sidebarOpen ? 1 : 0 }}>{item.label}</span>
             </button>
           ))}
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '0 8px 4px' }}>
-          <button onClick={toggleTema} title={tema === 'dark' ? 'Modo claro' : 'Modo escuro'} style={iconBtn}>
-            {tema === 'dark' ? ICONS.sun : ICONS.moon}
-          </button>
-          <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#3b82f6,#06b6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#fff' }} title={session.user.email}>
-            {initials}
+        {/* Footer */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 8px 4px', width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 4px' }}>
+            <button onClick={toggleTema} title={tema === 'dark' ? 'Modo claro' : 'Modo escuro'} style={iconBtn}>
+              {tema === 'dark' ? ICONS.sun : ICONS.moon}
+            </button>
+            <span style={{ ...navLabelStyle, opacity: sidebarOpen ? 1 : 0, fontSize: 12, color: 'var(--muted)' }}>Alternar tema</span>
           </div>
-          <button onClick={() => supabase.auth.signOut()} title="Sair" style={iconBtn}>
-            {ICONS.sair}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 4px' }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#3b82f6,#06b6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#fff', flexShrink: 0 }} title={session.user.email}>
+              {initials}
+            </div>
+            <span style={{ ...navLabelStyle, opacity: sidebarOpen ? 1 : 0, fontSize: 12, color: 'var(--text2)', maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis' }}>{session.user.email}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 4px' }}>
+            <button onClick={() => supabase.auth.signOut()} title="Sair" style={iconBtn}>
+              {ICONS.sair}
+            </button>
+            <span style={{ ...navLabelStyle, opacity: sidebarOpen ? 1 : 0, fontSize: 12, color: 'var(--muted)' }}>Sair</span>
+          </div>
         </div>
       </aside>
 
-      <main style={{ background: 'var(--bg)', overflowY: 'auto' }}>
+      <main style={{ flex: 1, background: 'var(--bg)', overflowY: 'auto', minWidth: 0 }}>
         {pagina === 'inicio' && <Dashboard onNavegar={setPagina} />}
         {pagina === 'epis' && <Epis isAdmin={isAdmin} />}
         {pagina === 'veiculos' && <Veiculos isAdmin={isAdmin} />}
