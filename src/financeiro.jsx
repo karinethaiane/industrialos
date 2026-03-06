@@ -335,7 +335,7 @@ const dados = {
                   {isAdmin && (
                     <td style={S.td}>
                       <div style={{ display: 'flex', gap: 4 }}>
-                        <button style={S.btnObs} onClick={() => setModalObs(r)}>Obs.</button>
+                        {r.observacoes && <button style={S.btnObs} onClick={() => setModalObs(r)}>Obs.</button>}
                         <button style={S.btnSm} onClick={() => abrirEditarPag(r)}>Editar</button>
                         <button style={S.btnDanger} onClick={() => excluirPag(r.id)}>✕</button>
                       </div>
