@@ -29,7 +29,12 @@ function fmtDataBR() {
   return new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
 }
 
+function fmtData(d) { if (!d) return null; return new Date(d).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) }
+function fmtVal(v) { if (!v && v !== 0) return null; return `R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` }
 function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1) }
+
+const STATUS_PAG_COR = { em_andamento: 'var(--blue)', ajustes: 'var(--amber)', aguardando_desbloqueio: 'var(--red)', concluido: 'var(--green)', cancelado: 'var(--muted)' }
+const STATUS_PAG_LABEL = { em_andamento: 'Em andamento', ajustes: 'Ajustes', aguardando_desbloqueio: 'Aguard. Desbloqueio', concluido: 'Concluído', cancelado: 'Cancelado' }
 
 const S = {
   wrap: { padding: 28, background: 'var(--bg)', minHeight: '100vh' },
@@ -50,16 +55,19 @@ const S = {
   modStatVal: (cor) => ({ fontFamily: 'DM Mono, monospace', fontSize: 20, fontWeight: 500, color: cor, lineHeight: 1 }),
   modStatLbl: { fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginTop: 3 },
   tableWrap: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' },
-  tableHeader: { display: 'grid', gridTemplateColumns: '110px 1fr 130px 100px', padding: '10px 18px', background: 'var(--surface2)', borderBottom: '1px solid var(--border)', fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600 },
-  tableRow: { display: 'grid', gridTemplateColumns: '110px 1fr 130px 100px', alignItems: 'center', padding: '12px 18px', borderBottom: '1px solid var(--border)', fontSize: 12.5, color: 'var(--text2)', cursor: 'pointer', transition: 'background .12s' },
+  tableHeader: { display: 'grid', gridTemplateColumns: '110px 1fr 130px 140px 100px', padding: '10px 18px', background: 'var(--surface2)', borderBottom: '1px solid var(--border)', fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600 },
+  tableRow: { display: 'grid', gridTemplateColumns: '110px 1fr 130px 140px 100px', alignItems: 'center', padding: '12px 18px', borderBottom: '1px solid var(--border)', fontSize: 12.5, color: 'var(--text2)', transition: 'background .12s' },
   tag: (bg, cor) => ({ padding: '2px 9px', borderRadius: 4, fontSize: 10, fontWeight: 600, background: bg, color: cor }),
   prio: (cor) => ({ fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5, color: cor }),
   prioDot: (cor) => ({ width: 7, height: 7, borderRadius: '50%', background: cor, flexShrink: 0 }),
+  modal: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, backdropFilter: 'blur(4px)' },
+  modalBox: { background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 14, padding: 28, width: '90%', maxWidth: 480, boxShadow: '0 8px 40px var(--shadow)' },
 }
 
 export default function Dashboard({ onNavegar }) {
   const [dados, setDados] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [modalPag, setModalPag] = useState(null)
 
   useEffect(() => { carregar() }, [])
 
@@ -79,13 +87,11 @@ export default function Dashboard({ onNavegar }) {
     const emissoesData = emissoesRes.data || []
     const pagamentosData = pagamentosRes.data || []
 
-    // EPIs — usa mesma lógica do epis.jsx
     const ultimas = ultimasEntregas(episRaw)
-    const episAtivos  = ultimas.filter(e => calcStatusEpi(e.data_prox_entrega) === 'VIGENTE').length
+    const episAtivos   = ultimas.filter(e => calcStatusEpi(e.data_prox_entrega) === 'VIGENTE').length
     const episVencidos = ultimas.filter(e => calcStatusEpi(e.data_prox_entrega) === 'VENCIDO')
     const episAVencer  = ultimas.filter(e => calcStatusEpi(e.data_prox_entrega) === 'VENCENDO')
 
-    // Veículos
     const veiculosEmUso = veiculosData.filter(v => v.status === 'em_uso')
     const veiculosRevisaoVencida = veiculosData.filter(v => {
       const vencidaData = v.data_proxima_revisao && new Date(v.data_proxima_revisao) < hoje
@@ -99,41 +105,33 @@ export default function Dashboard({ onNavegar }) {
       return proxData || proxKm
     })
 
-    // Financeiro
     const nfsAbertas = emissoesData.filter(e => e.status_sgt === 'Em execução')
     const pagBloqueados = pagamentosData.filter(p => p.status === 'aguardando_desbloqueio')
 
-    // Pendências
     const pendencias = []
     veiculosRevisaoVencida.slice(0, 2).forEach(v => {
-      pendencias.push({ modulo: 'Veículos', desc: `${v.placa} — Revisão preventiva vencida`, status: 'Vencida', prio: 'alta' })
+      pendencias.push({ modulo: 'Veículos', desc: `${v.placa} — Revisão preventiva vencida`, status: 'Vencida', prio: 'alta', valor: null, previsao: null, pagObj: null })
     })
     episVencidos.slice(0, 2).forEach(e => {
-      pendencias.push({ modulo: 'EPIs', desc: `${e.tipo}${e.colaboradores?.nome ? ' — ' + e.colaboradores.nome : ''} · Vencido`, status: 'Vencido', prio: 'alta' })
+      pendencias.push({ modulo: 'EPIs', desc: `${e.tipo}${e.colaboradores?.nome ? ' — ' + e.colaboradores.nome : ''} · Vencido`, status: 'Vencido', prio: 'alta', valor: null, previsao: null, pagObj: null })
     })
     pagBloqueados.slice(0, 2).forEach(p => {
-      pendencias.push({ modulo: 'Financeiro', desc: `Chamado #${p.numero_chamado} — Aguardando desbloqueio`, status: 'Bloqueado', prio: 'media' })
+      pendencias.push({ modulo: 'Financeiro', desc: `Chamado #${p.numero_chamado} — Aguardando desbloqueio`, status: 'Bloqueado', prio: 'media', valor: p.valor, previsao: p.previsao_pagamento, pagObj: p })
     })
     episAVencer.slice(0, 2).forEach(e => {
       const dias = Math.floor((new Date(e.data_prox_entrega) - hoje) / 86400000)
-      pendencias.push({ modulo: 'EPIs', desc: `${e.tipo}${e.colaboradores?.nome ? ' — ' + e.colaboradores.nome : ''} · Vence em ${dias} dias`, status: 'A vencer', prio: 'media' })
+      pendencias.push({ modulo: 'EPIs', desc: `${e.tipo}${e.colaboradores?.nome ? ' — ' + e.colaboradores.nome : ''} · Vence em ${dias} dias`, status: 'A vencer', prio: 'media', valor: null, previsao: null, pagObj: null })
     })
     veiculosRevisaoProxima.slice(0, 2).forEach(v => {
       const dias = v.data_proxima_revisao ? Math.floor((new Date(v.data_proxima_revisao) - hoje) / 86400000) : null
-      pendencias.push({ modulo: 'Veículos', desc: `${v.placa} — Revisão em ${dias != null ? dias + ' dias' : 'breve'}`, status: 'Próxima', prio: 'baixa' })
+      pendencias.push({ modulo: 'Veículos', desc: `${v.placa} — Revisão em ${dias != null ? dias + ' dias' : 'breve'}`, status: 'Próxima', prio: 'baixa', valor: null, previsao: null, pagObj: null })
     })
 
     setDados({
-      episAtivos,
-      episVencidos: episVencidos.length,
-      episAVencer: episAVencer.length,
-      veiculosTotal: veiculosData.length,
-      veiculosEmUso: veiculosEmUso.length,
-      veiculosRevisaoVencida: veiculosRevisaoVencida.length,
-      veiculosRevisaoProxima: veiculosRevisaoProxima.length,
-      nfsAbertas: nfsAbertas.length,
-      pagBloqueados: pagBloqueados.length,
-      pendencias,
+      episAtivos, episVencidos: episVencidos.length, episAVencer: episAVencer.length,
+      veiculosTotal: veiculosData.length, veiculosEmUso: veiculosEmUso.length,
+      veiculosRevisaoVencida: veiculosRevisaoVencida.length, veiculosRevisaoProxima: veiculosRevisaoProxima.length,
+      nfsAbertas: nfsAbertas.length, pagBloqueados: pagBloqueados.length, pendencias,
     })
     setLoading(false)
   }
@@ -143,11 +141,7 @@ export default function Dashboard({ onNavegar }) {
   const d = dados
   const totalAlertas = d.veiculosRevisaoVencida + d.episVencidos + d.pagBloqueados + d.episAVencer
 
-  const prioConfig = {
-    alta:  { cor: 'var(--red)',   label: 'Alta' },
-    media: { cor: 'var(--amber)', label: 'Média' },
-    baixa: { cor: 'var(--blue)',  label: 'Baixa' },
-  }
+  const prioConfig = { alta: { cor: 'var(--red)', label: 'Alta' }, media: { cor: 'var(--amber)', label: 'Média' }, baixa: { cor: 'var(--blue)', label: 'Baixa' } }
   const statusConfig = {
     'Vencida':  { bg: 'var(--red-dim)',   cor: 'var(--red)' },
     'Vencido':  { bg: 'var(--red-dim)',   cor: 'var(--red)' },
@@ -156,9 +150,9 @@ export default function Dashboard({ onNavegar }) {
     'Próxima':  { bg: 'var(--blue-dim)',  cor: 'var(--blue)' },
   }
   const modTagConfig = {
-    'Veículos':   { bg: 'var(--blue-dim)',        cor: 'var(--blue)' },
-    'EPIs':       { bg: 'var(--green-dim)',        cor: 'var(--green)' },
-    'Financeiro': { bg: 'rgba(167,139,250,.12)',   cor: '#a78bfa' },
+    'Veículos':   { bg: 'var(--blue-dim)',      cor: 'var(--blue)' },
+    'EPIs':       { bg: 'var(--green-dim)',      cor: 'var(--green)' },
+    'Financeiro': { bg: 'rgba(167,139,250,.12)', cor: '#a78bfa' },
   }
 
   const trHover = {
@@ -267,23 +261,105 @@ export default function Dashboard({ onNavegar }) {
           <div style={S.sectionTitle}>Pendências do dia <div style={S.sectionLine} /></div>
           <div style={S.tableWrap}>
             <div style={S.tableHeader}>
-              <span>Módulo</span><span>Descrição</span><span>Status</span><span>Prioridade</span>
+              <span>Módulo</span><span>Descrição</span><span>Status</span><span>Valor / Previsão</span><span>Prioridade</span>
             </div>
             {d.pendencias.map((p, i) => {
               const mt = modTagConfig[p.modulo] || { bg: 'var(--subtle)', cor: 'var(--muted)' }
               const st = statusConfig[p.status] || { bg: 'var(--subtle)', cor: 'var(--muted)' }
               const pr = prioConfig[p.prio]
+              const isFinanceiro = p.modulo === 'Financeiro' && p.pagObj
               return (
-                <div key={i} style={{ ...S.tableRow, borderBottom: i === d.pendencias.length - 1 ? 'none' : '1px solid var(--border)' }} {...trHover}>
+                <div
+                  key={i}
+                  style={{ ...S.tableRow, borderBottom: i === d.pendencias.length - 1 ? 'none' : '1px solid var(--border)', cursor: isFinanceiro ? 'pointer' : 'default' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--subtle)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  onClick={() => isFinanceiro && setModalPag(p.pagObj)}
+                >
                   <span><span style={S.tag(mt.bg, mt.cor)}>{p.modulo}</span></span>
-                  <span>{p.desc}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {p.desc}
+                    {isFinanceiro && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>}
+                  </span>
                   <span><span style={S.tag(st.bg, st.cor)}>{p.status}</span></span>
+                  <span>
+                    {p.valor ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--green)', fontWeight: 500 }}>{fmtVal(p.valor)}</span>
+                        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: p.previsao ? 'var(--muted)' : 'var(--border2)' }}>
+                          {p.previsao ? `Prev. ${fmtData(p.previsao)}` : 'Sem previsão'}
+                        </span>
+                      </div>
+                    ) : (
+                      <span style={{ color: 'var(--border2)', fontSize: 12 }}>—</span>
+                    )}
+                  </span>
                   <span style={S.prio(pr.cor)}><div style={S.prioDot(pr.cor)} />{pr.label}</span>
                 </div>
               )
             })}
           </div>
         </>
+      )}
+
+      {/* MODAL DETALHES PAGAMENTO */}
+      {modalPag && (
+        <div style={S.modal} onClick={e => e.target === e.currentTarget && setModalPag(null)}>
+          <div style={S.modalBox}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>Detalhes da Solicitação</div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--blue)', fontWeight: 500 }}>Chamado #{modalPag.numero_chamado}</div>
+              </div>
+              <button onClick={() => setModalPag(null)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 22, lineHeight: 1, padding: 0 }}>×</button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 5 }}>Solicitante</div>
+                <div style={{ fontSize: 13, color: 'var(--text)' }}>{modalPag.solicitante || '—'}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 5 }}>Nº NF / Boleto / AL</div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: '#a78bfa' }}>{modalPag.numero_nf_boleto_al || '—'}</div>
+              </div>
+              <div style={{ gridColumn: 'span 2' }}>
+                <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 5 }}>Razão Social</div>
+                <div style={{ fontSize: 13, color: 'var(--text)' }}>{modalPag.razao_social || '—'}</div>
+              </div>
+            </div>
+
+            <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 8 }}>Descrição</div>
+            <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px', fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 16 }}>
+              {modalPag.descricao || '—'}
+            </div>
+
+            <div style={{ background: 'linear-gradient(135deg, rgba(59,130,246,.07), rgba(6,182,212,.04))', border: '1px solid rgba(59,130,246,.2)', borderRadius: 10, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 6 }}>Valor</div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 22, fontWeight: 500, color: 'var(--blue)' }}>{fmtVal(modalPag.valor) || '—'}</div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>
+                  {modalPag.previsao_pagamento ? `Previsão: ${fmtData(modalPag.previsao_pagamento)}` : 'Sem previsão de pagamento'}
+                </div>
+              </div>
+              <span style={{ background: `${STATUS_PAG_COR[modalPag.status] || 'var(--muted)'}18`, color: STATUS_PAG_COR[modalPag.status] || 'var(--muted)', padding: '4px 12px', borderRadius: 6, fontSize: 12, fontWeight: 600 }}>
+                ● {STATUS_PAG_LABEL[modalPag.status] || modalPag.status}
+              </span>
+            </div>
+
+            {modalPag.observacoes && (
+              <div style={{ background: 'rgba(167,139,250,.06)', border: '1px solid rgba(167,139,250,.2)', borderRadius: 8, padding: '12px 14px', marginTop: 14 }}>
+                <div style={{ fontSize: 10, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 6 }}>Observações</div>
+                <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6 }}>{modalPag.observacoes}</div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 20 }}>
+              <button onClick={() => setModalPag(null)} style={{ background: 'var(--subtle)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>Fechar</button>
+              <button onClick={() => { setModalPag(null); onNavegar?.('financeiro') }} style={{ background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Ver no Financeiro</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
