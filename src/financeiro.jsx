@@ -116,7 +116,7 @@ export default function Financeiro({ isAdmin = false }) {
   const [formPag, setFormPag] = useState({
     numero_chamado: '', tipo_tarefa: 'Solicitação de Pagamento', solicitante: '',
     numero_nf_boleto_al: '', descricao: '', razao_social: '',
-    status: 'em_andamento', observacoes: ''
+    status: 'em_andamento', valor: '', previsao_pagamento: '', observacoes: ''
   })
 
   useEffect(() => { init() }, [])
@@ -152,7 +152,7 @@ export default function Financeiro({ isAdmin = false }) {
 
   function abrirEditarPag(r) {
     setEditandoPag(r); setErro('')
-    setFormPag({ numero_chamado: r.numero_chamado, tipo_tarefa: r.tipo_tarefa || 'Solicitação de Pagamento', solicitante: r.solicitante || '', numero_nf_boleto_al: r.numero_nf_boleto_al || '', descricao: r.descricao || '', razao_social: r.razao_social || '', status: r.status || 'em_andamento', observacoes: r.observacoes || '' })
+setFormPag({ numero_chamado: r.numero_chamado, tipo_tarefa: r.tipo_tarefa || 'Solicitação de Pagamento', solicitante: r.solicitante || '', numero_nf_boleto_al: r.numero_nf_boleto_al || '', descricao: r.descricao || '', razao_social: r.razao_social || '', status: r.status || 'em_andamento', valor: r.valor || '', previsao_pagamento: r.previsao_pagamento || '', observacoes: r.observacoes || '' })
     setModalPag(true)
   }
 
@@ -183,12 +183,14 @@ export default function Financeiro({ isAdmin = false }) {
   async function salvarPag() {
     if (!formPag.numero_chamado) { setErro('Número do chamado é obrigatório.'); return }
     setSalvando(true); setErro('')
-    const dados = {
+const dados = {
       numero_chamado: formPag.numero_chamado.trim(), tipo_tarefa: formPag.tipo_tarefa,
       solicitante: formPag.solicitante || null, numero_nf_boleto_al: formPag.numero_nf_boleto_al || null,
       descricao: formPag.descricao || null, razao_social: formPag.razao_social || null,
-      status: formPag.status, observacoes: formPag.observacoes || null
-    }
+      status: formPag.status, valor: parseFloat(formPag.valor) || null,
+      previsao_pagamento: formPag.previsao_pagamento || null,
+      observacoes: formPag.observacoes || null
+    }   
     let error
     if (editandoPag) { ({ error } = await supabase.from('solicitacoes_pagamento').update(dados).eq('id', editandoPag.id)) }
     else { ({ error } = await supabase.from('solicitacoes_pagamento').insert(dados)) }
@@ -442,6 +444,10 @@ export default function Financeiro({ isAdmin = false }) {
               <div style={S.field}><label style={S.label}>Razão Social</label><input style={S.input} value={formPag.razao_social} onChange={e => setFormPag({ ...formPag, razao_social: e.target.value })} /></div>
             </div>
             <div style={S.field}><label style={S.label}>Descrição</label><textarea style={S.textarea} value={formPag.descricao} onChange={e => setFormPag({ ...formPag, descricao: e.target.value })} /></div>
+            <div style={S.fieldRow}>
+  <div style={S.field}><label style={S.label}>Valor (R$)</label><input type="number" step="0.01" style={S.input} value={formPag.valor} onChange={e => setFormPag({ ...formPag, valor: e.target.value })} placeholder="0,00" /></div>
+  <div style={S.field}><label style={S.label}>Previsão de Pagamento</label><input type="date" style={S.input} value={formPag.previsao_pagamento} onChange={e => setFormPag({ ...formPag, previsao_pagamento: e.target.value })} /></div>
+</div>
             <div style={S.field}><label style={S.label}>Observações</label><textarea style={S.textarea} value={formPag.observacoes} onChange={e => setFormPag({ ...formPag, observacoes: e.target.value })} /></div>
             <div style={S.row}><button style={S.btnSm} onClick={() => setModalPag(false)}>Cancelar</button><button style={S.btn} onClick={salvarPag} disabled={salvando}>{salvando ? 'Salvando...' : 'Salvar'}</button></div>
           </div>
