@@ -107,7 +107,7 @@ function proximasDatasKickoff(dataAssinatura) {
   return sugestoes
 }
 
-function gerarSessoes(dataKickoff, dataEncerramento, configPorte) {
+function gerarSessoes(dataKickoff, dataEncerramento, configPorte, nomeConsultor, nomeEsp) {
   const inicio = new Date(dataKickoff + 'T00:00:00')
   const fim = new Date(dataEncerramento + 'T00:00:00')
   const totalDias = Math.round((fim - inicio) / (1000 * 60 * 60 * 24))
@@ -120,12 +120,16 @@ function gerarSessoes(dataKickoff, dataEncerramento, configPorte) {
     const diasOffset = Math.round(progresso * totalDias)
     const d = new Date(inicio); d.setDate(d.getDate() + diasOffset)
     while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1)
+    const nomeReal = a.resp === 'CT' ? nomeConsultor
+      : a.resp === 'ESP' ? (nomeEsp || 'ESPECIALISTA OU COORDENADOR')
+      : nomeConsultor // EDU = mesmo consultor técnico
     return {
       id: i,
       data: d.toISOString().split('T')[0],
       etapa: a.etapa,
       atividade: a.atividade,
-      responsavel: a.resp === 'CT' ? 'CONSULTOR TÉCNICO' : a.resp === 'ESP' ? 'ESPECIALISTA OU COORDENADOR' : 'EDUCAÇÃO',
+      tipoResp: a.resp, // CT / ESP / EDU — para o totalizador
+      responsavel: nomeReal,
       horas: a.horas,
       horario: a.horas <= 4 ? '08:00 as 12:00' : '08:00 as 17:00',
       formato: 'Presencial',
@@ -206,7 +210,9 @@ const S = {
 }
 
 const formVazio = { id_sgt: '', empresa: '', consultor: '', data_kickoff: '', horas: '', porte: 'Médio', status: 'aguardando_cronograma' }
-const geradorVazio = { kickoffId: '', empresa: '', id_sgt: '', porteConfig: 'Médio — 120h', localidade: '', dataAssinatura: '', dataKickoff: '', dataEncerramento: '', consultorSelecionado: '' }
+const CARGO_COORDENADOR = 'coordenador'
+const formVazio2 = null // placeholder
+const geradorVazio = { kickoffId: '', empresa: '', id_sgt: '', porteConfig: 'Médio — 120h', localidade: '', dataAssinatura: '', dataKickoff: '', dataEncerramento: '', consultorSelecionado: '', espSelecionado: '' }
 
 // ── COMPONENTE ────────────────────────────────────────────────────────────────
 export default function Consultoria({ isAdmin = false }) {
@@ -214,6 +220,7 @@ export default function Consultoria({ isAdmin = false }) {
   const [kickoffs, setKickoffs] = useState([])
   const [consultores, setConsultores] = useState([])
   const [especialista, setEspecialista] = useState('')
+  const [espOptions, setEspOptions] = useState([]) // especialista + coordenadores para o drop
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
   const [filtro, setFiltro] = useState('')
@@ -246,6 +253,12 @@ export default function Consultoria({ isAdmin = false }) {
     setConsultores(colab.filter(c => CARGOS_CONSULTOR.includes((c.cargo || '').toLowerCase().trim())))
     const esp = colab.find(c => (c.cargo || '').toLowerCase().trim() === CARGO_ESPECIALISTA)
     setEspecialista(esp?.nome || '')
+    // ESP + coordenadores para o dropdown de ESP no gerador
+    const espCoord = colab.filter(c => {
+      const cargo = (c.cargo || '').toLowerCase().trim()
+      return cargo === CARGO_ESPECIALISTA || cargo === CARGO_COORDENADOR
+    })
+    setEspOptions(espCoord)
     setLoading(false)
   }
 
@@ -302,7 +315,7 @@ export default function Consultoria({ isAdmin = false }) {
     const k = kickoffs.find(x => x.id === kickoffId)
     if (!k) { setGen(geradorVazio); return }
     const portePadrao = k.porte === 'Médio' ? 'Médio — 120h' : 'Micro/Pequeno — 80h'
-    setGen({ ...geradorVazio, kickoffId, empresa: k.empresa, id_sgt: k.id_sgt, porteConfig: portePadrao, localidade: k.localidade_empresa || '' })
+    setGen({ ...geradorVazio, kickoffId, empresa: k.empresa, id_sgt: k.id_sgt, porteConfig: portePadrao, localidade: k.localidade_empresa || '', espSelecionado: especialista || '' })
     setSessoes([]); setSugestoesData([]); setRankingConsultores([]); setErroGen('')
     if (k.localidade_empresa) calcularRankingComLoc(k.localidade_empresa)
   }
@@ -347,7 +360,7 @@ export default function Consultoria({ isAdmin = false }) {
     if (!gen.dataEncerramento) { setErroGen('Informe a data de encerramento.'); return }
     if (!gen.consultorSelecionado) { setErroGen('Selecione um consultor.'); return }
     const config = CONFIG_PORTE[gen.porteConfig]
-    setSessoes(gerarSessoes(gen.dataKickoff, gen.dataEncerramento, config))
+    setSessoes(gerarSessoes(gen.dataKickoff, gen.dataEncerramento, config, gen.consultorSelecionado, gen.espSelecionado))
   }
 
   function editarSessao(id, campo, valor) {
@@ -384,8 +397,8 @@ export default function Consultoria({ isAdmin = false }) {
       const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs')
       const wb = XLSX.utils.book_new()
       const config = CONFIG_PORTE[gen.porteConfig]
-      const nomeConsultor = gen.consultorSelecionado
-      const nomeEsp = especialista || 'ESPECIALISTA OU COORDENADOR'
+      const nomeConsultor = (gen.consultorSelecionado || 'CONSULTOR TÉCNICO').toUpperCase()
+      const nomeEsp = (gen.espSelecionado || especialista || 'ESPECIALISTA OU COORDENADOR').toUpperCase()
 
       // ── Aba Cronograma (layout idêntico ao modelo) ──────────────────
       // Col: A(vazia) B(Mês) C(Etapa) D(Dia) E(Consultor) F(Entregas) G(Realizados) H(Horário) I(CH) J(Formato) K(CH Mês) L(CH Acum) M(%)
@@ -416,16 +429,12 @@ export default function Consultoria({ isAdmin = false }) {
         const mesLabel = mesesMap[mesKey].label
         const ehPrimeiroDoMes = mesLabel !== mesAnterior
         const ehPrimeiraDaEtapa = s.etapa !== etapaAnterior
-        // Substitui nome do consultor/especialista real
-        let nomeColuna = s.responsavel
-        if (s.responsavel === 'CONSULTOR TÉCNICO') nomeColuna = nomeConsultor.toUpperCase()
-        else if (s.responsavel === 'ESPECIALISTA OU COORDENADOR') nomeColuna = nomeEsp.toUpperCase()
         cronRows.push([
           null,
           ehPrimeiroDoMes ? mesLabel : null,
           ehPrimeiraDaEtapa ? s.etapa : null,
-          new Date(s.data + 'T00:00:00'),
-          nomeColuna,
+          d,  // Date object — SheetJS formata corretamente
+          s.responsavel.toUpperCase(),
           s.atividade,
           null,
           s.horario,
@@ -762,6 +771,29 @@ export default function Consultoria({ isAdmin = false }) {
               </div>
             )}
 
+            {/* SELEÇÃO DE ESPECIALISTA */}
+            {gen.empresa && espOptions.length > 0 && (
+              <div style={S.card}>
+                <div style={S.cardTitle}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                  Especialista / Coordenador
+                </div>
+                {espOptions.map(e => {
+                  const sel = gen.espSelecionado === e.nome
+                  return (
+                    <div key={e.id} style={{ background: sel ? 'rgba(167,139,250,.08)' : 'var(--surface2)', border: `1px solid ${sel ? 'rgba(167,139,250,.3)' : 'var(--border)'}`, borderRadius: 10, padding: '10px 14px', marginBottom: 8, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                      onClick={() => setGen(g => ({ ...g, espSelecionado: e.nome }))}>
+                      <span style={{ fontWeight: 600, color: sel ? '#a78bfa' : 'var(--text)', fontSize: 13 }}>{e.nome}</span>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--muted)', background: 'var(--subtle)', padding: '2px 7px', borderRadius: 4 }}>{e.cargo}</span>
+                        {sel && <span style={{ fontSize: 10, fontWeight: 700, color: '#a78bfa', background: 'rgba(167,139,250,.1)', padding: '1px 7px', borderRadius: 4 }}>SELECIONADO</span>}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
             {/* BOTÃO GERAR */}
             {gen.empresa && gen.dataKickoff && gen.dataEncerramento && gen.consultorSelecionado && (
               <div style={S.card}>
@@ -800,21 +832,21 @@ export default function Consultoria({ isAdmin = false }) {
                     <input type="date" style={{ ...S.input, padding: '5px 8px', fontSize: 12 }} value={s.data} onChange={e => editarSessao(s.id, 'data', e.target.value)} />
                     <input style={{ ...S.input, padding: '5px 8px', fontSize: 12 }} value={s.atividade} onChange={e => editarSessao(s.id, 'atividade', e.target.value)} />
                     <select style={{ ...S.fsel, padding: '5px 8px', fontSize: 11 }} value={s.responsavel} onChange={e => editarSessao(s.id, 'responsavel', e.target.value)}>
-                      <option>CONSULTOR TÉCNICO</option>
-                      <option>ESPECIALISTA OU COORDENADOR</option>
-                      <option>EDUCAÇÃO</option>
+                      <option value={gen.consultorSelecionado}>{gen.consultorSelecionado} (CT)</option>
+                      {espOptions.map(e => <option key={e.id} value={e.nome}>{e.nome} ({e.cargo})</option>)}
+                      <option value={gen.consultorSelecionado + '_EDU'}>{gen.consultorSelecionado} · Educação</option>
                     </select>
                     <input type="number" step="0.5" min="1" style={{ ...S.input, padding: '5px 8px', fontSize: 12 }} value={s.horas} onChange={e => editarSessao(s.id, 'horas', parseFloat(e.target.value))} />
                   </div>
                 ))}
 
                 <div style={{ marginTop: 14, padding: '10px 14px', background: 'var(--surface2)', borderRadius: 8, display: 'flex', gap: 24, flexWrap: 'wrap', fontSize: 12 }}>
-                  {['CONSULTOR TÉCNICO', 'ESPECIALISTA OU COORDENADOR', 'EDUCAÇÃO'].map(r => {
-                    const h = sessoes.filter(s => s.responsavel === r).reduce((a, s) => a + (parseFloat(s.horas) || 0), 0)
+                  {[['CT', 'var(--blue-dim)', 'var(--blue)'], ['ESP', 'rgba(167,139,250,.1)', '#a78bfa'], ['EDU', 'var(--green-dim)', 'var(--green)']].map(([tipo, bg, color]) => {
+                    const h = sessoes.filter(s => s.tipoResp === tipo).reduce((a, s) => a + (parseFloat(s.horas) || 0), 0)
                     if (!h) return null
                     return (
-                      <div key={r} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={S.respChip(r)}>{r === 'CONSULTOR TÉCNICO' ? 'CT' : r === 'ESPECIALISTA OU COORDENADOR' ? 'ESP' : 'EDU'}</span>
+                      <div key={tipo} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ display: 'inline-flex', padding: '2px 7px', borderRadius: 4, fontSize: 10, fontWeight: 600, background: bg, color }}>{tipo}</span>
                         <span style={{ fontFamily: 'DM Mono, monospace', fontWeight: 600, color: 'var(--text)' }}>{h}h</span>
                       </div>
                     )
