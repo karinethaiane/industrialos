@@ -405,7 +405,9 @@ export default function Consultoria({ isAdmin = false }) {
         document.head.appendChild(script)
         await new Promise(r => { script.onload = r })
         window._pyodide = await window.loadPyodide()
-        await window._pyodide.loadPackage(['openpyxl'])
+        await window._pyodide.loadPackage('micropip')
+        const micropip = window._pyodide.pyimport('micropip')
+        await micropip.install('openpyxl')
         window._pyodideReady = true
       }
       const py = window._pyodide
