@@ -1,8 +1,25 @@
 {
-  "functions": {
-    "api/gerar_cronograma.py": {
-      "runtime": "python3.9",
-      "maxDuration": 30
+  "builds": [
+    {
+      "src": "api/gerar_cronograma.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     }
-  }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ]
 }
