@@ -398,136 +398,43 @@ export default function Consultoria({ isAdmin = false }) {
     setGerandoXlsx(true)
     setErroGen('')
     try {
-      const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs')
-      const wb   = XLSX.utils.book_new()
       const config = CONFIG_PORTE[gen.porteConfig]
-
-      const MESES_PT = {0:'Janeiro',1:'Fevereiro',2:'Março',3:'Abril',4:'Maio',5:'Junho',
-                        6:'Julho',7:'Agosto',8:'Setembro',9:'Outubro',10:'Novembro',11:'Dezembro'}
-
-      // Serial Excel (número de dias desde 1900-01-00)
-      const toSerial = (dateStr) => {
-        const d = new Date(dateStr + 'T00:00:00')
-        return Math.floor((d - new Date(Date.UTC(1899,11,30))) / 86400000)
+      const payload = {
+        empresa:          gen.empresa,
+        consultor:        gen.consultorSelecionado,
+        especialista:     gen.espSelecionado || especialista || 'ESPECIALISTA OU COORDENADOR',
+        horasTotal:       config.horasTotal,
+        dataEncerramento: gen.dataEncerramento,
+        sessoes: sessoes.map(s => ({
+          data:        s.data,
+          etapa:       s.etapa,
+          tipoResp:    s.tipoResp,
+          responsavel: s.responsavel,
+          atividade:   s.atividade,
+          horario:     s.horario,
+          horas:       s.horas,
+          formato:     s.formato || 'Presencial',
+        }))
       }
 
-      // ── ABA PRINCIPAL ─────────────────────────────────────────────────────
-      // Linhas do cabeçalho (rows 1-9 no Excel = índices 0-8)
-      const aoa = []
-      // Linha 1-4: título e cabeçalho geral (vazias, o layout vem das col widths)
-      aoa.push([null,null,null,null,null,'CRONOGRAMA DE ATENDIMENTO',null,null,null,null,null,null,null]) // row1
-      aoa.push([null,null,null,null,null,null,null,null,null,null,null,null,null])                         // row2
-      aoa.push([null,null,null,null,null,null,null,null,null,null,null,null,null])                         // row3
-      aoa.push([null,null,null,null,null,null,null,null,null,null,null,null,null])                         // row4
-      aoa.push([null,'Cliente',gen.empresa,null,null,null,null,null,null,null,null,null,null])             // row5
-      aoa.push([null,`${config.horasTotal} HORAS - FINALIZAÇÃO EM ${fmtData(gen.dataEncerramento)}`,null,null,null,null,null,null,null,null,null,null,null]) // row6
-      aoa.push([null,null,null,null,null,null,null,null,null,null,null,null,null])                         // row7
-      aoa.push([null,'Mês','Etapa','Dia','Consultor','Entregas programadas','Trabalhos realizados','Horário','CH Consultor','Formato','CH Mês','CH Acumulada','% do Projeto']) // row8
-      aoa.push([null,null,null,null,null,null,null,null,null,null,null,null,null])                         // row9
-
-      // Agrupar sessões por mês
-      const mesMap = {}
-      sessoes.forEach(s => {
-        const d = new Date(s.data + 'T00:00:00')
-        const mk = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
-        if (!mesMap[mk]) mesMap[mk] = { label: MESES_PT[d.getMonth()], sessoes: [], ch: 0 }
-        mesMap[mk].sessoes.push(s)
-        mesMap[mk].ch += parseFloat(s.horas) || 0
+      const res = await fetch('/api/gerar_cronograma', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
       })
 
-      let chAcum = 0
-      let mesPrev = '', etapaPrev = ''
-      sessoes.forEach(s => {
-        const d = new Date(s.data + 'T00:00:00')
-        const mk = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
-        const mesLabel  = mesMap[mk].label
-        const firstMes  = mesLabel !== mesPrev
-        const firstEtapa= s.etapa !== etapaPrev
-        if (firstMes) chAcum += mesMap[mk].ch
-        aoa.push([
-          null,
-          firstMes   ? mesLabel : null,
-          firstEtapa ? s.etapa  : null,
-          { t:'n', v: toSerial(s.data), z:'DD/MM/YYYY' },
-          s.responsavel,
-          s.atividade,
-          null,
-          s.horario,
-          parseFloat(s.horas),
-          s.formato || 'Presencial',
-          firstMes ? mesMap[mk].ch : null,
-          firstMes ? chAcum        : null,
-          firstMes ? Math.round(chAcum / config.horasTotal * 100) + '%' : null,
-        ])
-        if (firstMes)   mesPrev   = mesLabel
-        if (firstEtapa) etapaPrev = s.etapa
-      })
-      // Total
-      aoa.push([null,null,null,null,null,null,null,null,config.horasTotal,null,config.horasTotal,config.horasTotal,null])
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || `Erro HTTP ${res.status}`)
+      }
 
-      const ws = XLSX.utils.aoa_to_sheet(aoa, { cellDates: false })
-      ws['!cols'] = [
-        {wch:2},{wch:10},{wch:22},{wch:12},{wch:28},
-        {wch:62},{wch:28},{wch:16},{wch:10},{wch:11},{wch:8},{wch:12},{wch:10}
-      ]
-      XLSX.utils.book_append_sheet(wb, ws, gen.empresa.slice(0,28))
-
-      // ── ABAS REL ACO ──────────────────────────────────────────────────────
-      let acum = 0
-      Object.entries(mesMap).forEach(([mk, { label, sessoes: sessMes, ch }]) => {
-        acum += ch
-        const saldo  = config.horasTotal - acum
-        const serial = toSerial(mk + '-01')
-
-        // Cada sessão ocupa 2 linhas (como no modelo)
-        const relAoa = []
-        relAoa.push([null,null,null,'RELATÓRIO DE ACOMPANHAMENTO DA CONSULTORIA',null,null,null,null,null]) // r1
-        relAoa.push([null,null,null,null,null,null,null,null,null])                                          // r2
-        relAoa.push(['EMPRESA:',null,gen.empresa,null,null,null,null,null,null])                             // r3
-        relAoa.push(['PRODUTO:',null,'Consultoria Eficiência Energética',null,null,null,null,null,null])     // r4
-        relAoa.push([null,null,null,null,null,null,null,null,null])                                          // r5
-        relAoa.push(['MÊS/ANO:',null,{t:'n',v:serial,z:'MM/YYYY'},null,'CONSULTOR:',gen.consultorSelecionado,null,null,null]) // r6
-        relAoa.push([null,null,null,null,null,null,null,null,null])                                          // r7
-        relAoa.push([null,null,null,null,null,null,null,null,null])                                          // r8
-        relAoa.push(['DATA',null,'DESCRIÇÃO DAS ATIVIDADES REALIZADAS NA CONSULTORIA',null,null,null,null,'QUANT.HORAS',null]) // r9
-
-        // Sessões — 2 linhas cada (r10, r11, r12, r13 ...)
-        sessMes.forEach(s => {
-          relAoa.push([{t:'n',v:toSerial(s.data),z:'DD/MM/YYYY'},null,s.atividade,null,null,null,null,parseFloat(s.horas),null])
-          relAoa.push([null,null,null,null,null,null,null,null,null]) // linha vazia do par
-        })
-
-        // Preencher até a linha 23 se necessário (manter estrutura)
-        while (relAoa.length < 23) relAoa.push([null,null,null,null,null,null,null,null,null])
-
-        relAoa.push([null,null,null,null,null,null,null,null,null])                              // r24 separador
-        relAoa.push(['Horas previstas na proposta:',null,null,null,config.horasTotal,'Total de horas realizadas no mês:',null,null,ch])  // r25
-        relAoa.push([null,null,null,null,null,null,null,null,null])                              // r26
-        relAoa.push(['Total de horas realizadas (acumulado):',null,null,null,acum,'Saldo de horas:',null,null,saldo]) // r27
-        relAoa.push([null,null,null,null,null,null,null,null,null])
-        relAoa.push([null,null,null,null,null,null,null,null,null])
-        relAoa.push([null,null,null,null,null,null,null,null,null])
-        relAoa.push(['Ações Pendentes',null,null,null,'Responsável',null,'Data Limite',null,'Status']) // r31
-        relAoa.push([null,null,null,null,null,null,null,null,null])
-        relAoa.push([null,null,null,null,null,null,null,null,null])
-        relAoa.push([null,null,null,null,null,null,null,null,null])
-        relAoa.push(['Próximas ações',null,null,null,'Responsável',null,'Data Limite',null,'Status'])  // r35
-        relAoa.push([null,null,null,null,null,null,null,null,null])
-        relAoa.push([null,null,null,null,null,null,null,null,null])
-        relAoa.push([null,null,null,null,null,null,null,null,null])
-        relAoa.push([null,null,null,null,null,null,null,null,null])
-        relAoa.push([null,null,null,null,null,null,null,null,null])
-        relAoa.push([null,null,null,null,null,null,null,null,null])
-        relAoa.push(['Consultor(a)',null,null,null,null,'Representante da Empresa',null,null,null]) // r42
-        relAoa.push([null,'Data:      /         /',null,null,null,null,'Data:      /         /',null,null]) // r43
-
-        const wsRel = XLSX.utils.aoa_to_sheet(relAoa, { cellDates: false })
-        wsRel['!cols'] = [{wch:14},{wch:5},{wch:48},{wch:8},{wch:14},{wch:30},{wch:12},{wch:10},{wch:12}]
-        const nomeAba = ('REL ACO - ' + label).slice(0,31)
-        XLSX.utils.book_append_sheet(wb, wsRel, nomeAba)
-      })
-
-      XLSX.writeFile(wb, `Cronograma_${String(gen.empresa).replace(/\s+/g,'_')}_${config.label}.xlsx`)
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = `Cronograma_${String(gen.empresa).replace(/\s+/g,'_')}_${config.label}.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
 
     } catch(e) {
       setErroGen('Erro ao exportar: ' + e.message)
