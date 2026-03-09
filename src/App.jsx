@@ -5,6 +5,8 @@ import Colaboradores from './colaboradores'
 import Veiculos from './veiculos'
 import Financeiro from './financeiro'
 import Dashboard from './dashboard'
+import OneDock from './onedoc'
+import Consultoria from './consultoria'
 
 const ICONS = {
   epis: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
