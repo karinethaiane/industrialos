@@ -60,8 +60,11 @@ const S = {
 
 const formVazio = { id_sgt: '', empresa: '', consultor: '', data_kickoff: '', horas: '', porte: 'Médio', status: 'pendente' }
 
+const CARGOS_CONSULTOR = ['consultor técnico', 'consultora técnica']
+
 export default function Consultoria({ isAdmin = false }) {
   const [kickoffs, setKickoffs] = useState([])
+  const [consultores, setConsultores] = useState([])
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
   const [filtro, setFiltro] = useState('')
@@ -75,15 +78,22 @@ export default function Consultoria({ isAdmin = false }) {
 
   async function carregar() {
     setLoading(true)
-    const { data } = await supabase.from('kickoffs').select('*').order('data_kickoff', { ascending: false })
-    setKickoffs(data || [])
+    const [kickRes, colabRes] = await Promise.all([
+      supabase.from('kickoffs').select('*').order('data_kickoff', { ascending: false }),
+      supabase.from('colaboradores').select('id, nome, cargo').eq('ativo', true).order('nome'),
+    ])
+    setKickoffs(kickRes.data || [])
+    // filtra só consultores técnicos
+    const lista = (colabRes.data || []).filter(c =>
+      CARGOS_CONSULTOR.includes((c.cargo || '').toLowerCase().trim())
+    )
+    setConsultores(lista)
     setLoading(false)
   }
 
   function abrirNovo() { setEditando(null); setErro(''); setForm(formVazio); setModal(true) }
   function abrirEditar(r) { setEditando(r); setErro(''); setForm({ id_sgt: r.id_sgt, empresa: r.empresa, consultor: r.consultor || '', data_kickoff: r.data_kickoff || '', horas: r.horas || '', porte: r.porte || 'Médio', status: r.status }); setModal(true) }
 
-  // Auto-preenche horas ao mudar porte
   function setPorte(p) { setForm(f => ({ ...f, porte: p, horas: HORAS_POR_PORTE[p] || f.horas })) }
 
   async function salvar() {
@@ -135,7 +145,6 @@ export default function Consultoria({ isAdmin = false }) {
         )}
       </div>
 
-      {/* ALERTA DO DIA */}
       {hoje.length > 0 && (
         <div style={S.alerta}>
           <div style={S.alertaIcon}>
@@ -189,7 +198,7 @@ export default function Consultoria({ isAdmin = false }) {
             <th style={S.th}></th>
           </tr></thead>
           <tbody>
-            {filtrados.map((r, i) => {
+            {filtrados.map((r) => {
               const hoje_ = isHoje(r.data_kickoff)
               const cor = STATUS_COR[r.status] || 'var(--muted)'
               const porteCor = PORTE_COR[r.porte] || 'var(--muted)'
@@ -199,10 +208,7 @@ export default function Consultoria({ isAdmin = false }) {
                   <td style={{ ...S.td, color: 'var(--text)', fontWeight: 500 }}>{r.empresa}</td>
                   <td style={S.td}>{r.consultor || '—'}</td>
                   <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12 }}>
-                    {hoje_
-                      ? <span style={{ color: 'var(--amber, #f59e0b)', fontWeight: 700, fontSize: 13 }}>Hoje</span>
-                      : fmtData(r.data_kickoff)
-                    }
+                    {hoje_ ? <span style={{ color: 'var(--amber, #f59e0b)', fontWeight: 700, fontSize: 13 }}>Hoje</span> : fmtData(r.data_kickoff)}
                   </td>
                   <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', color: '#a78bfa', fontWeight: 500 }}>{r.horas ? `${r.horas}h` : '—'}</td>
                   <td style={S.td}><span style={{ background: `${porteCor}18`, color: porteCor, padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{r.porte || '—'}</span></td>
@@ -229,7 +235,6 @@ export default function Consultoria({ isAdmin = false }) {
         </table>
       </div>
 
-      {/* MODAL FORM */}
       {modal && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setModal(false)}>
           <div style={S.modalBox}>
@@ -245,7 +250,16 @@ export default function Consultoria({ isAdmin = false }) {
             </div>
             <div style={S.field}><label style={S.label}>Empresa *</label><input style={S.input} value={form.empresa} onChange={e => setForm({ ...form, empresa: e.target.value })} placeholder="Nome da empresa" /></div>
             <div style={S.fieldRow}>
-              <div style={S.field}><label style={S.label}>Consultor</label><input style={S.input} value={form.consultor} onChange={e => setForm({ ...form, consultor: e.target.value })} placeholder="Nome do consultor" /></div>
+              <div style={S.field}>
+                <label style={S.label}>Consultor</label>
+                <select style={S.fsel} value={form.consultor} onChange={e => setForm({ ...form, consultor: e.target.value })}>
+                  <option value="">Selecione o consultor...</option>
+                  {consultores.length > 0
+                    ? consultores.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)
+                    : <option disabled>Nenhum consultor técnico cadastrado</option>
+                  }
+                </select>
+              </div>
               <div style={S.field}><label style={S.label}>Data do Kick Off *</label><input type="date" style={S.input} value={form.data_kickoff} onChange={e => setForm({ ...form, data_kickoff: e.target.value })} /></div>
             </div>
             <div style={S.field}><label style={S.label}>Horas a Apropriar</label><input type="number" step="0.5" min="0.5" style={S.input} value={form.horas} onChange={e => setForm({ ...form, horas: e.target.value })} placeholder="Ex: 4" /></div>
