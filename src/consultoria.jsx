@@ -8,29 +8,61 @@ const PORTE_COR = { Micro: 'var(--green)', Pequeno: 'var(--amber)', Médio: 'var
 const STATUS_COR = { pendente: 'var(--red)', apropriado: 'var(--green)', aguardando_cronograma: 'var(--blue)' }
 const STATUS_LABEL = { pendente: 'Pendente', apropriado: 'Apropriado', aguardando_cronograma: 'Ag. Cronograma' }
 const CARGOS_CONSULTOR = ['consultor técnico', 'consultora técnica']
+const CARGO_ESPECIALISTA = 'especialista técnico'
 
 const CONFIG_PORTE = {
-  'Micro/Pequeno — 80h': { horasTotal: 80, horasCT: 68, horasEsp: 8, horasEdu: 4, duracaoMin: 90, label: '80h' },
+  'Micro/Pequeno — 80h': { horasTotal: 80,  horasCT: 68,  horasEsp: 8,  horasEdu: 4, duracaoMin: 90, label: '80h'  },
   'Médio — 120h':        { horasTotal: 120, horasCT: 104, horasEsp: 12, horasEdu: 4, duracaoMin: 75, label: '120h' },
-  'Médio — 110h':        { horasTotal: 110, horasCT: 94, horasEsp: 8, horasEdu: 4, duracaoMin: 75, label: '110h' },
+  'Médio — 110h':        { horasTotal: 110, horasCT: 94,  horasEsp: 8,  horasEdu: 4, duracaoMin: 75, label: '110h' },
 }
 
-const ATIVIDADES_TEMPLATE = [
-  { etapa: 'Preparação',            atividade: 'Reunião de Kick Off',                                         resp: 'CT',  horas: 4 },
-  { etapa: 'Preparação',            atividade: 'Kick Off — Educação',                                         resp: 'EDU', horas: 4 },
+// Template 80h — exatamente como a planilha modelo (Garanhuns)
+// CT: 68h | ESP: 8h | EDU: 4h = 80h total
+const ATIVIDADES_80H = [
+  { etapa: 'Preparação',            atividade: 'Reunião de Kick Off: Reunião com empresário e gestores da empresa para apresentar o programa e o que será desenvolvido; Relembrar o cronograma; Realizar uma visita no Gemba; Definir focal point', resp: 'CT',  horas: 4 },
+  { etapa: 'Preparação',            atividade: 'Reunião de Kick Off: Reunião com empresário e gestores da empresa para apresentar o programa de formação profissional',                                                                             resp: 'EDU', horas: 4 },
   { etapa: 'Preparação',            atividade: 'Análise Tarifária',                                           resp: 'CT',  horas: 2 },
-  { etapa: 'Mapeamento energético', atividade: 'Identificação da Carga Alvo',                                 resp: 'CT',  horas: 4 },
+  { etapa: 'Mapeamento energético', atividade: 'Identificação da Carga Alvo.',                                resp: 'CT',  horas: 4 },
   { etapa: 'Mapeamento energético', atividade: 'Validação da Oportunidade',                                   resp: 'CT',  horas: 8 },
-  { etapa: 'Mapeamento energético', atividade: 'Inspeção Termográfica / Drone',                               resp: 'CT',  horas: 8 },
+  { etapa: 'Mapeamento energético', atividade: 'Inspeção Termográfica/Inspeção com Drone',                    resp: 'CT',  horas: 8 },
   { etapa: 'Mapeamento energético', atividade: 'Medição Inicial da Carga Alvo',                               resp: 'CT',  horas: 8 },
   { etapa: 'Mapeamento energético', atividade: 'Acompanhamento Operacional',                                  resp: 'CT',  horas: 8 },
+  { etapa: 'Mapeamento energético', atividade: 'Análise de Tecnologia e Otimização',                          resp: 'CT',  horas: 4 },
+  { etapa: 'Implementação',         atividade: 'Elaboração do Plano de Implementação',                        resp: 'CT',  horas: 6 },
+  { etapa: 'Implementação',         atividade: 'Monitoramento das Ações em Implementação',                    resp: 'CT',  horas: 4 },
+  { etapa: 'Implementação',         atividade: 'Controle e Gestão da Consultoria ',                           resp: 'ESP', horas: 8 },
+  { etapa: 'Implementação',         atividade: 'Medição Final das Cargas Alvo.',                              resp: 'CT',  horas: 4 },
+  { etapa: 'Implementação',         atividade: 'Medição Final das Cargas Alvo.',                              resp: 'CT',  horas: 4 },
+  { etapa: 'Reunião Final',         atividade: 'Análise e Validação do Relatório e Reunião de Encerramento.', resp: 'CT',  horas: 4 },
+]
+
+// Template 120h — como a planilha modelo (MABOR)
+// CT: 104h | ESP: 12h | EDU: 4h = 120h total
+const ATIVIDADES_120H = [
+  { etapa: 'Preparação',            atividade: 'Reunião de Kick Off: Reunião com empresário e gestores da empresa para apresentar o programa e o que será desenvolvido; Relembrar o cronograma; Realizar uma visita no Gemba; Definir focal point', resp: 'CT',  horas: 4 },
+  { etapa: 'Preparação',            atividade: 'Reunião de Kick Off: Reunião com empresário e gestores da empresa para apresentar o programa de formação profissional',                                                                             resp: 'EDU', horas: 4 },
+  { etapa: 'Preparação',            atividade: 'Análise Tarifária',                                           resp: 'CT',  horas: 4 },
+  { etapa: 'Mapeamento energético', atividade: 'Identificação da Carga Alvo',                                 resp: 'CT',  horas: 8 },
+  { etapa: 'Mapeamento energético', atividade: 'Validação da Oportunidade',                                   resp: 'CT',  horas: 8 },
+  { etapa: 'Mapeamento energético', atividade: 'Inspeção Termográfica/Inspeção com Drone',                    resp: 'CT',  horas: 8 },
+  { etapa: 'Mapeamento energético', atividade: 'Medição Inicial da Carga Alvo',                               resp: 'CT',  horas: 8 },
+  { etapa: 'Mapeamento energético', atividade: 'Medição Inicial da Carga Alvo',                               resp: 'CT',  horas: 8 },
+  { etapa: 'Implementação',         atividade: 'Acompanhamento Operacional',                                  resp: 'ESP', horas: 8 },
   { etapa: 'Implementação',         atividade: 'Análise de Tecnologia e Otimização',                          resp: 'CT',  horas: 8 },
   { etapa: 'Implementação',         atividade: 'Elaboração do Plano de Implementação',                        resp: 'CT',  horas: 8 },
   { etapa: 'Implementação',         atividade: 'Monitoramento das Ações em Implementação',                    resp: 'CT',  horas: 8 },
-  { etapa: 'Implementação',         atividade: 'Controle e Gestão da Consultoria',                            resp: 'ESP', horas: 8 },
-  { etapa: 'Implementação',         atividade: 'Medição Final das Cargas Alvo',                               resp: 'CT',  horas: 8 },
-  { etapa: 'Reunião Final',         atividade: 'Análise, Validação do Relatório e Reunião de Encerramento',   resp: 'CT',  horas: 8 },
+  { etapa: 'Implementação',         atividade: 'Monitoramento das Ações em Implementação',                    resp: 'CT',  horas: 8 },
+  { etapa: 'Implementação',         atividade: 'Controle e Gestão da Consultoria ',                           resp: 'ESP', horas: 4 },
+  { etapa: 'Implementação',         atividade: 'Medição Final das Cargas Alvo.',                              resp: 'CT',  horas: 8 },
+  { etapa: 'Implementação',         atividade: 'Medição Final das Cargas Alvo.',                              resp: 'CT',  horas: 8 },
+  { etapa: 'Reunião Final',         atividade: 'Análise e validação do Relatório e Reunião de encerramento.', resp: 'CT',  horas: 8 },
 ]
+
+// Template 110h — ajusta a partir do 120h (sem 2ª Medição Inicial, ESP reduzido)
+// CT: 94h | ESP: 8h | EDU: 4h = 110h (sem a 2ª Medição Inicial -8h e Acomp ESP -4h)
+const ATIVIDADES_110H = [
+  ...ATIVIDADES_120H.filter((_, i) => i !== 7), // remove 2ª Medição Inicial
+].map(a => a.atividade === 'Acompanhamento Operacional' ? { ...a, horas: 4 } : a) // Acomp 4h
 
 const REGIOES_PE = {
   rmr: ['recife','olinda','jaboatão','jaboatao','paulista','camaragibe','são lourenço','sao lourenco','cabo de santo agostinho','cabo','ipojuca','moreno','abreu e lima','igarassu','itamaracá','itamaraca','araçoiaba','aracoiaba'],
@@ -79,13 +111,9 @@ function gerarSessoes(dataKickoff, dataEncerramento, configPorte) {
   const inicio = new Date(dataKickoff + 'T00:00:00')
   const fim = new Date(dataEncerramento + 'T00:00:00')
   const totalDias = Math.round((fim - inicio) / (1000 * 60 * 60 * 24))
-  let atividades = [...ATIVIDADES_TEMPLATE]
-  if (configPorte.horasTotal <= 80) {
-    atividades = atividades.filter(a => a.atividade !== 'Acompanhamento Operacional')
-  }
-  if (configPorte.horasTotal === 110) {
-    atividades = atividades.map(a => a.atividade === 'Controle e Gestão da Consultoria' ? { ...a, horas: 4 } : a)
-  }
+  const atividades = configPorte.horasTotal <= 80 ? ATIVIDADES_80H
+    : configPorte.horasTotal === 110 ? ATIVIDADES_110H
+    : ATIVIDADES_120H
   const n = atividades.length
   return atividades.map((a, i) => {
     const progresso = i / Math.max(n - 1, 1)
@@ -99,7 +127,7 @@ function gerarSessoes(dataKickoff, dataEncerramento, configPorte) {
       atividade: a.atividade,
       responsavel: a.resp === 'CT' ? 'CONSULTOR TÉCNICO' : a.resp === 'ESP' ? 'ESPECIALISTA OU COORDENADOR' : 'EDUCAÇÃO',
       horas: a.horas,
-      horario: a.horas <= 4 ? '08:00 às 12:00' : '08:00 às 17:00',
+      horario: a.horas <= 4 ? '08:00 as 12:00' : '08:00 as 17:00',
       formato: 'Presencial',
     }
   })
@@ -185,6 +213,7 @@ export default function Consultoria({ isAdmin = false }) {
   const [aba, setAba] = useState('kickoffs')
   const [kickoffs, setKickoffs] = useState([])
   const [consultores, setConsultores] = useState([])
+  const [especialista, setEspecialista] = useState('')
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
   const [filtro, setFiltro] = useState('')
@@ -213,7 +242,10 @@ export default function Consultoria({ isAdmin = false }) {
       supabase.from('colaboradores').select('id, nome, cargo, setor').eq('ativo', true).order('nome'),
     ])
     setKickoffs(kickRes.data || [])
-    setConsultores((colabRes.data || []).filter(c => CARGOS_CONSULTOR.includes((c.cargo || '').toLowerCase().trim())))
+    const colab = colabRes.data || []
+    setConsultores(colab.filter(c => CARGOS_CONSULTOR.includes((c.cargo || '').toLowerCase().trim())))
+    const esp = colab.find(c => (c.cargo || '').toLowerCase().trim() === CARGO_ESPECIALISTA)
+    setEspecialista(esp?.nome || '')
     setLoading(false)
   }
 
@@ -352,49 +384,109 @@ export default function Consultoria({ isAdmin = false }) {
       const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs')
       const wb = XLSX.utils.book_new()
       const config = CONFIG_PORTE[gen.porteConfig]
+      const nomeConsultor = gen.consultorSelecionado
+      const nomeEsp = especialista || 'ESPECIALISTA OU COORDENADOR'
 
-      // Aba Cronograma
-      const rows = [
-        ['', '', '', '', '', 'CRONOGRAMA DE ATENDIMENTO'],
-        ['', 'Cliente', gen.empresa],
-        ['', `${config.horasTotal} HORAS — FINALIZAÇÃO EM ${fmtData(gen.dataEncerramento)}`],
-        ['', 'Mês', 'Etapa', 'Dia', 'Consultor', 'Entregas programadas', 'Trabalhos realizados', 'Horário', 'CH Consultor', 'Formato'],
+      // ── Aba Cronograma (layout idêntico ao modelo) ──────────────────
+      // Col: A(vazia) B(Mês) C(Etapa) D(Dia) E(Consultor) F(Entregas) G(Realizados) H(Horário) I(CH) J(Formato) K(CH Mês) L(CH Acum) M(%)
+      const cronRows = [
+        [null, null, null, null, null, 'CRONOGRAMA DE ATENDIMENTO', null, null, null, null, null, null, null],
+        [null, 'Cliente', gen.empresa, null, null, null, null, null, null, null, null, null, null],
+        [null, `${config.horasTotal} HORAS - FINALIZAÇÃO EM ${fmtData(gen.dataEncerramento)}`, null, null, null, null, null, null, null, null, null, null, null],
+        [null, 'Mês', 'Etapa', 'Dia', 'Consultor ', 'Entregas programadas', 'Trabalhos realizados', 'Horário', 'CH Consultor', 'Formato', 'CH Mês', 'CH Acumulada', '% do Projeto '],
       ]
-      let mesAtual = ''
-      sessoes.forEach(s => {
-        const mes = new Date(s.data + 'T00:00:00').toLocaleString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' })
-        rows.push(['', mes !== mesAtual ? (mesAtual = mes, mes) : '', s.etapa || '', s.data, s.responsavel, s.atividade, '', s.horario, s.horas, s.formato])
-      })
-      const wsCron = XLSX.utils.aoa_to_sheet(rows)
-      wsCron['!cols'] = [{ wch: 2 }, { wch: 12 }, { wch: 22 }, { wch: 14 }, { wch: 28 }, { wch: 45 }, { wch: 30 }, { wch: 16 }, { wch: 10 }, { wch: 12 }]
-      XLSX.utils.book_append_sheet(wb, wsCron, gen.empresa.slice(0, 28))
 
-      // Abas de Relatório por mês
+      // Agrupa sessões por mês para calcular CH Mês
       const mesesMap = {}
       sessoes.forEach(s => {
-        const mes = new Date(s.data + 'T00:00:00').toLocaleString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' })
-        if (!mesesMap[mes]) mesesMap[mes] = []
-        mesesMap[mes].push(s)
+        const d = new Date(s.data + 'T00:00:00')
+        const mesKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+        const mesLabel = d.toLocaleString('pt-BR', { month: 'long', timeZone: 'UTC' })
+        const mesCapit = mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1)
+        if (!mesesMap[mesKey]) mesesMap[mesKey] = { label: mesCapit, sessoes: [], chTotal: 0 }
+        mesesMap[mesKey].sessoes.push(s)
+        mesesMap[mesKey].chTotal += parseFloat(s.horas) || 0
       })
-      Object.entries(mesesMap).forEach(([mes, sessMes], idx) => {
+
+      let mesAnterior = ''
+      let etapaAnterior = ''
+      sessoes.forEach(s => {
+        const d = new Date(s.data + 'T00:00:00')
+        const mesKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+        const mesLabel = mesesMap[mesKey].label
+        const ehPrimeiroDoMes = mesLabel !== mesAnterior
+        const ehPrimeiraDaEtapa = s.etapa !== etapaAnterior
+        // Substitui nome do consultor/especialista real
+        let nomeColuna = s.responsavel
+        if (s.responsavel === 'CONSULTOR TÉCNICO') nomeColuna = nomeConsultor.toUpperCase()
+        else if (s.responsavel === 'ESPECIALISTA OU COORDENADOR') nomeColuna = nomeEsp.toUpperCase()
+        cronRows.push([
+          null,
+          ehPrimeiroDoMes ? mesLabel : null,
+          ehPrimeiraDaEtapa ? s.etapa : null,
+          new Date(s.data + 'T00:00:00'),
+          nomeColuna,
+          s.atividade,
+          null,
+          s.horario,
+          s.horas,
+          s.formato,
+          ehPrimeiroDoMes ? mesesMap[mesKey].chTotal : null,
+          null,
+          null,
+        ])
+        if (ehPrimeiroDoMes) mesAnterior = mesLabel
+        if (ehPrimeiraDaEtapa) etapaAnterior = s.etapa
+      })
+
+      // Linha de total
+      cronRows.push([null, null, null, null, null, null, null, null, config.horasTotal, null, config.horasTotal, null, null])
+
+      const wsCron = XLSX.utils.aoa_to_sheet(cronRows)
+      // Formatar coluna D (índice 3) como data
+      const range = XLSX.utils.decode_range(wsCron['!ref'])
+      for (let R = 4; R <= range.e.r; R++) {
+        const cell = wsCron[XLSX.utils.encode_cell({ r: R, c: 3 })]
+        if (cell && cell.v instanceof Date) {
+          cell.t = 'd'; cell.z = 'DD/MM/YYYY'
+        }
+      }
+      wsCron['!cols'] = [{ wch: 2 }, { wch: 10 }, { wch: 22 }, { wch: 12 }, { wch: 28 }, { wch: 65 }, { wch: 30 }, { wch: 16 }, { wch: 11 }, { wch: 11 }, { wch: 8 }, { wch: 12 }, { wch: 10 }]
+      XLSX.utils.book_append_sheet(wb, wsCron, gen.empresa.slice(0, 28))
+
+      // ── Abas REL ACO por mês (layout idêntico ao modelo) ──────────────
+      Object.entries(mesesMap).forEach(([mesKey, { label, sessoes: sessMes, chTotal }], idx) => {
+        const mesDate = new Date(mesKey + '-01T00:00:00')
         const relRows = [
-          ['', '', '', 'RELATÓRIO DE ACOMPANHAMENTO DA CONSULTORIA'],
-          ['EMPRESA:', '', gen.empresa],
-          ['PRODUTO:', '', 'Consultoria Eficiência Energética'],
-          ['MÊS/ANO:', '', mes, '', 'CONSULTOR(A):', gen.consultorSelecionado],
-          ['DATA', 'DESCRIÇÃO DAS ATIVIDADES REALIZADAS NA CONSULTORIA', '', '', '', '', '', 'QUANT.HORAS'],
-          ...sessMes.map(s => [s.data, s.atividade, '', '', '', '', '', s.horas]),
-          ['Horas previstas na proposta:', '', '', '', config.horasTotal, 'Total de horas realizadas no mês:', '', '', ''],
-          ['Total de horas realizadas (acumulado):', '', '', '', '', 'Saldo de horas:', '', '', ''],
-          ['Ações Pendentes', '', '', '', 'Responsável', '', 'Data Limite', '', 'Status'],
-          ['Próximas ações', '', '', '', 'Responsável', '', 'Data Limite', '', 'Status'],
-          ['Consultor(a)', '', '', '', '', 'Representante da Empresa'],
-          ['', 'Data:      /         /'],
+          [null, null, null, 'RELATÓRIO DE ACOMPANHAMENTO DA CONSULTORIA', null, null, null, null, null],
+          ['EMPRESA:', null, gen.empresa, null, null, null, null, null, null],
+          ['PRODUTO:', null, 'Consultoria Eficiência Energética', null, null, null, null, null, null],
+          ['MÊS/ANO:', null, mesDate, null, 'CONSULTOR(A):', nomeConsultor, null, null, null],
+          ['DATA', 'DESCRIÇÃO DAS ATIVIDADES REALIZADAS NA CONSULTORIA', null, null, null, null, null, 'QUANT.HORAS', null],
         ]
+        sessMes.forEach(s => {
+          relRows.push([new Date(s.data + 'T00:00:00'), s.atividade, null, null, null, null, null, s.horas, null])
+        })
+        relRows.push(['Horas previstas na proposta:', null, null, null, config.horasTotal, 'Total de horas realizadas no mês:', null, null, chTotal])
+        relRows.push(['Total de horas realizadas (acumulado):', null, null, null, null, 'Saldo de horas:', null, null, null])
+        relRows.push(['Ações Pendentes', null, null, null, 'Responsável', null, 'Data Limite', null, 'Status'])
+        relRows.push(['Próximas ações', null, null, null, 'Responsável', null, 'Data Limite', null, 'Status'])
+        relRows.push(['Consultor(a)', null, null, null, null, 'Representante da Empresa', null, null, null])
+        relRows.push([null, 'Data:      /         /', null, null, null, null, 'Data:      /         /', null, null])
+
         const wsRel = XLSX.utils.aoa_to_sheet(relRows)
-        wsRel['!cols'] = [{ wch: 14 }, { wch: 42 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 28 }, { wch: 14 }, { wch: 10 }, { wch: 12 }]
-        const nomeAba = `REL ${String(idx + 1).padStart(2, '0')} - ${mes.slice(0, 3).charAt(0).toUpperCase() + mes.slice(1, 3)}`
-        XLSX.utils.book_append_sheet(wb, wsRel, nomeAba)
+        // Formatar datas na col A
+        const rng = XLSX.utils.decode_range(wsRel['!ref'])
+        for (let R = 4; R <= rng.e.r; R++) {
+          const cell = wsRel[XLSX.utils.encode_cell({ r: R, c: 0 })]
+          if (cell && cell.v instanceof Date) { cell.t = 'd'; cell.z = 'DD/MM/YYYY' }
+        }
+        // Formatar MÊS/ANO como data
+        const cellMes = wsRel[XLSX.utils.encode_cell({ r: 3, c: 2 })]
+        if (cellMes) { cellMes.t = 'd'; cellMes.z = 'MM/YYYY' }
+        wsRel['!cols'] = [{ wch: 14 }, { wch: 48 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 30 }, { wch: 14 }, { wch: 10 }, { wch: 12 }]
+        const nomeAba = `REL ACO - ${label.slice(0, 3).charAt(0).toUpperCase() + label.slice(0, 3).slice(1)} `
+        XLSX.utils.book_append_sheet(wb, wsRel, nomeAba + (idx + 1))
       })
 
       XLSX.writeFile(wb, `Cronograma_${gen.empresa.replace(/\s+/g, '_')}_${config.label}.xlsx`)
