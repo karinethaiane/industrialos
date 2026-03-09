@@ -115,26 +115,29 @@ function gerarSessoes(dataKickoff, dataEncerramento, configPorte, nomeConsultor,
     : configPorte.horasTotal === 110 ? ATIVIDADES_110H
     : ATIVIDADES_120H
   const n = atividades.length
-  return atividades.map((a, i) => {
+  const sessoes = atividades.map((a, i) => {
     const progresso = i / Math.max(n - 1, 1)
     const diasOffset = Math.round(progresso * totalDias)
     const d = new Date(inicio); d.setDate(d.getDate() + diasOffset)
     while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1)
-    const nomeReal = a.resp === 'CT' ? nomeConsultor
+    const nomeReal = a.resp === 'CT'  ? nomeConsultor
       : a.resp === 'ESP' ? (nomeEsp || 'ESPECIALISTA OU COORDENADOR')
-      : nomeConsultor // EDU = mesmo consultor técnico
+      : 'EDUCAÇÃO'
     return {
       id: i,
       data: d.toISOString().split('T')[0],
       etapa: a.etapa,
       atividade: a.atividade,
-      tipoResp: a.resp, // CT / ESP / EDU — para o totalizador
+      tipoResp: a.resp,
       responsavel: nomeReal,
       horas: a.horas,
       horario: a.horas <= 4 ? '08:00 as 12:00' : '08:00 as 17:00',
       formato: 'Presencial',
     }
   })
+  const dataKickOffCT = sessoes[0]?.data
+  sessoes.forEach(s => { if (s.tipoResp === 'EDU') s.data = dataKickOffCT })
+  return sessoes
 }
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
@@ -400,6 +403,14 @@ export default function Consultoria({ isAdmin = false }) {
       const nomeConsultor = (gen.consultorSelecionado || 'CONSULTOR TÉCNICO').toUpperCase()
       const nomeEsp = (gen.espSelecionado || especialista || 'ESPECIALISTA OU COORDENADOR').toUpperCase()
 
+      // Converte string "YYYY-MM-DD" para número serial do Excel (evita str.match error do SheetJS)
+      const toSerial = (dateStr) => {
+        if (!dateStr) return null
+        const d = new Date(dateStr + 'T00:00:00')
+        // Serial Excel: dias desde 1900-01-01 (com bug do ano bissexto 1900)
+        return Math.floor((d - new Date(Date.UTC(1899, 11, 30))) / 86400000)
+      }
+
       // ── Aba Cronograma (layout idêntico ao modelo) ──────────────────
       // Col: A(vazia) B(Mês) C(Etapa) D(Dia) E(Consultor) F(Entregas) G(Realizados) H(Horário) I(CH) J(Formato) K(CH Mês) L(CH Acum) M(%)
       const cronRows = [
@@ -433,7 +444,7 @@ export default function Consultoria({ isAdmin = false }) {
           null,
           ehPrimeiroDoMes ? mesLabel : null,
           ehPrimeiraDaEtapa ? s.etapa : null,
-          d,  // Date object — SheetJS formata corretamente
+          toSerial(s.data),
           s.responsavel.toUpperCase(),
           s.atividade,
           null,
@@ -452,12 +463,12 @@ export default function Consultoria({ isAdmin = false }) {
       cronRows.push([null, null, null, null, null, null, null, null, config.horasTotal, null, config.horasTotal, null, null])
 
       const wsCron = XLSX.utils.aoa_to_sheet(cronRows)
-      // Formatar coluna D (índice 3) como data
+      // Marcar coluna D (índice 3) como data formatada
       const range = XLSX.utils.decode_range(wsCron['!ref'])
       for (let R = 4; R <= range.e.r; R++) {
         const cell = wsCron[XLSX.utils.encode_cell({ r: R, c: 3 })]
-        if (cell && cell.v instanceof Date) {
-          cell.t = 'd'; cell.z = 'DD/MM/YYYY'
+        if (cell && typeof cell.v === 'number') {
+          cell.t = 'n'; cell.z = 'DD/MM/YYYY'
         }
       }
       wsCron['!cols'] = [{ wch: 2 }, { wch: 10 }, { wch: 22 }, { wch: 12 }, { wch: 28 }, { wch: 65 }, { wch: 30 }, { wch: 16 }, { wch: 11 }, { wch: 11 }, { wch: 8 }, { wch: 12 }, { wch: 10 }]
@@ -465,16 +476,16 @@ export default function Consultoria({ isAdmin = false }) {
 
       // ── Abas REL ACO por mês (layout idêntico ao modelo) ──────────────
       Object.entries(mesesMap).forEach(([mesKey, { label, sessoes: sessMes, chTotal }], idx) => {
-        const mesDate = new Date(mesKey + '-01T00:00:00')
+        const mesSerial = toSerial(mesKey + '-01')
         const relRows = [
           [null, null, null, 'RELATÓRIO DE ACOMPANHAMENTO DA CONSULTORIA', null, null, null, null, null],
           ['EMPRESA:', null, gen.empresa, null, null, null, null, null, null],
           ['PRODUTO:', null, 'Consultoria Eficiência Energética', null, null, null, null, null, null],
-          ['MÊS/ANO:', null, mesDate, null, 'CONSULTOR(A):', nomeConsultor, null, null, null],
+          ['MÊS/ANO:', null, mesSerial, null, 'CONSULTOR(A):', nomeConsultor, null, null, null],
           ['DATA', 'DESCRIÇÃO DAS ATIVIDADES REALIZADAS NA CONSULTORIA', null, null, null, null, null, 'QUANT.HORAS', null],
         ]
         sessMes.forEach(s => {
-          relRows.push([new Date(s.data + 'T00:00:00'), s.atividade, null, null, null, null, null, s.horas, null])
+          relRows.push([toSerial(s.data), s.atividade, null, null, null, null, null, s.horas, null])
         })
         relRows.push(['Horas previstas na proposta:', null, null, null, config.horasTotal, 'Total de horas realizadas no mês:', null, null, chTotal])
         relRows.push(['Total de horas realizadas (acumulado):', null, null, null, null, 'Saldo de horas:', null, null, null])
@@ -484,21 +495,20 @@ export default function Consultoria({ isAdmin = false }) {
         relRows.push([null, 'Data:      /         /', null, null, null, null, 'Data:      /         /', null, null])
 
         const wsRel = XLSX.utils.aoa_to_sheet(relRows)
-        // Formatar datas na col A
+        // Marcar col A (datas) e C3 (mês/ano) como datas formatadas
         const rng = XLSX.utils.decode_range(wsRel['!ref'])
         for (let R = 4; R <= rng.e.r; R++) {
           const cell = wsRel[XLSX.utils.encode_cell({ r: R, c: 0 })]
-          if (cell && cell.v instanceof Date) { cell.t = 'd'; cell.z = 'DD/MM/YYYY' }
+          if (cell && typeof cell.v === 'number') { cell.t = 'n'; cell.z = 'DD/MM/YYYY' }
         }
-        // Formatar MÊS/ANO como data
         const cellMes = wsRel[XLSX.utils.encode_cell({ r: 3, c: 2 })]
-        if (cellMes) { cellMes.t = 'd'; cellMes.z = 'MM/YYYY' }
+        if (cellMes && typeof cellMes.v === 'number') { cellMes.t = 'n'; cellMes.z = 'MM/YYYY' }
         wsRel['!cols'] = [{ wch: 14 }, { wch: 48 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 30 }, { wch: 14 }, { wch: 10 }, { wch: 12 }]
         const nomeAba = `REL ACO - ${label.slice(0, 3).charAt(0).toUpperCase() + label.slice(0, 3).slice(1)} `
         XLSX.utils.book_append_sheet(wb, wsRel, nomeAba + (idx + 1))
       })
 
-      XLSX.writeFile(wb, `Cronograma_${gen.empresa.replace(/\s+/g, '_')}_${config.label}.xlsx`)
+      XLSX.writeFile(wb, `Cronograma_${String(gen.empresa).replace(/\s+/g, '_')}_${config.label}.xlsx`)
     } catch (e) { setErroGen('Erro ao exportar: ' + e.message) }
     setGerandoXlsx(false)
   }
@@ -834,7 +844,7 @@ export default function Consultoria({ isAdmin = false }) {
                     <select style={{ ...S.fsel, padding: '5px 8px', fontSize: 11 }} value={s.responsavel} onChange={e => editarSessao(s.id, 'responsavel', e.target.value)}>
                       <option value={gen.consultorSelecionado}>{gen.consultorSelecionado} (CT)</option>
                       {espOptions.map(e => <option key={e.id} value={e.nome}>{e.nome} ({e.cargo})</option>)}
-                      <option value={gen.consultorSelecionado + '_EDU'}>{gen.consultorSelecionado} · Educação</option>
+                      <option value="EDUCAÇÃO">EDUCAÇÃO</option>
                     </select>
                     <input type="number" step="0.5" min="1" style={{ ...S.input, padding: '5px 8px', fontSize: 12 }} value={s.horas} onChange={e => editarSessao(s.id, 'horas', parseFloat(e.target.value))} />
                   </div>
