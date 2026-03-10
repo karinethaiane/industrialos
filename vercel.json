@@ -1,7 +1,0 @@
-{
-  "functions": {
-    "api/gerar_cronograma.py": {
-      "runtime": "vercel-python@3.0.0"
-    }
-  }
-}
