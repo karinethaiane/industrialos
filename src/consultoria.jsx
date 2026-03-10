@@ -417,7 +417,8 @@ export default function Consultoria({ isAdmin = false }) {
         }))
       }
 
-      const res = await fetch('/api/gerar_cronograma', {
+      const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:8000' : 'https://cronograma-api-3id0.onrender.com/gerar'
+      const res = await fetch(apiUrl, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify(payload),
