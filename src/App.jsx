@@ -7,6 +7,7 @@ import Financeiro from './financeiro'
 import Dashboard from './dashboard'
 import OneDock from './onedoc'
 import Consultoria from './consultoria'
+import Patrimonio from './patrimonio'
 
 const ICONS = {
   epis: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
@@ -15,6 +16,7 @@ const ICONS = {
   financeiro: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
   onedoc: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
   consultoria: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>,
+  patrimonio: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>,
   inicio: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>,
   sun: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
   moon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
@@ -69,16 +71,19 @@ export default function App() {
 
   if (!session) return <Login tema={tema} toggleTema={toggleTema} />
 
-  const isAdmin = perfil?.role === 'admin'
+  const isAdmin       = perfil?.role === 'admin'
+  const isEspecialista = perfil?.role === 'especialista'
   const initials = (session.user.email || '').slice(0, 2).toUpperCase()
 
   const navItems = [
-    { id: 'inicio', label: 'Início', icon: ICONS.inicio },
-    { id: 'epis', label: 'EPIs', icon: ICONS.epis },
-    { id: 'veiculos', label: 'Veículos', icon: ICONS.veiculos },
-    { id: 'financeiro', label: 'Financeiro', icon: ICONS.financeiro },
-    { id: 'onedoc', label: '1Doc', icon: ICONS.onedoc },
-    { id: 'consultoria', label: 'Consultoria', icon: ICONS.consultoria },
+    { id: 'inicio',       label: 'Início',      icon: ICONS.inicio },
+    { id: 'epis',         label: 'EPIs',         icon: ICONS.epis },
+    { id: 'veiculos',     label: 'Veículos',     icon: ICONS.veiculos },
+    { id: 'financeiro',   label: 'Financeiro',   icon: ICONS.financeiro },
+    { id: 'onedoc',       label: '1Doc',         icon: ICONS.onedoc },
+    { id: 'consultoria',  label: 'Consultoria',  icon: ICONS.consultoria },
+    { id: 'patrimonio',   label: 'Patrimônio',   icon: ICONS.patrimonio },
+    // Colaboradores: só admin vê
     ...(isAdmin ? [{ id: 'colaboradores', label: 'Colaboradores', icon: ICONS.colaboradores }] : []),
   ]
 
@@ -161,12 +166,13 @@ export default function App() {
       </aside>
 
       <main style={{ flex: 1, background: 'var(--bg)', overflowY: 'auto', minWidth: 0 }}>
-        {pagina === 'inicio' && <Dashboard onNavegar={setPagina} />}
-        {pagina === 'epis' && <Epis isAdmin={isAdmin} />}
-        {pagina === 'veiculos' && <Veiculos isAdmin={isAdmin} />}
-        {pagina === 'financeiro' && <Financeiro isAdmin={isAdmin} />}
-        {pagina === 'onedoc' && <OneDock isAdmin={isAdmin} />}
-        {pagina === 'consultoria' && <Consultoria isAdmin={isAdmin} />}
+        {pagina === 'inicio'      && <Dashboard onNavegar={setPagina} />}
+        {pagina === 'epis'        && <Epis isAdmin={isAdmin} />}
+        {pagina === 'veiculos'    && <Veiculos isAdmin={isAdmin} />}
+        {pagina === 'financeiro'  && <Financeiro isAdmin={isAdmin} />}
+        {pagina === 'onedoc'      && <OneDock isAdmin={isAdmin} />}
+        {pagina === 'consultoria' && <Consultoria isAdmin={isAdmin} isEspecialista={isEspecialista} />}
+        {pagina === 'patrimonio'  && <Patrimonio isAdmin={isAdmin} />}
         {pagina === 'colaboradores' && isAdmin && <Colaboradores />}
       </main>
     </div>
