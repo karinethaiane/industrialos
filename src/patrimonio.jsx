@@ -227,33 +227,77 @@ export default function Patrimonio({ isAdmin = false }) {
       const rows = XLSX.utils.sheet_to_json(ws, { defval: '' })
 
       // Mapeamento flexível de colunas (aceita variações de nome)
-      // Mapeamento direto pelos nomes exatos da planilha
-      const col = (row, ...nomes) => {
-        for (const n of nomes) {
-          const k = Object.keys(row).find(k => k.trim().toLowerCase() === n.toLowerCase())
-          if (k !== undefined && row[k] !== '' && row[k] !== null && row[k] !== undefined)
-            return String(row[k]).trim()
+      // Planilha tem formato especial: cabeçalho na linha 37, dados a partir da 38
+      // Responsável e Local ficam em linhas "Total do Responsável [X]" e "Total do Local [X]"
+      // Colunas por índice: barCode=6, description=8, complementary=11, situation=16,
+      //                     acquisitionDate=19, acquisitionValue=23, accountingBalance=34
+      const rawData = XLSX.utils.sheet_to_json(ws, { header: 1 })
+
+      const extractAssetType = (desc) => {
+        const d = (desc || '').toUpperCase()
+        if (d.includes('NOTEBOOK') || d.includes('DESKTOP')) return 'Computador'
+        if (d.includes('MONITOR') || d.includes('TECLADO') || d.includes('MOUSE') || d.includes('IMPRESSORA')) return 'Periférico'
+        if (d.includes('MULTÍMETRO') || d.includes('ANALISADOR') || d.includes('MEDIDOR')) return 'Instrumento de Medição'
+        if (d.includes('MESA') || d.includes('CADEIRA') || d.includes('ARMÁRIO')) return 'Móvel'
+        return 'Outro'
+      }
+
+      const formatDate = (v) => {
+        if (!v) return null
+        if (typeof v === 'number') {
+          const d = new Date((v - 25569) * 86400 * 1000)
+          return d.toISOString().split('T')[0]
+        }
+        if (typeof v === 'string') {
+          const m = v.match(/(\d{2})\/(\d{2})\/(\d{4})/)
+          if (m) return `${m[3]}-${m[2]}-${m[1]}`
+          if (v.match(/\d{4}-\d{2}-\d{2}/)) return v
         }
         return null
       }
 
       let inseridos = 0, erros = 0
-      for (const row of rows) {
-        const codigo = col(row, 'Cod. Barra', 'cod. barra', 'codigo_barra', 'Código', 'codigo')
-        if (!codigo) continue
+      let currentResponsavel = '', currentLocal = ''
+
+      for (let i = 38; i < rawData.length; i++) {
+        const row = rawData[i]
+        if (!row) continue
+
+        const col5 = String(row[5] || '').trim()
+        const col6 = String(row[6] || '').trim()
+
+        // Linha de responsável
+        if (col5.includes('Total do Responsável')) {
+          const m = col5.match(/Total do Responsável \[([^\]]+)\]/)
+          if (m) currentResponsavel = m[1].trim()
+          continue
+        }
+        // Linha de local
+        if (col6.includes('Total do Local')) {
+          const m = col6.match(/Total do Local \[([^\]]+)\]/)
+          if (m) currentLocal = m[1].trim()
+          continue
+        }
+        // Pular linhas de total
+        if (col5.includes('Total') || col5.includes('total')) continue
+
+        const barCode = String(row[6] || '').trim()
+        const description = String(row[8] || '').trim()
+        if (!barCode || !description || barCode === 'Cod. Barra') continue
+
         const dados = {
-          codigo_barra:           codigo,
-          descricao:              col(row, 'Descr. Padrao', 'descr. padrao', 'Descrição', 'descricao') || '',
-          descricao_complementar: col(row, 'Compl. Descricao', 'compl. descricao', 'Complemento'),
-          tipo_bem:               col(row, 'Tipo', 'tipo_bem', 'Tipo de Bem'),
-          situacao:               col(row, 'Situacao', 'Situação', 'situacao') || 'Em uso',
-          local:                  col(row, 'Local', 'Localização', 'local'),
-          responsavel:            col(row, 'Responsavel', 'Responsável', 'responsavel'),
-          usuario_patrimonio:     col(row, 'Usuario', 'Usuário', 'usuario_patrimonio'),
-          unidade:                col(row, 'Unidade', 'unidade'),
-          data_aquisicao:         col(row, 'Dt. Aquis.', 'dt. aquis.', 'Data Aquisição', 'data_aquisicao'),
-          valor_aquisicao:        col(row, 'Vlr. Aquis.', 'vlr. aquis.', 'Valor Aquisição', 'valor_aquisicao'),
-          saldo_contabil:         col(row, 'Saldo Contábil', 'saldo contábil', 'Saldo', 'saldo_contabil'),
+          codigo_barra:           barCode,
+          descricao:              description,
+          descricao_complementar: String(row[11] || '').trim() || null,
+          tipo_bem:               extractAssetType(description),
+          situacao:               String(row[16] || '').trim() || 'Em uso',
+          local:                  currentLocal || null,
+          responsavel:            currentResponsavel || null,
+          usuario_patrimonio:     null,
+          unidade:                null,
+          data_aquisicao:         formatDate(row[19]),
+          valor_aquisicao:        String(row[23] || '').trim() || null,
+          saldo_contabil:         String(row[34] || '').trim() || null,
         }
         // Upsert por codigo_barra
         const { error } = await supabase.from('patrimonios').upsert(dados, { onConflict: 'codigo_barra' })
