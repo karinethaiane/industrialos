@@ -99,6 +99,7 @@ export default function Patrimonio({ isAdmin = false }) {
   const [formOcor, setFormOcor]     = useState(ocorVazio)
   const [modalOcor, setModalOcor]   = useState(false)
   const [ocorSel, setOcorSel]       = useState(null)
+  const [ocorDetalhe, setOcorDetalhe] = useState(null)
   const [salvando, setSalvando]     = useState(false)
   const [salvandoOcor, setSalvandoOcor] = useState(false)
   const [erro, setErro]             = useState('')
@@ -112,7 +113,7 @@ export default function Patrimonio({ isAdmin = false }) {
     setLoading(true)
     const [{ data: patrimonios }, { data: ocor }] = await Promise.all([
       supabase.from('patrimonios').select('*').order('descricao'),
-      supabase.from('patrimonio_ocorrencias').select('*, patrimonios(codigo_barra, descricao)').order('created_at', { ascending: false }),
+      supabase.from('patrimonio_ocorrencias').select('*, patrimonios(codigo_barra, descricao, local, usuario_patrimonio)').order('created_at', { ascending: false }),
     ])
     setItens(patrimonios || [])
     setTodasOcor(ocor || [])
@@ -259,7 +260,7 @@ export default function Patrimonio({ isAdmin = false }) {
     setModalOcor(false)
     const [{ data: ocorItem }, { data: ocorTodas }] = await Promise.all([
       supabase.from('patrimonio_ocorrencias').select('*').eq('patrimonio_id', itemSel.id).order('created_at', { ascending: false }),
-      supabase.from('patrimonio_ocorrencias').select('*, patrimonios(codigo_barra, descricao)').order('created_at', { ascending: false }),
+      supabase.from('patrimonio_ocorrencias').select('*, patrimonios(codigo_barra, descricao, local, usuario_patrimonio)').order('created_at', { ascending: false }),
     ])
     setOcorrencias(ocorItem || [])
     setTodasOcor(ocorTodas || [])
@@ -270,10 +271,17 @@ export default function Patrimonio({ isAdmin = false }) {
     await supabase.from('patrimonio_ocorrencias').delete().eq('id', id)
     const [{ data: ocorItem }, { data: ocorTodas }] = await Promise.all([
       supabase.from('patrimonio_ocorrencias').select('*').eq('patrimonio_id', itemSel.id).order('created_at', { ascending: false }),
-      supabase.from('patrimonio_ocorrencias').select('*, patrimonios(codigo_barra, descricao)').order('created_at', { ascending: false }),
+      supabase.from('patrimonio_ocorrencias').select('*, patrimonios(codigo_barra, descricao, local, usuario_patrimonio)').order('created_at', { ascending: false }),
     ])
     setOcorrencias(ocorItem || [])
     setTodasOcor(ocorTodas || [])
+  }
+
+  async function excluirOcorGlobal(o) {
+    if (!confirm('Excluir esta ocorrência?')) return
+    await supabase.from('patrimonio_ocorrencias').delete().eq('id', o.id)
+    const { data } = await supabase.from('patrimonio_ocorrencias').select('*, patrimonios(codigo_barra, descricao, local, usuario_patrimonio)').order('created_at', { ascending: false })
+    setTodasOcor(data || [])
   }
 
   // ── IMPORTAÇÃO ───────────────────────────────────────────────────────────────
@@ -596,10 +604,11 @@ export default function Patrimonio({ isAdmin = false }) {
                 <th style={S.th}>Data</th>
                 <th style={S.th}>Tipo</th>
                 <th style={S.th}>Bem</th>
-                <th style={S.th}>Código</th>
+                <th style={S.th}>Local · Usuário</th>
                 <th style={S.th}>Descrição</th>
                 <th style={S.th}>Chamado</th>
                 <th style={S.th}>Status</th>
+                <th style={S.th}></th>
               </tr></thead>
               <tbody>
                 {ocorFiltradas.map(o => {
@@ -613,10 +622,13 @@ export default function Patrimonio({ isAdmin = false }) {
                           {o.patrimonios?.descricao || '—'}
                         </div>
                       </td>
-                      <td style={{ ...S.td, fontFamily:'DM Mono, monospace', color:'var(--blue)', fontSize:11 }}>
-                        {o.patrimonios?.codigo_barra || '—'}
+                      <td style={{ ...S.td, fontSize:11 }}>
+                        <div style={{ color:'var(--text2)' }}>{o.patrimonios?.local || <span style={{ color:'var(--border2)' }}>—</span>}</div>
+                        {o.patrimonios?.usuario_patrimonio && (
+                          <div style={{ marginTop:2 }}><span style={S.chip('var(--green-dim)','var(--green)')}>{o.patrimonios.usuario_patrimonio}</span></div>
+                        )}
                       </td>
-                      <td style={{ ...S.td, maxWidth:220 }}>
+                      <td style={{ ...S.td, maxWidth:200 }}>
                         <div style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o.descricao}</div>
                       </td>
                       <td style={{ ...S.td, fontFamily:'DM Mono, monospace', fontSize:11 }}>
@@ -627,11 +639,20 @@ export default function Patrimonio({ isAdmin = false }) {
                           {o.status}
                         </span>
                       </td>
+                      <td style={S.td}>
+                        <div style={{ display:'flex', gap:4 }}>
+                          <button style={S.btnGhost} title="Detalhes" onClick={() => setOcorDetalhe(o)}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                          </button>
+                          {isAdmin && <button style={S.btnSm} onClick={() => { setItemSel(itens.find(i => i.id === o.patrimonio_id) || { id: o.patrimonio_id, descricao: o.patrimonios?.descricao }); abrirEditarOcor(o) }}>Editar</button>}
+                          {isAdmin && <button style={S.btnDanger} onClick={() => excluirOcorGlobal(o)}>✕</button>}
+                        </div>
+                      </td>
                     </tr>
                   )
                 })}
                 {ocorFiltradas.length === 0 && (
-                  <tr><td colSpan={7} style={{ ...S.td, textAlign:'center', padding:40, color:'var(--muted)' }}>
+                  <tr><td colSpan={8} style={{ ...S.td, textAlign:'center', padding:40, color:'var(--muted)' }}>
                     Nenhuma ocorrência encontrada.
                   </td></tr>
                 )}
@@ -804,6 +825,69 @@ export default function Patrimonio({ isAdmin = false }) {
             <div style={S.row}>
               <button style={S.btnSm} onClick={() => setModalOcor(false)}>Cancelar</button>
               <button style={S.btn} onClick={salvarOcor} disabled={salvandoOcor}>{salvandoOcor ? 'Salvando...' : 'Salvar'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL DETALHE OCORRÊNCIA ─────────────────────────────────────────── */}
+      {ocorDetalhe && (
+        <div style={S.modal} onClick={e => e.target === e.currentTarget && setOcorDetalhe(null)}>
+          <div style={{ ...S.modalBox, maxWidth: 460 }}>
+            <div style={S.modalTitle}>Detalhes da Ocorrência</div>
+            <div style={S.modalSub}>{ocorDetalhe.patrimonios?.descricao} · <span style={{ fontFamily:'DM Mono, monospace', color:'var(--blue)' }}>{ocorDetalhe.patrimonios?.codigo_barra}</span></div>
+
+            {/* Tipo + Status */}
+            <div style={{ display:'flex', gap:8, marginBottom:16 }}>
+              {(() => { const [bg,cor] = OCOR_COR[ocorDetalhe.tipo]||OCOR_COR['Outro']; return <span style={S.chip(bg,cor)}>{ocorDetalhe.tipo}</span> })()}
+              <span style={{ background: ocorDetalhe.status==='Aberto'?'rgba(245,158,11,.1)':'var(--green-dim)', color: ocorDetalhe.status==='Aberto'?'var(--amber)':'var(--green)', padding:'2px 8px', borderRadius:4, fontSize:10, fontWeight:600 }}>{ocorDetalhe.status}</span>
+            </div>
+
+            {/* Bem */}
+            <div style={S.sectionLabel}>Bem patrimonial</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
+              <div>
+                <div style={{ fontSize:11, color:'var(--muted)', fontWeight:500, marginBottom:3 }}>Local</div>
+                <div style={{ fontSize:13, color:'var(--text)' }}>{ocorDetalhe.patrimonios?.local || '—'}</div>
+              </div>
+              <div>
+                <div style={{ fontSize:11, color:'var(--muted)', fontWeight:500, marginBottom:3 }}>Usuário</div>
+                <div style={{ fontSize:13, color:'var(--text)' }}>
+                  {ocorDetalhe.patrimonios?.usuario_patrimonio
+                    ? <span style={S.chip('var(--green-dim)','var(--green)')}>{ocorDetalhe.patrimonios.usuario_patrimonio}</span>
+                    : '—'}
+                </div>
+              </div>
+            </div>
+
+            {/* Ocorrência */}
+            <div style={S.sectionLabel}>Ocorrência</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
+              <div>
+                <div style={{ fontSize:11, color:'var(--muted)', fontWeight:500, marginBottom:3 }}>Data de abertura</div>
+                <div style={{ fontSize:13, color:'var(--text)' }}>{fmtData(ocorDetalhe.data_abertura)}</div>
+              </div>
+              {ocorDetalhe.chamado && (
+                <div>
+                  <div style={{ fontSize:11, color:'var(--muted)', fontWeight:500, marginBottom:3 }}>Nº do chamado</div>
+                  <div style={{ fontFamily:'DM Mono, monospace', fontSize:13, color:'var(--text)' }}>{ocorDetalhe.chamado}</div>
+                </div>
+              )}
+              {ocorDetalhe.data_resolucao && (
+                <div>
+                  <div style={{ fontSize:11, color:'var(--muted)', fontWeight:500, marginBottom:3 }}>Resolvido em</div>
+                  <div style={{ fontSize:13, color:'var(--green)' }}>{fmtData(ocorDetalhe.data_resolucao)}</div>
+                </div>
+              )}
+            </div>
+            <div style={{ marginBottom:18 }}>
+              <div style={{ fontSize:11, color:'var(--muted)', fontWeight:500, marginBottom:6 }}>Descrição</div>
+              <div style={{ fontSize:13, color:'var(--text)', lineHeight:1.6, background:'var(--surface2)', borderRadius:7, padding:'10px 12px' }}>{ocorDetalhe.descricao}</div>
+            </div>
+
+            <div style={S.row}>
+              {isAdmin && <button style={S.btnSm} onClick={() => { setItemSel(itens.find(i => i.id === ocorDetalhe.patrimonio_id) || { id: ocorDetalhe.patrimonio_id, descricao: ocorDetalhe.patrimonios?.descricao }); abrirEditarOcor(ocorDetalhe); setOcorDetalhe(null) }}>Editar</button>}
+              <button style={S.btnSm} onClick={() => setOcorDetalhe(null)}>Fechar</button>
             </div>
           </div>
         </div>
