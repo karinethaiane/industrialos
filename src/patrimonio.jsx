@@ -78,7 +78,11 @@ const S = {
 function fmtData(d) { if (!d) return '—'; return new Date(d + 'T00:00:00').toLocaleDateString('pt-BR') }
 
 export default function Patrimonio({ isAdmin = false }) {
+  const [aba, setAba]               = useState('bens')
   const [itens, setItens]           = useState([])
+  const [todasOcor, setTodasOcor]   = useState([])
+  const [filtroOcorTipo, setFiltroOcorTipo] = useState('')
+  const [filtroOcorStatus, setFiltroOcorStatus] = useState('')
   const [loading, setLoading]       = useState(true)
   const [busca, setBusca]           = useState('')
   const [filtroTipo, setFiltroTipo] = useState('')
@@ -106,8 +110,12 @@ export default function Patrimonio({ isAdmin = false }) {
 
   async function carregar() {
     setLoading(true)
-    const { data } = await supabase.from('patrimonios').select('*').order('descricao')
-    setItens(data || [])
+    const [{ data: patrimonios }, { data: ocor }] = await Promise.all([
+      supabase.from('patrimonios').select('*').order('descricao'),
+      supabase.from('patrimonio_ocorrencias').select('*, patrimonios(codigo_barra, descricao)').order('created_at', { ascending: false }),
+    ])
+    setItens(patrimonios || [])
+    setTodasOcor(ocor || [])
     setLoading(false)
   }
 
@@ -249,15 +257,23 @@ export default function Patrimonio({ isAdmin = false }) {
     setSalvandoOcor(false)
     if (error) { setErroOcor('Erro: ' + error.message); return }
     setModalOcor(false)
-    const { data } = await supabase.from('patrimonio_ocorrencias').select('*').eq('patrimonio_id', itemSel.id).order('created_at', { ascending: false })
-    setOcorrencias(data || [])
+    const [{ data: ocorItem }, { data: ocorTodas }] = await Promise.all([
+      supabase.from('patrimonio_ocorrencias').select('*').eq('patrimonio_id', itemSel.id).order('created_at', { ascending: false }),
+      supabase.from('patrimonio_ocorrencias').select('*, patrimonios(codigo_barra, descricao)').order('created_at', { ascending: false }),
+    ])
+    setOcorrencias(ocorItem || [])
+    setTodasOcor(ocorTodas || [])
   }
 
   async function excluirOcor(id) {
     if (!confirm('Excluir esta ocorrência?')) return
     await supabase.from('patrimonio_ocorrencias').delete().eq('id', id)
-    const { data } = await supabase.from('patrimonio_ocorrencias').select('*').eq('patrimonio_id', itemSel.id).order('created_at', { ascending: false })
-    setOcorrencias(data || [])
+    const [{ data: ocorItem }, { data: ocorTodas }] = await Promise.all([
+      supabase.from('patrimonio_ocorrencias').select('*').eq('patrimonio_id', itemSel.id).order('created_at', { ascending: false }),
+      supabase.from('patrimonio_ocorrencias').select('*, patrimonios(codigo_barra, descricao)').order('created_at', { ascending: false }),
+    ])
+    setOcorrencias(ocorItem || [])
+    setTodasOcor(ocorTodas || [])
   }
 
   // ── IMPORTAÇÃO ───────────────────────────────────────────────────────────────
@@ -346,6 +362,26 @@ export default function Patrimonio({ isAdmin = false }) {
 
   const trHover = { onMouseEnter: e => e.currentTarget.style.background='var(--subtle)', onMouseLeave: e => e.currentTarget.style.background='transparent' }
 
+  // ── Dados derivados ─────────────────────────────────────────────────────────
+  const ocorAbertas = todasOcor.filter(o => o.status === 'Aberto')
+  const resumoOcor = {
+    'Manutenção':             ocorAbertas.filter(o => o.tipo === 'Manutenção').length,
+    'Reimpressão de plaqueta':ocorAbertas.filter(o => o.tipo === 'Reimpressão de plaqueta').length,
+    'Empréstimo':             ocorAbertas.filter(o => o.tipo === 'Empréstimo').length,
+    'Transferência':          ocorAbertas.filter(o => o.tipo === 'Transferência').length,
+  }
+  const ocorFiltradas = todasOcor.filter(o => {
+    if (filtroOcorTipo   && o.tipo   !== filtroOcorTipo)   return false
+    if (filtroOcorStatus && o.status !== filtroOcorStatus) return false
+    return true
+  })
+  const OCOR_RESUMO_COR = {
+    'Manutenção':              ['rgba(245,158,11,.1)', 'var(--amber)'],
+    'Reimpressão de plaqueta': ['var(--red-dim)',      'var(--red)'],
+    'Empréstimo':              ['rgba(167,139,250,.1)','#a78bfa'],
+    'Transferência':           ['var(--blue-dim)',     'var(--blue)'],
+  }
+
   return (
     <div style={S.wrap}>
       <div style={S.header}>
@@ -371,6 +407,73 @@ export default function Patrimonio({ isAdmin = false }) {
       {erroImport && (
         <div style={{ ...S.erro, marginBottom:16, color: erroImport.startsWith('Erro') ? 'var(--red)' : 'var(--green)', background: erroImport.startsWith('Erro') ? 'var(--red-dim)' : 'var(--green-dim)' }}>
           {erroImport}
+        </div>
+      )}
+
+      {/* ABAS PRINCIPAIS */}
+      <div style={S.abas}>
+        <button style={S.aba(aba === 'bens')} onClick={() => setAba('bens')}>Bens</button>
+        <button style={S.aba(aba === 'ocorrencias')} onClick={() => setAba('ocorrencias')}>
+          Ocorrências
+          {ocorAbertas.length > 0 && (
+            <span style={{ marginLeft:6, background:'rgba(245,158,11,.15)', color:'var(--amber)', borderRadius:10, padding:'1px 7px', fontSize:10, fontWeight:700 }}>
+              {ocorAbertas.length} {ocorAbertas.length === 1 ? 'aberta' : 'abertas'}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* ══ ABA BENS ══════════════════════════════════════════════════════════ */}
+      {aba === 'bens' && (<>
+
+      {/* CARD RESUMO — só aparece se houver ocorrências abertas */}
+      {ocorAbertas.length > 0 && (
+        <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:10, padding:'14px 18px', marginBottom:18 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+            <span style={{ fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.07em' }}>
+              Ocorrências abertas
+            </span>
+            <button style={{ ...S.btnSm, fontSize:11 }} onClick={() => setAba('ocorrencias')}>Ver todas →</button>
+          </div>
+          {/* Contadores por tipo */}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8, marginBottom:12 }}>
+            {Object.entries(resumoOcor).map(([tipo, qtd]) => {
+              const [bg, cor] = OCOR_RESUMO_COR[tipo] || ['var(--subtle)','var(--muted)']
+              return (
+                <div key={tipo} style={{ background: qtd > 0 ? bg : 'var(--subtle)', borderRadius:8, padding:'10px 12px', opacity: qtd === 0 ? .4 : 1 }}>
+                  <div style={{ fontFamily:'DM Mono, monospace', fontSize:20, fontWeight:500, color: qtd > 0 ? cor : 'var(--muted)', lineHeight:1, marginBottom:3 }}>{qtd}</div>
+                  <div style={{ fontSize:10, color: qtd > 0 ? cor : 'var(--muted)', fontWeight:600 }}>{tipo}</div>
+                </div>
+              )
+            })}
+          </div>
+          {/* Mini lista das abertas (máx 4) */}
+          <div style={{ borderTop:'1px solid var(--border)', paddingTop:10 }}>
+            {ocorAbertas.slice(0, 4).map(o => {
+              const [, cor] = OCOR_RESUMO_COR[o.tipo] || ['var(--subtle)','var(--muted)']
+              return (
+                <div key={o.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'5px 0', borderBottom:'1px solid var(--border)' }}>
+                  <div style={{ display:'flex', gap:8, alignItems:'center', minWidth:0 }}>
+                    <span style={{ ...S.chip('var(--subtle)', cor), flexShrink:0 }}>{o.tipo}</span>
+                    <span style={{ fontSize:12, color:'var(--text)', fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      {o.patrimonios?.descricao || '—'}
+                    </span>
+                    <span style={{ fontFamily:'DM Mono, monospace', fontSize:11, color:'var(--blue)', flexShrink:0 }}>
+                      {o.patrimonios?.codigo_barra}
+                    </span>
+                  </div>
+                  <span style={{ fontSize:11, color:'var(--muted)', flexShrink:0, marginLeft:8 }}>
+                    {o.data_abertura ? new Date(o.data_abertura + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
+                  </span>
+                </div>
+              )
+            })}
+            {ocorAbertas.length > 4 && (
+              <div style={{ paddingTop:8, fontSize:11, color:'var(--muted)', textAlign:'center' }}>
+                + {ocorAbertas.length - 4} outras ocorrências abertas
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -463,6 +566,80 @@ export default function Patrimonio({ isAdmin = false }) {
           </tbody>
         </table>
       </div>
+
+      </>)}
+
+      {/* ══ ABA OCORRÊNCIAS ═══════════════════════════════════════════════════ */}
+      {aba === 'ocorrencias' && (
+        <div>
+          <div style={S.toolbar2}>
+            <span style={{ fontSize:11, color:'var(--muted)', fontWeight:500 }}>Filtrar:</span>
+            <select style={S.fselSm} value={filtroOcorTipo} onChange={e => setFiltroOcorTipo(e.target.value)}>
+              <option value="">Tipo — todos</option>
+              {TIPOS_OCOR.map(t => <option key={t}>{t}</option>)}
+            </select>
+            <select style={S.fselSm} value={filtroOcorStatus} onChange={e => setFiltroOcorStatus(e.target.value)}>
+              <option value="">Status — todos</option>
+              <option>Aberto</option>
+              <option>Resolvido</option>
+            </select>
+            {(filtroOcorTipo || filtroOcorStatus) && (
+              <button style={S.btnLimpar} onClick={() => { setFiltroOcorTipo(''); setFiltroOcorStatus('') }}>limpar</button>
+            )}
+            <span style={{ fontSize:11, color:'var(--muted)', marginLeft:'auto' }}>
+              {ocorFiltradas.length} de {todasOcor.length} ocorrências
+            </span>
+          </div>
+          <div style={S.tableWrap}>
+            <table style={S.table}>
+              <thead><tr>
+                <th style={S.th}>Data</th>
+                <th style={S.th}>Tipo</th>
+                <th style={S.th}>Bem</th>
+                <th style={S.th}>Código</th>
+                <th style={S.th}>Descrição</th>
+                <th style={S.th}>Chamado</th>
+                <th style={S.th}>Status</th>
+              </tr></thead>
+              <tbody>
+                {ocorFiltradas.map(o => {
+                  const [bg, cor] = OCOR_COR[o.tipo] || OCOR_COR['Outro']
+                  return (
+                    <tr key={o.id} onMouseEnter={e => e.currentTarget.style.background='var(--subtle)'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                      <td style={{ ...S.td, fontFamily:'DM Mono, monospace', fontSize:11, whiteSpace:'nowrap' }}>{fmtData(o.data_abertura)}</td>
+                      <td style={S.td}><span style={S.chip(bg, cor)}>{o.tipo}</span></td>
+                      <td style={{ ...S.td, color:'var(--text)', fontWeight:500, maxWidth:180 }}>
+                        <div style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                          {o.patrimonios?.descricao || '—'}
+                        </div>
+                      </td>
+                      <td style={{ ...S.td, fontFamily:'DM Mono, monospace', color:'var(--blue)', fontSize:11 }}>
+                        {o.patrimonios?.codigo_barra || '—'}
+                      </td>
+                      <td style={{ ...S.td, maxWidth:220 }}>
+                        <div style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o.descricao}</div>
+                      </td>
+                      <td style={{ ...S.td, fontFamily:'DM Mono, monospace', fontSize:11 }}>
+                        {o.chamado || <span style={{ color:'var(--border2)' }}>—</span>}
+                      </td>
+                      <td style={S.td}>
+                        <span style={{ background: o.status === 'Aberto' ? 'rgba(245,158,11,.1)' : 'var(--green-dim)', color: o.status === 'Aberto' ? 'var(--amber)' : 'var(--green)', padding:'2px 8px', borderRadius:4, fontSize:10, fontWeight:600 }}>
+                          {o.status}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })}
+                {ocorFiltradas.length === 0 && (
+                  <tr><td colSpan={7} style={{ ...S.td, textAlign:'center', padding:40, color:'var(--muted)' }}>
+                    Nenhuma ocorrência encontrada.
+                  </td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* ── MODAL FORM ──────────────────────────────────────────────────────────── */}
       {modal === 'form' && (
