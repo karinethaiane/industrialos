@@ -222,23 +222,18 @@ export default function Patrimonio({ isAdmin = false }) {
     try {
       const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs')
       const buf  = await file.arrayBuffer()
-      const wb   = XLSX.read(buf)
+      const wb   = XLSX.read(new Uint8Array(buf), { type: 'array' })
       const ws   = wb.Sheets[wb.SheetNames[0]]
-      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' })
 
-      // Mapeamento flexível de colunas (aceita variações de nome)
-      // Planilha tem formato especial: cabeçalho na linha 37, dados a partir da 38
-      // Responsável e Local ficam em linhas "Total do Responsável [X]" e "Total do Local [X]"
-      // Colunas por índice: barCode=6, description=8, complementary=11, situation=16,
-      //                     acquisitionDate=19, acquisitionValue=23, accountingBalance=34
+      // Planilha de relatório: dados por índice de coluna (formato fixo do sistema)
       const rawData = XLSX.utils.sheet_to_json(ws, { header: 1 })
 
-      const extractAssetType = (desc) => {
+      const extractType = (desc) => {
         const d = (desc || '').toUpperCase()
-        if (d.includes('NOTEBOOK') || d.includes('DESKTOP')) return 'Computador'
-        if (d.includes('MONITOR') || d.includes('TECLADO') || d.includes('MOUSE') || d.includes('IMPRESSORA')) return 'Periférico'
-        if (d.includes('MULTÍMETRO') || d.includes('ANALISADOR') || d.includes('MEDIDOR')) return 'Instrumento de Medição'
-        if (d.includes('MESA') || d.includes('CADEIRA') || d.includes('ARMÁRIO')) return 'Móvel'
+        if (d.includes('NOTEBOOK') || d.includes('DESKTOP') || d.includes('COMPUTADOR')) return 'Computador'
+        if (d.includes('MONITOR') || d.includes('TECLADO') || d.includes('MOUSE') || d.includes('IMPRESSORA') || d.includes('SCANNER')) return 'Periférico'
+        if (d.includes('MULTÍMETRO') || d.includes('ANALISADOR') || d.includes('MEDIDOR') || d.includes('ANALISAD')) return 'Instrumento de Medição'
+        if (d.includes('MESA') || d.includes('CADEIRA') || d.includes('ARMÁRIO') || d.includes('ESTANTE')) return 'Móvel'
         return 'Outro'
       }
 
@@ -251,7 +246,7 @@ export default function Patrimonio({ isAdmin = false }) {
         if (typeof v === 'string') {
           const m = v.match(/(\d{2})\/(\d{2})\/(\d{4})/)
           if (m) return `${m[3]}-${m[2]}-${m[1]}`
-          if (v.match(/\d{4}-\d{2}-\d{2}/)) return v
+          if (/\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0, 10)
         }
         return null
       }
@@ -259,52 +254,76 @@ export default function Patrimonio({ isAdmin = false }) {
       let inseridos = 0, erros = 0
       let currentResponsavel = '', currentLocal = ''
 
-      for (let i = 38; i < rawData.length; i++) {
+      // Encontrar a linha do cabeçalho (contém 'Cod. Barra')
+      let dataStart = 38
+      for (let i = 30; i < 50; i++) {
         const row = rawData[i]
-        if (!row) continue
+        if (row && row.some(c => String(c || '').includes('Cod. Barra'))) {
+          dataStart = i + 1
+          break
+        }
+      }
 
-        const col5 = String(row[5] || '').trim()
-        const col6 = String(row[6] || '').trim()
+      for (let i = dataStart; i < rawData.length; i++) {
+        const row = rawData[i]
+        if (!row || row.length === 0) continue
 
-        // Linha de responsável
-        if (col5.includes('Total do Responsável')) {
-          const m = col5.match(/Total do Responsável \[([^\]]+)\]/)
+        // Detectar linhas de responsável e local (varrer toda a linha)
+        const rowStr = row.map(c => String(c || '')).join('|')
+        
+        if (rowStr.includes('Total do Responsável')) {
+          const m = rowStr.match(/Total do Responsável \[([^\]]+)\]/)
           if (m) currentResponsavel = m[1].trim()
           continue
         }
-        // Linha de local
-        if (col6.includes('Total do Local')) {
-          const m = col6.match(/Total do Local \[([^\]]+)\]/)
+        if (rowStr.includes('Total do Local')) {
+          const m = rowStr.match(/Total do Local \[([^\]]+)\]/)
           if (m) currentLocal = m[1].trim()
           continue
         }
-        // Pular linhas de total
-        if (col5.includes('Total') || col5.includes('total')) continue
+        if (rowStr.includes('Total da Unidade') || rowStr.includes('Total de bens') || rowStr.includes('Total do')) continue
 
-        const barCode = String(row[6] || '').trim()
-        const description = String(row[8] || '').trim()
-        if (!barCode || !description || barCode === 'Cod. Barra') continue
+        // Tentar encontrar o código de barra — procurar em colunas 5-8
+        let barCode = '', description = '', compl = '', situation = '', dtAquis = null, vlrAquis = '', saldo = ''
+        
+        // Procurar coluna com código (numérico longo ou começa com 0)
+        for (let c = 5; c <= 8; c++) {
+          const v = String(row[c] || '').trim()
+          if (v && v !== 'Cod. Barra' && /^\d{5,}/.test(v)) {
+            barCode    = v
+            description = String(row[c + 2] || '').trim()
+            compl       = String(row[c + 5] || '').trim()
+            situation   = String(row[c + 10] || '').trim()
+            dtAquis     = formatDate(row[c + 13])
+            vlrAquis    = String(row[c + 17] || '').trim()
+            saldo       = String(row[c + 28] || '').trim()
+            break
+          }
+        }
+
+        if (!barCode || !description || description === 'Descr. Padrao') continue
 
         const dados = {
           codigo_barra:           barCode,
           descricao:              description,
-          descricao_complementar: String(row[11] || '').trim() || null,
-          tipo_bem:               extractAssetType(description),
-          situacao:               String(row[16] || '').trim() || 'Em uso',
+          descricao_complementar: compl || null,
+          tipo_bem:               extractType(description),
+          situacao:               situation || 'Em uso',
           local:                  currentLocal || null,
           responsavel:            currentResponsavel || null,
           usuario_patrimonio:     null,
           unidade:                null,
-          data_aquisicao:         formatDate(row[19]),
-          valor_aquisicao:        String(row[23] || '').trim() || null,
-          saldo_contabil:         String(row[34] || '').trim() || null,
+          data_aquisicao:         dtAquis,
+          valor_aquisicao:        vlrAquis || null,
+          saldo_contabil:         saldo || null,
         }
-        // Upsert por codigo_barra
+
         const { error } = await supabase.from('patrimonios').upsert(dados, { onConflict: 'codigo_barra' })
         if (error) erros++
         else inseridos++
       }
-      setErroImport(`Importação concluída: ${inseridos} registros. ${erros > 0 ? `${erros} erros.` : ''}`)
+
+      setErroImport(`Importação concluída: ${inseridos} registros.${erros > 0 ? ` ${erros} erros.` : ''}`)
       carregar()
     } catch (e) {
       setErroImport('Erro ao importar: ' + e.message)
