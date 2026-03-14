@@ -227,31 +227,33 @@ export default function Patrimonio({ isAdmin = false }) {
       const rows = XLSX.utils.sheet_to_json(ws, { defval: '' })
 
       // Mapeamento flexível de colunas (aceita variações de nome)
-      const mapCol = (row, ...nomes) => {
+      // Mapeamento direto pelos nomes exatos da planilha
+      const col = (row, ...nomes) => {
         for (const n of nomes) {
-          const k = Object.keys(row).find(k => k.toLowerCase().replace(/[^a-z0-9]/g,'').includes(n.toLowerCase().replace(/[^a-z0-9]/g,'')))
-          if (k && row[k] !== '') return String(row[k]).trim()
+          const k = Object.keys(row).find(k => k.trim().toLowerCase() === n.toLowerCase())
+          if (k !== undefined && row[k] !== '' && row[k] !== null && row[k] !== undefined)
+            return String(row[k]).trim()
         }
         return null
       }
 
-      let inseridos = 0, atualizados = 0, erros = 0
+      let inseridos = 0, erros = 0
       for (const row of rows) {
-        const codigo = mapCol(row, 'codigobarra', 'codigo', 'barcode', 'patrimônio', 'patrimonio', 'num')
+        const codigo = col(row, 'Cod. Barra', 'cod. barra', 'codigo_barra', 'Código', 'codigo')
         if (!codigo) continue
         const dados = {
           codigo_barra:           codigo,
-          descricao:              mapCol(row, 'descrição', 'descricao', 'description', 'bem') || '',
-          descricao_complementar: mapCol(row, 'complementar', 'complemento', 'obs'),
-          tipo_bem:               mapCol(row, 'tipo', 'tipobem', 'type'),
-          situacao:               mapCol(row, 'situação', 'situacao', 'status') || 'Em uso',
-          local:                  mapCol(row, 'local', 'localização', 'localizacao', 'location'),
-          responsavel:            mapCol(row, 'responsavel', 'responsável'),
-          usuario_patrimonio:     mapCol(row, 'usuario', 'usuário', 'user'),
-          unidade:                mapCol(row, 'unidade', 'unit'),
-          data_aquisicao:         mapCol(row, 'dataaquisicao', 'data'),
-          valor_aquisicao:        mapCol(row, 'valoraquisicao', 'valor'),
-          saldo_contabil:         mapCol(row, 'saldo', 'saldocontabil'),
+          descricao:              col(row, 'Descr. Padrao', 'descr. padrao', 'Descrição', 'descricao') || '',
+          descricao_complementar: col(row, 'Compl. Descricao', 'compl. descricao', 'Complemento'),
+          tipo_bem:               col(row, 'Tipo', 'tipo_bem', 'Tipo de Bem'),
+          situacao:               col(row, 'Situacao', 'Situação', 'situacao') || 'Em uso',
+          local:                  col(row, 'Local', 'Localização', 'local'),
+          responsavel:            col(row, 'Responsavel', 'Responsável', 'responsavel'),
+          usuario_patrimonio:     col(row, 'Usuario', 'Usuário', 'usuario_patrimonio'),
+          unidade:                col(row, 'Unidade', 'unidade'),
+          data_aquisicao:         col(row, 'Dt. Aquis.', 'dt. aquis.', 'Data Aquisição', 'data_aquisicao'),
+          valor_aquisicao:        col(row, 'Vlr. Aquis.', 'vlr. aquis.', 'Valor Aquisição', 'valor_aquisicao'),
+          saldo_contabil:         col(row, 'Saldo Contábil', 'saldo contábil', 'Saldo', 'saldo_contabil'),
         }
         // Upsert por codigo_barra
         const { error } = await supabase.from('patrimonios').upsert(dados, { onConflict: 'codigo_barra' })
