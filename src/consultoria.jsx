@@ -907,17 +907,37 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                     <>
                       <div style={{fontSize:10,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:8}}>✦ Recomendados para a região</div>
                       {rankingConsultores.filter(c=>c.score>=8).map((c,i) => {
-                        const ativas = kickoffs.filter(k=>k.consultor===c.nome&&k.status!=='apropriado').length
-                        const sel    = gen.consultorSelecionado === c.nome
+                        const ativas   = kickoffs.filter(k=>k.consultor===c.nome&&k.status!=='apropriado').length
+                        const sel      = gen.consultorSelecionado === c.nome
+                        // Verificar sobreposição de férias com o período do cronograma
+                        const feriasConflito = (() => {
+                          if (!gen.dataKickoff || !gen.dataEncerramento) return null
+                          const ini = new Date(gen.dataKickoff + 'T00:00:00')
+                          const fim = new Date(gen.dataEncerramento + 'T00:00:00')
+                          const feriasC = feriasPorConsultor[c.id] || []
+                          return feriasC.find(f => {
+                            const fIni = new Date(f.data_inicio + 'T00:00:00')
+                            const fFim = new Date(f.data_fim + 'T00:00:00')
+                            return fIni <= fim && fFim >= ini // sobreposição real
+                          }) || null
+                        })()
                         return (
                           <div key={c.id} style={{background:sel?'rgba(59,130,246,.06)':'rgba(16,185,129,.04)',border:`1px solid ${sel?'rgba(59,130,246,.3)':'rgba(16,185,129,.2)'}`,borderRadius:10,padding:'12px 14px',marginBottom:8,cursor:'pointer'}} onClick={()=>setGen(g=>({...g,consultorSelecionado:c.nome}))}>
                             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
                               <span style={{fontWeight:700,color:sel?'var(--blue)':'var(--green)',fontSize:13}}>{i===0?'★ ':''}{c.nome}</span>
-                              {sel && <span style={{fontSize:10,fontWeight:700,color:'var(--blue)',background:'var(--blue-dim)',padding:'1px 7px',borderRadius:4}}>SELECIONADO</span>}
+                              <div style={{display:'flex',gap:5,alignItems:'center'}}>
+                                {feriasConflito && <span style={{fontSize:10,fontWeight:700,color:'var(--red)',background:'rgba(240,90,90,.1)',padding:'1px 7px',borderRadius:4}}>⚠ FÉRIAS NO PERÍODO</span>}
+                                {sel && <span style={{fontSize:10,fontWeight:700,color:'var(--blue)',background:'var(--blue-dim)',padding:'1px 7px',borderRadius:4}}>SELECIONADO</span>}
+                              </div>
                             </div>
-                            <div>
+                            <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
                               <span style={S.chipReg(true)}>✓ {c.setor||'Sem setor'}</span>
                               <span style={S.chipReg(ativas<3)}>{ativas} empresa{ativas!==1?'s':''} ativa{ativas!==1?'s':''}</span>
+                              {feriasConflito && (
+                                <span style={{display:'inline-flex',alignItems:'center',gap:3,padding:'2px 8px',borderRadius:4,fontSize:10,fontWeight:600,background:'rgba(240,90,90,.08)',color:'var(--red)',border:'1px solid rgba(240,90,90,.18)'}}>
+                                  🏖 {new Date(feriasConflito.data_inicio+'T00:00:00').toLocaleDateString('pt-BR')} – {new Date(feriasConflito.data_fim+'T00:00:00').toLocaleDateString('pt-BR')}
+                                </span>
+                              )}
                             </div>
                           </div>
                         )
@@ -933,20 +953,37 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                         <div style={S.avisoFora}>⚠ Consultores fora da região podem gerar custo de deslocamento</div>
                       )}
                       {rankingConsultores.filter(c=>c.score<8).map(c => {
-                        const ativas = kickoffs.filter(k=>k.consultor===c.nome&&k.status!=='apropriado').length
-                        const sel    = gen.consultorSelecionado === c.nome
+                        const ativas   = kickoffs.filter(k=>k.consultor===c.nome&&k.status!=='apropriado').length
+                        const sel      = gen.consultorSelecionado === c.nome
+                        const feriasConflito = (() => {
+                          if (!gen.dataKickoff || !gen.dataEncerramento) return null
+                          const ini = new Date(gen.dataKickoff + 'T00:00:00')
+                          const fim = new Date(gen.dataEncerramento + 'T00:00:00')
+                          const feriasC = feriasPorConsultor[c.id] || []
+                          return feriasC.find(f => {
+                            const fIni = new Date(f.data_inicio + 'T00:00:00')
+                            const fFim = new Date(f.data_fim + 'T00:00:00')
+                            return fIni <= fim && fFim >= ini
+                          }) || null
+                        })()
                         return (
                           <div key={c.id} style={{background:sel?'rgba(59,130,246,.06)':'var(--surface2)',border:`1px solid ${sel?'rgba(59,130,246,.3)':'var(--border)'}`,borderRadius:10,padding:'12px 14px',marginBottom:8,cursor:'pointer',opacity:sel?1:.75}} onClick={()=>setGen(g=>({...g,consultorSelecionado:c.nome}))}>
                             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
                               <span style={{fontWeight:600,color:sel?'var(--blue)':'var(--text2)',fontSize:13}}>{c.nome}</span>
                               <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                                {feriasConflito && <span style={{fontSize:10,fontWeight:700,color:'var(--red)',background:'rgba(240,90,90,.1)',padding:'1px 7px',borderRadius:4}}>⚠ FÉRIAS NO PERÍODO</span>}
                                 <span style={{fontSize:10,color:'var(--muted)',background:'var(--subtle)',padding:'1px 7px',borderRadius:4}}>{c.setor||'Sem setor'}</span>
                                 {sel && <span style={{fontSize:10,fontWeight:700,color:'var(--blue)',background:'var(--blue-dim)',padding:'1px 7px',borderRadius:4}}>SELECIONADO</span>}
                               </div>
                             </div>
-                            <div>
+                            <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
                               <span style={S.chipReg(false)}>~ {c.setor||'Sem setor'}</span>
                               <span style={S.chipReg(ativas<3)}>{ativas} empresa{ativas!==1?'s':''} ativa{ativas!==1?'s':''}</span>
+                              {feriasConflito && (
+                                <span style={{display:'inline-flex',alignItems:'center',gap:3,padding:'2px 8px',borderRadius:4,fontSize:10,fontWeight:600,background:'rgba(240,90,90,.08)',color:'var(--red)',border:'1px solid rgba(240,90,90,.18)'}}>
+                                  🏖 {new Date(feriasConflito.data_inicio+'T00:00:00').toLocaleDateString('pt-BR')} – {new Date(feriasConflito.data_fim+'T00:00:00').toLocaleDateString('pt-BR')}
+                                </span>
+                              )}
                             </div>
                           </div>
                         )
