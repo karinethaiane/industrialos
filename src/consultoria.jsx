@@ -287,6 +287,9 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
   const [formNF, setFormNF]             = useState(SOLICITAR_NF_VAZIO)
   const [salvandoNF, setSalvandoNF]     = useState(false)
 
+  // Férias dos consultores
+  const [feriasPorConsultor, setFeriasPorConsultor] = useState({})
+
   // Feriados — cache por ano, buscados da BrasilAPI com fallback para lista fixa
   const [feriadosCache, setFeriadosCache] = useState({})
 
@@ -305,6 +308,20 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
       setFeriadosCache(prev => ({ ...prev, [ano]: fixos }))
       return fixos
     }
+  }
+
+  function isConsultorEmFerias(dateStr, nomeConsultor) {
+    if (!dateStr || !nomeConsultor) return false
+    // Encontrar o colaborador pelo nome
+    const consultor = [...consultores, ...espOptions].find(c => c.nome === nomeConsultor)
+    if (!consultor) return false
+    const ferias = feriasPorConsultor[consultor.id] || []
+    const data = new Date(dateStr + 'T00:00:00')
+    return ferias.some(f => {
+      const ini = new Date(f.data_inicio + 'T00:00:00')
+      const fim = new Date(f.data_fim + 'T00:00:00')
+      return data >= ini && data <= fim
+    })
   }
 
   function isFeriadoCached(dateStr) {
@@ -332,11 +349,12 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
 
   async function carregar() {
     setLoading(true)
-    const [kRes, sRes, dRes, cRes] = await Promise.all([
+    const [kRes, sRes, dRes, cRes, fRes] = await Promise.all([
       supabase.from('kickoffs').select('*').order('data_kickoff', { ascending:false, nullsFirst:true }),
       supabase.from('sebraetec').select('*').order('created_at', { ascending:false }),
       supabase.from('diretas').select('*').order('created_at', { ascending:false }),
       supabase.from('colaboradores').select('id,nome,cargo,setor').eq('ativo',true).order('nome'),
+      supabase.from('colaborador_ferias').select('*').order('data_inicio'),
     ])
     setKickoffs(kRes.data || [])
     setSebraetec(sRes.data || [])
@@ -346,6 +364,13 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
     const esp = colab.find(c => (c.cargo||'').toLowerCase().trim() === CARGO_ESPECIALISTA)
     setEspecialista(esp?.nome || '')
     setEspOptions(colab.filter(c => { const cg=(c.cargo||'').toLowerCase().trim(); return cg===CARGO_ESPECIALISTA||cg===CARGO_COORDENADOR }))
+    // Agrupar férias por colaborador_id
+    const fMap = {}
+    for (const f of (fRes.data || [])) {
+      if (!fMap[f.colaborador_id]) fMap[f.colaborador_id] = []
+      fMap[f.colaborador_id].push(f)
+    }
+    setFeriasPorConsultor(fMap)
     setLoading(false)
   }
 
@@ -983,8 +1008,14 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
 
                   {/* Aviso feriados */}
                   {sessoes.some(s=>isFeriadoCached(s.data)) && (
-                    <div style={{background:'rgba(245,158,11,.07)',border:'1px solid rgba(245,158,11,.2)',borderRadius:7,padding:'8px 12px',marginBottom:12,fontSize:12,color:'var(--amber)'}}>
+                    <div style={{background:'rgba(245,158,11,.07)',border:'1px solid rgba(245,158,11,.2)',borderRadius:7,padding:'8px 12px',marginBottom:8,fontSize:12,color:'var(--amber)'}}>
                       ⚠ {sessoes.filter(s=>isFeriadoCached(s.data)).length} sessão(ões) coincidem com feriados nacionais — revise as datas abaixo.
+                    </div>
+                  )}
+                  {/* Aviso férias */}
+                  {sessoes.some(s=>isConsultorEmFerias(s.data, s.responsavel)) && (
+                    <div style={{background:'rgba(167,139,250,.07)',border:'1px solid rgba(167,139,250,.2)',borderRadius:7,padding:'8px 12px',marginBottom:12,fontSize:12,color:'var(--purple)'}}>
+                      🏖 {sessoes.filter(s=>isConsultorEmFerias(s.data, s.responsavel)).length} sessão(ões) coincidem com período de férias do responsável — revise as datas abaixo.
                     </div>
                   )}
 
@@ -994,8 +1025,14 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                   {sessoes.map(s => (
                     <div key={s.id} style={S.sessaoRow}>
                       <div>
-                        <input type="date" style={{...S.input,padding:'5px 8px',fontSize:12,borderColor:isFeriadoCached(s.data)?'rgba(245,158,11,.5)':undefined,background:isFeriadoCached(s.data)?'rgba(245,158,11,.05)':undefined}} value={s.data} onChange={e=>editarSessao(s.id,'data',e.target.value)} />
+                        <input type="date" style={{...S.input,padding:'5px 8px',fontSize:12,
+                          borderColor: isFeriadoCached(s.data)?'rgba(245,158,11,.5)': isConsultorEmFerias(s.data,s.responsavel)?'rgba(167,139,250,.5)':undefined,
+                          background:  isFeriadoCached(s.data)?'rgba(245,158,11,.05)': isConsultorEmFerias(s.data,s.responsavel)?'rgba(167,139,250,.05)':undefined
+                        }} value={s.data} onChange={e=>editarSessao(s.id,'data',e.target.value)} />
                         {isFeriadoCached(s.data) && <div style={S.feriadoWarn}>⚠ {nomeFeriado(s.data)}</div>}
+                        {!isFeriadoCached(s.data) && isConsultorEmFerias(s.data,s.responsavel) && (
+                          <div style={{fontSize:10,color:'var(--purple)',background:'rgba(167,139,250,.1)',padding:'2px 6px',borderRadius:4,marginTop:3,display:'inline-flex',alignItems:'center',gap:3}}>🏖 Férias do responsável</div>
+                        )}
                       </div>
                       <input style={{...S.input,padding:'5px 8px',fontSize:12}} value={s.atividade} onChange={e=>editarSessao(s.id,'atividade',e.target.value)} />
                       <select style={{...S.fsel,padding:'5px 8px',fontSize:11}} value={s.responsavel} onChange={e=>editarSessao(s.id,'responsavel',e.target.value)}>
