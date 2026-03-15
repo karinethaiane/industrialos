@@ -18,12 +18,12 @@ const STATUS_KO_LABEL = { aguardando_cronograma: 'Ag. Cronograma', pendente: 'Pe
 const STATUS_KO_COR   = { aguardando_cronograma: 'var(--blue)', pendente: 'var(--amber)', apropriado: 'var(--green)' }
 
 // Status atendimento (B+P, Sebraetec, Diretas)
-const STATUS_AT_LABEL = { nao_iniciado: 'Não iniciado', em_execucao: 'Em execução', concluido: 'Concluído', cancelado: 'Cancelado' }
-const STATUS_AT_COR   = { nao_iniciado: 'var(--muted)', em_execucao: 'var(--blue)', concluido: 'var(--green)', cancelado: 'var(--red)' }
+const STATUS_AT_LABEL = { aguardando: 'Aguardando', nao_iniciado: 'Não iniciado', em_execucao: 'Em execução', concluido: 'Concluído', cancelado: 'Cancelado' }
+const STATUS_AT_COR   = { aguardando: '#fb923c', nao_iniciado: 'var(--muted)', em_execucao: 'var(--blue)', concluido: 'var(--green)', cancelado: 'var(--red)' }
 
 // Status NF (Diretas)
-const STATUS_NF_LABEL = { pendente: 'NF Pendente', emitida: 'NF Emitida' }
-const STATUS_NF_COR   = { pendente: 'var(--purple)', emitida: 'var(--green)' }
+const STATUS_NF_LABEL = { pendente: 'NF Pendente', solicitada: 'NF Solicitada', emitida: 'NF Emitida' }
+const STATUS_NF_COR   = { pendente: 'var(--muted)', solicitada: 'var(--purple)', emitida: 'var(--green)' }
 
 const PORTES = ['Micro', 'Pequeno', 'Médio']
 const PORTE_COR = { Micro: 'var(--green)', Pequeno: 'var(--amber)', Médio: 'var(--blue)' }
@@ -233,7 +233,8 @@ const S = {
 }
 
 const BP_FORM_VAZIO       = { id_sgt:'', empresa:'', consultor:'', data_kickoff:'', horas_kickoff:'4', porte:'Médio', status:'aguardando_cronograma', status_atendimento:'nao_iniciado' }
-const OUTRAS_FORM_VAZIO   = { id_sgt:'', numero_proposta:'', empresa:'', consultor:'', horas_total:'', receita:'', status:'em_execucao' }
+const OUTRAS_FORM_VAZIO   = { id_sgt:'', numero_proposta:'', empresa:'', consultor:'', horas_total:'', receita:'', status:'em_execucao', motivo_pendencia:'', observacoes:'', data_conclusao:'' }
+const SOLICITAR_NF_VAZIO  = { numero_parcelas:1, valor_parcela:'', observacoes:'' }
 const GERADOR_VAZIO       = { kickoffId:'', empresa:'', id_sgt:'', porteConfig:'Médio — 120h', localidade:'', dataAssinatura:'', dataKickoff:'', dataEncerramento:'', consultorSelecionado:'', espSelecionado:'' }
 
 // ── COMPONENTE ────────────────────────────────────────────────────────────────
@@ -279,6 +280,44 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
   const [formD, setFormD]           = useState(OUTRAS_FORM_VAZIO)
   const [salvando, setSalvando]     = useState(false)
   const [erro, setErro]             = useState('')
+
+  // Modal solicitar NF
+  const [modalSolNF, setModalSolNF]     = useState(false)
+  const [diretaSel, setDiretaSel]       = useState(null)
+  const [formNF, setFormNF]             = useState(SOLICITAR_NF_VAZIO)
+  const [salvandoNF, setSalvandoNF]     = useState(false)
+
+  // Feriados — cache por ano, buscados da BrasilAPI com fallback para lista fixa
+  const [feriadosCache, setFeriadosCache] = useState({})
+
+  async function buscarFeriados(ano) {
+    if (feriadosCache[ano]) return feriadosCache[ano]
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/feriados/v1/${ano}`)
+      if (!res.ok) throw new Error('API indisponível')
+      const data = await res.json()
+      const datas = data.map(f => f.date)
+      setFeriadosCache(prev => ({ ...prev, [ano]: datas }))
+      return datas
+    } catch {
+      // fallback lista fixa
+      const fixos = FERIADOS_NACIONAIS.filter(d => d.startsWith(String(ano)))
+      setFeriadosCache(prev => ({ ...prev, [ano]: fixos }))
+      return fixos
+    }
+  }
+
+  function isFeriadoCached(dateStr) {
+    const ano = dateStr.slice(0, 4)
+    const lista = feriadosCache[ano]
+    if (!lista) return false
+    return lista.includes(dateStr)
+  }
+
+  async function carregarFeriadosParaSessoes(sessoesList) {
+    const anos = [...new Set(sessoesList.map(s => s.data.slice(0,4)))]
+    await Promise.all(anos.map(a => buscarFeriados(a)))
+  }
 
   // Gerador
   const [gen, setGen]                   = useState(GERADOR_VAZIO)
@@ -360,13 +399,13 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
   function abrirNovoS() { setEditandoS(null); setErro(''); setFormS(OUTRAS_FORM_VAZIO); setModalS(true) }
   function abrirEditarS(r) {
     setEditandoS(r); setErro('')
-    setFormS({ id_sgt:r.id_sgt, numero_proposta:r.numero_proposta||'', empresa:r.empresa, consultor:r.consultor||'', horas_total:r.horas_total||'', receita:r.receita||'', status:r.status })
+    setFormS({ id_sgt:r.id_sgt, numero_proposta:r.numero_proposta||'', empresa:r.empresa, consultor:r.consultor||'', horas_total:r.horas_total||'', receita:r.receita||'', status:r.status, motivo_pendencia:r.motivo_pendencia||'', observacoes:r.observacoes||'', data_conclusao:r.data_conclusao||'' })
     setModalS(true)
   }
   async function salvarS() {
     if (!formS.id_sgt.trim()||!formS.empresa.trim()) { setErro('ID SGT e Empresa são obrigatórios.'); return }
     setSalvando(true); setErro('')
-    const dados = { id_sgt:formS.id_sgt.trim(), numero_proposta:formS.numero_proposta.trim()||null, empresa:formS.empresa.trim(), consultor:formS.consultor||null, horas_total:parseFloat(formS.horas_total)||null, receita:parseFloat(formS.receita)||null, status:formS.status }
+    const dados = { id_sgt:formS.id_sgt.trim(), numero_proposta:formS.numero_proposta.trim()||null, empresa:formS.empresa.trim(), consultor:formS.consultor||null, horas_total:parseFloat(formS.horas_total)||null, receita:parseFloat(formS.receita)||null, status:formS.status, motivo_pendencia: formS.status==='aguardando'?(formS.motivo_pendencia||null):null, observacoes: formS.status==='aguardando'?(formS.observacoes||null):null, data_conclusao: formS.status==='concluido'?(formS.data_conclusao||null):null }
     let error
     if (editandoS) { ({ error } = await supabase.from('sebraetec').update(dados).eq('id',editandoS.id)) }
     else           { ({ error } = await supabase.from('sebraetec').insert(dados)) }
@@ -380,13 +419,13 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
   function abrirNovoD() { setEditandoD(null); setErro(''); setFormD(OUTRAS_FORM_VAZIO); setModalD(true) }
   function abrirEditarD(r) {
     setEditandoD(r); setErro('')
-    setFormD({ id_sgt:r.id_sgt, numero_proposta:r.numero_proposta||'', empresa:r.empresa, consultor:r.consultor||'', horas_total:r.horas_total||'', receita:r.receita||'', status:r.status })
+    setFormD({ id_sgt:r.id_sgt, numero_proposta:r.numero_proposta||'', empresa:r.empresa, consultor:r.consultor||'', horas_total:r.horas_total||'', receita:r.receita||'', status:r.status, motivo_pendencia:r.motivo_pendencia||'', observacoes:r.observacoes||'', data_conclusao:r.data_conclusao||'' })
     setModalD(true)
   }
   async function salvarD() {
     if (!formD.id_sgt.trim()||!formD.empresa.trim()) { setErro('ID SGT e Empresa são obrigatórios.'); return }
     setSalvando(true); setErro('')
-    const dados = { id_sgt:formD.id_sgt.trim(), numero_proposta:formD.numero_proposta.trim()||null, empresa:formD.empresa.trim(), consultor:formD.consultor||null, horas_total:parseFloat(formD.horas_total)||null, receita:parseFloat(formD.receita)||null, status:formD.status, status_nf: editandoD?.status_nf||'pendente' }
+    const dados = { id_sgt:formD.id_sgt.trim(), numero_proposta:formD.numero_proposta.trim()||null, empresa:formD.empresa.trim(), consultor:formD.consultor||null, horas_total:parseFloat(formD.horas_total)||null, receita:parseFloat(formD.receita)||null, status:formD.status, motivo_pendencia: formD.status==='aguardando'?(formD.motivo_pendencia||null):null, observacoes: formD.status==='aguardando'?(formD.observacoes||null):null, data_conclusao: formD.status==='concluido'?(formD.data_conclusao||null):null, status_nf: editandoD?.status_nf||'pendente' }
     let error
     if (editandoD) { ({ error } = await supabase.from('diretas').update(dados).eq('id',editandoD.id)) }
     else           { ({ error } = await supabase.from('diretas').insert(dados)) }
@@ -395,7 +434,41 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
     setModalD(false); carregar()
   }
   async function excluirD(id) { if (!confirm('Excluir?')) return; await supabase.from('diretas').delete().eq('id',id); carregar() }
-  async function marcarNFEmitida(id) { await supabase.from('diretas').update({ status_nf:'emitida' }).eq('id',id); carregar() }
+  function abrirSolicitarNF(r) {
+    setDiretaSel(r)
+    const receita = parseFloat(r.receita) || 0
+    setFormNF({ numero_parcelas:1, valor_parcela: receita.toFixed(2), observacoes:'' })
+    setModalSolNF(true)
+  }
+
+  async function salvarSolicitacaoNF() {
+    if (!diretaSel) return
+    setSalvandoNF(true)
+    const parcelas = parseInt(formNF.numero_parcelas) || 1
+    const valorParcela = parseFloat(formNF.valor_parcela) || 0
+    const dados = {
+      id_sgt:               diretaSel.id_sgt,
+      numero_proposta:      diretaSel.numero_proposta || null,
+      empresa:              diretaSel.empresa,
+      consultor:            diretaSel.consultor || null,
+      status_sgt:           'Concluído',
+      data_conclusao_sgt:   diretaSel.data_conclusao || null,
+      numero_parcelas:      parcelas,
+      valor_parcela:        valorParcela,
+      valor_total:          valorParcela * parcelas,
+      nf_boleto_enviado:    false,
+      observacoes:          formNF.observacoes || null,
+      origem:               'consultoria',
+      direta_id:            diretaSel.id,
+    }
+    const { error } = await supabase.from('emissoes_nf').insert(dados)
+    if (error) { alert('Erro ao criar NF: ' + error.message); setSalvandoNF(false); return }
+    await supabase.from('diretas').update({ status_nf:'solicitada' }).eq('id', diretaSel.id)
+    setSalvandoNF(false)
+    setModalSolNF(false)
+    setDiretaSel(null)
+    carregar()
+  }
 
   // ── FILTROS ───────────────────────────────────────────────────────────────
   const hoje        = kickoffs.filter(k => isHoje(k.data_kickoff) && k.status === 'pendente')
@@ -473,14 +546,16 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
     setGen(g => ({ ...g, dataKickoff:data, dataEncerramento:enc }))
   }
 
-  function gerarCronograma() {
+  async function gerarCronograma() {
     setErroGen('')
     if (!gen.empresa)             { setErroGen('Selecione uma empresa.'); return }
     if (!gen.dataKickoff)         { setErroGen('Informe a data do Kick Off.'); return }
     if (!gen.dataEncerramento)    { setErroGen('Informe a data de encerramento.'); return }
     if (!gen.consultorSelecionado){ setErroGen('Selecione um consultor.'); return }
     const config = CONFIG_PORTE[gen.porteConfig]
-    setSessoes(gerarSessoes(gen.dataKickoff, gen.dataEncerramento, config, gen.consultorSelecionado, gen.espSelecionado))
+    const novasSessoes = gerarSessoes(gen.dataKickoff, gen.dataEncerramento, config, gen.consultorSelecionado, gen.espSelecionado)
+    await carregarFeriadosParaSessoes(novasSessoes)
+    setSessoes(novasSessoes)
   }
 
   function editarSessao(id, campo, valor) {
@@ -907,9 +982,9 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                   </div>
 
                   {/* Aviso feriados */}
-                  {sessoes.some(s=>isFeriado(s.data)) && (
+                  {sessoes.some(s=>isFeriadoCached(s.data)) && (
                     <div style={{background:'rgba(245,158,11,.07)',border:'1px solid rgba(245,158,11,.2)',borderRadius:7,padding:'8px 12px',marginBottom:12,fontSize:12,color:'var(--amber)'}}>
-                      ⚠ {sessoes.filter(s=>isFeriado(s.data)).length} sessão(ões) coincidem com feriados nacionais — revise as datas abaixo.
+                      ⚠ {sessoes.filter(s=>isFeriadoCached(s.data)).length} sessão(ões) coincidem com feriados nacionais — revise as datas abaixo.
                     </div>
                   )}
 
@@ -919,8 +994,8 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                   {sessoes.map(s => (
                     <div key={s.id} style={S.sessaoRow}>
                       <div>
-                        <input type="date" style={{...S.input,padding:'5px 8px',fontSize:12,borderColor:isFeriado(s.data)?'rgba(245,158,11,.5)':undefined,background:isFeriado(s.data)?'rgba(245,158,11,.05)':undefined}} value={s.data} onChange={e=>editarSessao(s.id,'data',e.target.value)} />
-                        {isFeriado(s.data) && <div style={S.feriadoWarn}>⚠ {nomeFeriado(s.data)}</div>}
+                        <input type="date" style={{...S.input,padding:'5px 8px',fontSize:12,borderColor:isFeriadoCached(s.data)?'rgba(245,158,11,.5)':undefined,background:isFeriadoCached(s.data)?'rgba(245,158,11,.05)':undefined}} value={s.data} onChange={e=>editarSessao(s.id,'data',e.target.value)} />
+                        {isFeriadoCached(s.data) && <div style={S.feriadoWarn}>⚠ {nomeFeriado(s.data)}</div>}
                       </div>
                       <input style={{...S.input,padding:'5px 8px',fontSize:12}} value={s.atividade} onChange={e=>editarSessao(s.id,'atividade',e.target.value)} />
                       <select style={{...S.fsel,padding:'5px 8px',fontSize:11}} value={s.responsavel} onChange={e=>editarSessao(s.id,'responsavel',e.target.value)}>
@@ -963,6 +1038,7 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
         <div style={S.toolbar}>
           <input style={S.search} placeholder="Buscar empresa, ID SGT, nº proposta, consultor..." value={buscaS} onChange={e=>setBuscaS(e.target.value)} />
           <button style={S.filtro(!filtroS)} onClick={()=>setFiltroS('')}>Todos</button>
+          <button style={S.filtro(filtroS==='aguardando')} onClick={()=>setFiltroS('aguardando')}>Aguardando</button>
           <button style={S.filtro(filtroS==='em_execucao')} onClick={()=>setFiltroS('em_execucao')}>Em execução</button>
           <button style={S.filtro(filtroS==='concluido')} onClick={()=>setFiltroS('concluido')}>Concluído</button>
           <button style={S.filtro(filtroS==='cancelado')} onClick={()=>setFiltroS('cancelado')}>Cancelado</button>
@@ -982,10 +1058,15 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                     <td style={{...S.td,fontFamily:'DM Mono, monospace',color:'var(--blue)',fontWeight:500}}>{r.id_sgt}</td>
                     <td style={{...S.td,fontFamily:'DM Mono, monospace',fontSize:12,color:'var(--purple)'}}>{r.numero_proposta||<span style={{color:'var(--border2)'}}>—</span>}</td>
                     <td style={{...S.td,color:'var(--text)',fontWeight:500}}>{r.empresa}</td>
-                    <td style={S.td}>{r.consultor||<span style={{color:'var(--border2)'}}>—</span>}</td>
+                    <td style={S.td}>{r.consultor||<span style={{color:'var(--border2)'}}>—</span>}
+                      {r.status==='aguardando' && r.motivo_pendencia && <div style={{fontSize:10,color:'#fb923c',marginTop:2}}>⏳ {r.motivo_pendencia}</div>}
+                    </td>
                     <td style={{...S.td,fontFamily:'DM Mono, monospace'}}>{r.horas_total?`${r.horas_total}h`:'—'}</td>
                     <td style={{...S.td,fontFamily:'DM Mono, monospace',color:'var(--green)'}}>{fmtMoeda(r.receita)}</td>
-                    <td style={S.td}><span style={{background:`${cor}18`,color:cor,padding:'2px 8px',borderRadius:4,fontSize:11,fontWeight:600}}>● {STATUS_AT_LABEL[r.status]||r.status}</span></td>
+                    <td style={S.td}>
+                      <span style={{background:`${cor}18`,color:cor,padding:'2px 8px',borderRadius:4,fontSize:11,fontWeight:600}}>● {STATUS_AT_LABEL[r.status]||r.status}</span>
+                      {r.status==='concluido' && r.data_conclusao && <div style={{fontSize:10,color:'var(--muted)',marginTop:2}}>{fmtData(r.data_conclusao)}</div>}
+                    </td>
                     <td style={S.td}>
                       <div style={{display:'flex',gap:4}}>
                         {podeEditar && <button style={S.btnSm} onClick={()=>abrirEditarS(r)}>Editar</button>}
@@ -1010,6 +1091,7 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
         <div style={S.toolbar}>
           <input style={S.search} placeholder="Buscar empresa, ID SGT, nº proposta, consultor..." value={buscaD} onChange={e=>setBuscaD(e.target.value)} />
           <button style={S.filtro(!filtroD)} onClick={()=>setFiltroD('')}>Todos</button>
+          <button style={S.filtro(filtroD==='aguardando')} onClick={()=>setFiltroD('aguardando')}>Aguardando</button>
           <button style={S.filtro(filtroD==='em_execucao')} onClick={()=>setFiltroD('em_execucao')}>Em execução</button>
           <button style={S.filtro(filtroD==='concluido')} onClick={()=>setFiltroD('concluido')}>Concluído</button>
           <button style={S.filtro(filtroD==='cancelado')} onClick={()=>setFiltroD('cancelado')}>Cancelado</button>
@@ -1030,10 +1112,15 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                     <td style={{...S.td,fontFamily:'DM Mono, monospace',color:'var(--blue)',fontWeight:500}}>{r.id_sgt}</td>
                     <td style={{...S.td,fontFamily:'DM Mono, monospace',fontSize:12,color:'var(--purple)'}}>{r.numero_proposta||<span style={{color:'var(--border2)'}}>—</span>}</td>
                     <td style={{...S.td,color:'var(--text)',fontWeight:500}}>{r.empresa}</td>
-                    <td style={S.td}>{r.consultor||<span style={{color:'var(--border2)'}}>—</span>}</td>
+                    <td style={S.td}>{r.consultor||<span style={{color:'var(--border2)'}}>—</span>}
+                      {r.status==='aguardando' && r.motivo_pendencia && <div style={{fontSize:10,color:'#fb923c',marginTop:2}}>⏳ {r.motivo_pendencia}</div>}
+                    </td>
                     <td style={{...S.td,fontFamily:'DM Mono, monospace'}}>{r.horas_total?`${r.horas_total}h`:'—'}</td>
                     <td style={{...S.td,fontFamily:'DM Mono, monospace',color:'var(--green)'}}>{fmtMoeda(r.receita)}</td>
-                    <td style={S.td}><span style={{background:`${cor}18`,color:cor,padding:'2px 8px',borderRadius:4,fontSize:11,fontWeight:600}}>● {STATUS_AT_LABEL[r.status]||r.status}</span></td>
+                    <td style={S.td}>
+                      <span style={{background:`${cor}18`,color:cor,padding:'2px 8px',borderRadius:4,fontSize:11,fontWeight:600}}>● {STATUS_AT_LABEL[r.status]||r.status}</span>
+                      {r.status==='concluido' && r.data_conclusao && <div style={{fontSize:10,color:'var(--muted)',marginTop:2}}>{fmtData(r.data_conclusao)}</div>}
+                    </td>
                     <td style={S.td}>
                       {r.status_nf ? (
                         <span style={{background:`${corNF}18`,color:corNF,padding:'2px 8px',borderRadius:4,fontSize:11,fontWeight:600}}>
@@ -1044,7 +1131,7 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                     <td style={S.td}>
                       <div style={{display:'flex',gap:4}}>
                         {r.status==='concluido' && r.status_nf==='pendente' && (
-                          <button style={S.btnNF} onClick={()=>marcarNFEmitida(r.id)}>
+                          <button style={S.btnNF} onClick={()=>abrirSolicitarNF(r)}>
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                             Solicitar NF
                           </button>
@@ -1151,6 +1238,7 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
             <div style={S.fieldRow}>
               <div style={S.field}><label style={S.label}>Status</label>
                 <select style={S.fsel} value={formS.status} onChange={e=>setFormS({...formS,status:e.target.value})}>
+                  <option value="aguardando">Aguardando</option>
                   <option value="em_execucao">Em execução</option>
                   <option value="concluido">Concluído</option>
                   <option value="cancelado">Cancelado</option>
@@ -1158,6 +1246,28 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
               </div>
               <div style={S.field}><label style={S.label}>Horas Totais</label><input type="number" style={S.input} value={formS.horas_total} onChange={e=>setFormS({...formS,horas_total:e.target.value})} placeholder="40" /></div>
             </div>
+            {formS.status === 'aguardando' && (<>
+              <div style={S.field}>
+                <label style={S.label}>Motivo da pendência</label>
+                <select style={S.fsel} value={formS.motivo_pendencia} onChange={e=>setFormS({...formS,motivo_pendencia:e.target.value})}>
+                  <option value="">Selecione o motivo...</option>
+                  <option>Consultor não definido</option>
+                  <option>Aguardando avaliação interna</option>
+                  <option>Aguardando documentação</option>
+                  <option>Outros</option>
+                </select>
+              </div>
+              <div style={S.field}>
+                <label style={S.label}>Observação</label>
+                <textarea style={{...S.input,minHeight:60,resize:'vertical'}} value={formS.observacoes} onChange={e=>setFormS({...formS,observacoes:e.target.value})} placeholder="Detalhe o motivo..." />
+              </div>
+            </>)}
+            {formS.status === 'concluido' && (
+              <div style={S.field}>
+                <label style={S.label}>Data de Conclusão no SGT *</label>
+                <input type="date" style={S.input} value={formS.data_conclusao} onChange={e=>setFormS({...formS,data_conclusao:e.target.value})} />
+              </div>
+            )}
             <div style={S.field}><label style={S.label}>Receita Prevista (R$)</label><input type="number" style={S.input} value={formS.receita} onChange={e=>setFormS({...formS,receita:e.target.value})} placeholder="8000" /></div>
             <div style={S.row}>
               <button style={S.btnSm} onClick={()=>setModalS(false)}>Cancelar</button>
@@ -1172,7 +1282,7 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
         <div style={S.modal} onClick={e=>e.target===e.currentTarget&&setModalD(false)}>
           <div style={S.modalBox}>
             <div style={S.modalTitle}>{editandoD?'Editar Direta':'Nova Direta'}</div>
-            {!editandoD && <div style={S.infoGreen}>Quando concluído, este atendimento aparecerá com o botão "Solicitar NF" para emissão.</div>}
+            {!editandoD && <div style={S.infoGreen}>Quando concluído, este atendimento aparecerá com o botão "Solicitar NF" para envio ao Financeiro.</div>}
             {erro && <div style={S.erro}>{erro}</div>}
             <div style={S.fieldRow}>
               <div style={S.field}><label style={S.label}>ID SGT *</label><input style={S.input} value={formD.id_sgt} onChange={e=>setFormD({...formD,id_sgt:e.target.value})} placeholder="DIR-2026-012" /></div>
@@ -1189,6 +1299,7 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
             <div style={S.fieldRow}>
               <div style={S.field}><label style={S.label}>Status</label>
                 <select style={S.fsel} value={formD.status} onChange={e=>setFormD({...formD,status:e.target.value})}>
+                  <option value="aguardando">Aguardando</option>
                   <option value="em_execucao">Em execução</option>
                   <option value="concluido">Concluído</option>
                   <option value="cancelado">Cancelado</option>
@@ -1196,10 +1307,100 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
               </div>
               <div style={S.field}><label style={S.label}>Horas Totais</label><input type="number" style={S.input} value={formD.horas_total} onChange={e=>setFormD({...formD,horas_total:e.target.value})} placeholder="80" /></div>
             </div>
+            {formD.status === 'aguardando' && (<>
+              <div style={S.field}>
+                <label style={S.label}>Motivo da pendência</label>
+                <select style={S.fsel} value={formD.motivo_pendencia} onChange={e=>setFormD({...formD,motivo_pendencia:e.target.value})}>
+                  <option value="">Selecione o motivo...</option>
+                  <option>Consultor não definido</option>
+                  <option>Aguardando avaliação interna</option>
+                  <option>Aguardando documentação</option>
+                  <option>Outros</option>
+                </select>
+              </div>
+              <div style={S.field}>
+                <label style={S.label}>Observação</label>
+                <textarea style={{...S.input,minHeight:60,resize:'vertical'}} value={formD.observacoes} onChange={e=>setFormD({...formD,observacoes:e.target.value})} placeholder="Detalhe o motivo..." />
+              </div>
+            </>)}
+            {formD.status === 'concluido' && (
+              <div style={S.field}>
+                <label style={S.label}>Data de Conclusão no SGT *</label>
+                <input type="date" style={S.input} value={formD.data_conclusao} onChange={e=>setFormD({...formD,data_conclusao:e.target.value})} />
+              </div>
+            )}
             <div style={S.field}><label style={S.label}>Receita Prevista (R$)</label><input type="number" style={S.input} value={formD.receita} onChange={e=>setFormD({...formD,receita:e.target.value})} placeholder="18000" /></div>
             <div style={S.row}>
               <button style={S.btnSm} onClick={()=>setModalD(false)}>Cancelar</button>
               <button style={S.btn} onClick={salvarD} disabled={salvando}>{salvando?'Salvando...':'Salvar'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ── MODAL SOLICITAR NF ───────────────────────────────────────────────── */}
+      {modalSolNF && diretaSel && (
+        <div style={S.modal} onClick={e=>e.target===e.currentTarget&&setModalSolNF(false)}>
+          <div style={{...S.modalBox,maxWidth:520}}>
+            <div style={S.modalTitle}>Solicitar Emissão de NF</div>
+            <div style={{fontSize:12,color:'var(--muted)',marginBottom:18}}>{diretaSel.empresa} · {diretaSel.id_sgt}</div>
+
+            <div style={S.infoBox}>Os dados do atendimento foram importados. Preencha as condições de pagamento — o restante você completa no Financeiro após o envio.</div>
+
+            <div style={S.sectionLbl}>Dados importados</div>
+            <div style={S.fieldRow}>
+              <div style={S.field}><label style={S.label}>ID SGT</label><input style={{...S.input,opacity:.6,cursor:'not-allowed'}} value={diretaSel.id_sgt} disabled /></div>
+              <div style={S.field}><label style={S.label}>Nº Proposta</label><input style={{...S.input,opacity:.6,cursor:'not-allowed'}} value={diretaSel.numero_proposta||'—'} disabled /></div>
+            </div>
+            <div style={S.fieldRow}>
+              <div style={S.field}><label style={S.label}>Empresa</label><input style={{...S.input,opacity:.6,cursor:'not-allowed'}} value={diretaSel.empresa} disabled /></div>
+              <div style={S.field}><label style={S.label}>Consultor</label><input style={{...S.input,opacity:.6,cursor:'not-allowed'}} value={diretaSel.consultor||'—'} disabled /></div>
+            </div>
+            <div style={S.fieldRow}>
+              <div style={S.field}><label style={S.label}>Status SGT</label><input style={{...S.input,opacity:.6,cursor:'not-allowed'}} value="Concluído" disabled /></div>
+              <div style={S.field}><label style={S.label}>Data de conclusão</label><input style={{...S.input,opacity:.6,cursor:'not-allowed'}} value={diretaSel.data_conclusao ? new Date(diretaSel.data_conclusao+'T00:00:00').toLocaleDateString('pt-BR') : '—'} disabled /></div>
+            </div>
+
+            <div style={S.sectionLbl}>Condições de pagamento</div>
+            <div style={S.fieldRow}>
+              <div style={S.field}>
+                <label style={S.label}>Nº de Parcelas</label>
+                <input type="number" min="1" style={S.input} value={formNF.numero_parcelas} onChange={e=>{
+                  const n = parseInt(e.target.value)||1
+                  const receita = parseFloat(diretaSel.receita)||0
+                  setFormNF(f=>({...f,numero_parcelas:n,valor_parcela:(receita/n).toFixed(2)}))
+                }} />
+              </div>
+              <div style={S.field}>
+                <label style={S.label}>Valor por Parcela (R$) <span style={{color:'var(--muted)',fontWeight:400}}>editável</span></label>
+                <input type="number" step="0.01" style={S.input} value={formNF.valor_parcela} onChange={e=>setFormNF(f=>({...f,valor_parcela:e.target.value}))} />
+              </div>
+            </div>
+            {(() => {
+              const total = (parseFloat(formNF.valor_parcela)||0) * (parseInt(formNF.numero_parcelas)||1)
+              const receita = parseFloat(diretaSel.receita)||0
+              return (
+                <div style={{background:'var(--blue-dim)',border:'1px solid rgba(79,142,247,.2)',borderRadius:8,padding:'12px 16px',marginBottom:14,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <div>
+                    <div style={{fontSize:10,color:'var(--blue)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:3}}>Valor Total</div>
+                    <div style={{fontFamily:'DM Mono, monospace',fontSize:20,fontWeight:500,color:'var(--blue)'}}>{total.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
+                  </div>
+                  <div style={{textAlign:'right'}}>
+                    <div style={{fontSize:10,color:'var(--muted)',marginBottom:3}}>Receita cadastrada</div>
+                    <div style={{fontFamily:'DM Mono, monospace',fontSize:13,color:'var(--muted)'}}>{receita.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
+                  </div>
+                </div>
+              )
+            })()}
+            <div style={S.field}>
+              <label style={S.label}>Observações</label>
+              <textarea style={{...S.input,minHeight:60,resize:'vertical'}} value={formNF.observacoes} onChange={e=>setFormNF(f=>({...f,observacoes:e.target.value}))} placeholder="Informações adicionais..." />
+            </div>
+            <div style={S.row}>
+              <button style={S.btnSm} onClick={()=>setModalSolNF(false)}>Cancelar</button>
+              <button style={S.btnGreen} onClick={salvarSolicitacaoNF} disabled={salvandoNF}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                {salvandoNF?'Enviando...':'Enviar para Financeiro'}
+              </button>
             </div>
           </div>
         </div>
