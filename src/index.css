@@ -1,7 +1,152 @@
-@import './tema.css';
+/* ════════════════════════════════════════════════════
+   IndustrialOS — Design System
+   Layout: v4 Minimal + módulos v3 Editorial
+   ════════════════════════════════════════════════════ */
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 
-body { margin: 0; }
+/* ── TEMA ESCURO ─────────────────────────────────────────────────── */
+[data-tema="dark"] {
+  /* Fundos */
+  --bg:         #0c0d0f;
+  --surface:    #141518;
+  --surface2:   #1b1d21;
+  --surface3:   #21242a;
 
-#root { min-height: 100vh; }
+  /* Bordas */
+  --border:     rgba(255,255,255,.07);
+  --border2:    rgba(255,255,255,.12);
+
+  /* Texto — mais visível que antes */
+  --text:       #eceef4;
+  --text2:      #9096a4;
+  --text3:      #555c6b;
+  --muted:      #555c6b;  /* alias de --text3 */
+
+  /* Superfície sutil */
+  --subtle:     rgba(255,255,255,.03);
+  --shadow:     rgba(0,0,0,.55);
+
+  /* Acento principal — azul */
+  --blue:       #5b8dee;
+  --blue-dim:   rgba(91,141,238,.1);
+  --blue-glow:  rgba(91,141,238,.25);
+  --a:          #5b8dee;
+  --a-dim:      rgba(91,141,238,.1);
+  --a-border:   rgba(91,141,238,.2);
+
+  /* Verde / OK */
+  --green:      #3ec98a;
+  --green-dim:  rgba(62,201,138,.08);
+  --ok:         #3ec98a;
+  --ok-dim:     rgba(62,201,138,.08);
+
+  /* Âmbar / Atenção */
+  --amber:      #e8a244;
+  --amber-dim:  rgba(232,162,68,.08);
+  --warn:       #e8a244;
+  --warn-dim:   rgba(232,162,68,.08);
+
+  /* Vermelho / Crítico */
+  --red:        #e05252;
+  --red-dim:    rgba(224,82,82,.08);
+  --danger:     #e05252;
+  --danger-dim: rgba(224,82,82,.08);
+
+  /* Roxo */
+  --purple:     #9b7ff0;
+  --purple-dim: rgba(155,127,240,.08);
+
+  /* Cyan (usado em gradiente do logo) */
+  --cyan:       #22d3ee;
+}
+
+/* ── TEMA CLARO ──────────────────────────────────────────────────── */
+[data-tema="light"] {
+  --bg:         #f4f5f8;
+  --surface:    #ffffff;
+  --surface2:   #eef0f4;
+  --surface3:   #e6e8ed;
+
+  --border:     rgba(0,0,0,.08);
+  --border2:    rgba(0,0,0,.13);
+
+  --text:       #0f1116;
+  --text2:      #525865;
+  --text3:      #9198a6;
+  --muted:      #9198a6;
+
+  --subtle:     rgba(0,0,0,.025);
+  --shadow:     rgba(0,0,0,.08);
+
+  --blue:       #3b6fe0;
+  --blue-dim:   rgba(59,111,224,.08);
+  --blue-glow:  rgba(59,111,224,.2);
+  --a:          #3b6fe0;
+  --a-dim:      rgba(59,111,224,.08);
+  --a-border:   rgba(59,111,224,.2);
+
+  --green:      #1fa86a;
+  --green-dim:  rgba(31,168,106,.08);
+  --ok:         #1fa86a;
+  --ok-dim:     rgba(31,168,106,.08);
+
+  --amber:      #c47c14;
+  --amber-dim:  rgba(196,124,20,.08);
+  --warn:       #c47c14;
+  --warn-dim:   rgba(196,124,20,.08);
+
+  --red:        #c43838;
+  --red-dim:    rgba(196,56,56,.08);
+  --danger:     #c43838;
+  --danger-dim: rgba(196,56,56,.08);
+
+  --purple:     #7b5cd9;
+  --purple-dim: rgba(123,92,217,.08);
+
+  --cyan:       #0891b2;
+}
+
+/* ── RESET E BASE ────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: 'DM Sans', 'Figtree', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Input date — fix modo escuro (datas invisíveis) */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  color-scheme: dark;
+}
+
+[data-tema="light"] input[type="date"],
+[data-tema="light"] input[type="time"],
+[data-tema="light"] input[type="datetime-local"] {
+  color-scheme: light;
+}
+
+/* Scrollbar sutil */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* Seleção */
+::selection {
+  background: var(--a-dim);
+  color: var(--text);
+}
