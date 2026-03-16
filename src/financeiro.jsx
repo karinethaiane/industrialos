@@ -17,6 +17,7 @@ const S = {
   toolbar: { display: 'flex', gap: 8, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' },
   search: { background: 'var(--surface2)', border: '1px solid var(--border2)', borderRadius: 7, padding: '8px 12px', color: 'var(--text)', fontSize: 13, outline: 'none', fontFamily: 'inherit', width: 260 },
   filtro: (on) => ({ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? 'rgba(59,130,246,.25)' : 'var(--border2)'}`, background: on ? 'var(--blue-dim)' : 'var(--subtle)', color: on ? 'var(--blue)' : 'var(--text2)', fontFamily: 'inherit' }),
+  filtroConsultoria: (on) => ({ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? 'rgba(167,139,250,.3)' : 'var(--border2)'}`, background: on ? 'rgba(167,139,250,.1)' : 'var(--subtle)', color: on ? '#a78bfa' : 'var(--text2)', fontFamily: 'inherit' }),
   btn: { background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' },
   btnSm: { background: 'var(--subtle)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 6, padding: '4px 9px', fontSize: 11, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' },
   btnDanger: { background: 'var(--red-dim)', color: 'var(--red)', border: '1px solid transparent', borderRadius: 6, padding: '4px 8px', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' },
@@ -63,6 +64,15 @@ function responsavelBadge(s) {
   const resp = STATUS_RESPONSAVEL[s] || '—'
   const cor = RESPONSAVEL_COR[resp] || 'var(--muted)'
   return <span style={{ background: `${cor}12`, color: cor, padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{resp}</span>
+}
+
+function origemBadge(origem) {
+  if (!origem || origem !== 'consultoria') return null
+  return (
+    <span style={{ fontSize: 10, fontWeight: 600, color: '#a78bfa', background: 'rgba(167,139,250,.1)', border: '1px solid rgba(167,139,250,.2)', borderRadius: 4, padding: '1px 6px', marginLeft: 6, whiteSpace: 'nowrap' }}>
+      Consultoria
+    </span>
+  )
 }
 
 function fmtData(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) }
@@ -136,7 +146,9 @@ export default function Financeiro({ isAdmin = false }) {
 
   const totalNF = (r) => (parseFloat(r.valor_parcela) || 0) * (parseInt(r.numero_parcelas) || 1)
 
+  // ── FILTRO com suporte a origem 'consultoria' ─────────────────────────────
   const emissoesFiltradas = emissoes.filter(r => {
+    if (filtroStatus === 'consultoria') return r.origem === 'consultoria'
     if (filtroStatus && r.status_sgt !== filtroStatus) return false
     if (busca) { const b = busca.toLowerCase(); return r.id_sgt?.toLowerCase().includes(b) || r.empresa?.toLowerCase().includes(b) || r.consultor?.toLowerCase().includes(b) }
     return true
@@ -151,6 +163,7 @@ export default function Financeiro({ isAdmin = false }) {
   const trHover = { onMouseEnter: e => e.currentTarget.style.background = 'var(--subtle)', onMouseLeave: e => e.currentTarget.style.background = 'transparent' }
   const valorTotalNFs = emissoes.reduce((acc, r) => acc + totalNF(r), 0)
   const totalParcelas = (parseFloat(formNF.valor_parcela) || 0) * (parseInt(formNF.numero_parcelas) || 1)
+  const totalConsultoria = emissoes.filter(e => e.origem === 'consultoria').length
 
   return (
     <div style={S.wrap}>
@@ -169,7 +182,7 @@ export default function Financeiro({ isAdmin = false }) {
           ['var(--blue)', emissoes.length, 'Total NFs'],
           ['var(--blue)', emissoes.filter(e => e.status_sgt === 'Em execução').length, 'Em Execução'],
           ['var(--green)', emissoes.filter(e => e.status_sgt === 'Concluído' && e.nf_boleto_enviado).length, 'NFs Concluídas'],
-          ['var(--purple)', pagamentos.length, 'Total Pagamentos'],
+          ['#a78bfa', totalConsultoria, 'Via Consultoria'],
           ['var(--amber)', pagamentos.filter(p => p.status === 'aguardando_desbloqueio').length, 'Aguard. Desbloqueio'],
         ].map(([cor, val, lbl]) => (
           <div key={lbl} style={S.statCard}>
@@ -197,6 +210,10 @@ export default function Financeiro({ isAdmin = false }) {
             <input style={S.search} placeholder="Buscar empresa, ID SGT, consultor..." value={busca} onChange={e => setBusca(e.target.value)} />
             <button style={S.filtro(!filtroStatus)} onClick={() => setFiltroStatus('')}>Todos</button>
             {STATUS_NF.map(s => <button key={s} style={S.filtro(filtroStatus === s)} onClick={() => setFiltroStatus(s)}>{s}</button>)}
+            {/* Filtro Consultoria */}
+            <button style={S.filtroConsultoria(filtroStatus === 'consultoria')} onClick={() => setFiltroStatus('consultoria')}>
+              Consultoria {totalConsultoria > 0 && <span style={{ background: 'rgba(167,139,250,.2)', color: '#a78bfa', borderRadius: 8, padding: '0 5px', fontSize: 10, fontWeight: 700, marginLeft: 2 }}>{totalConsultoria}</span>}
+            </button>
             {valorTotalNFs > 0 && (
               <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
                 Total geral: <span style={{ fontFamily: 'DM Mono, monospace', color: 'var(--green)', fontWeight: 600, fontSize: 13 }}>{fmtVal(valorTotalNFs)}</span>
@@ -215,7 +232,12 @@ export default function Financeiro({ isAdmin = false }) {
               {emissoesFiltradas.map(r => (
                 <tr key={r.id} {...trHover}>
                   <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', color: 'var(--blue)', fontWeight: 500 }}>{r.id_sgt}</td>
-                  <td style={{ ...S.td, color: 'var(--text)', fontWeight: 500, maxWidth: 180 }}>{r.empresa}</td>
+                  <td style={{ ...S.td, color: 'var(--text)', fontWeight: 500, maxWidth: 200 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+                      {r.empresa}
+                      {origemBadge(r.origem)}
+                    </div>
+                  </td>
                   <td style={S.td}>{statusNfBadge(r.status_sgt)}</td>
                   <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12 }}>{fmtData(r.data_conclusao_sgt)}</td>
                   <td style={S.td}>{r.consultor || '—'}</td>
