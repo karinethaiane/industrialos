@@ -345,7 +345,11 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
   const [erroGen, setErroGen]           = useState('')
   const [salvandoCron, setSalvandoCron] = useState(false)
 
-  useEffect(() => { carregar() }, [])
+  useEffect(() => {
+  // Acorda o Render ao carregar a página (evita cold start no momento de gerar)
+  fetch('https://cronograma-api-3id0.onrender.com/').catch(() => {})
+  carregar()
+}, [])
 
   async function carregar() {
     setLoading(true)
