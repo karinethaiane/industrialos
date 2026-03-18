@@ -400,10 +400,12 @@ export default function Patrimonio({ isAdmin = false }) {
     setModalPedido(true)
   }
   async function salvarPedido() {
-    if (!formPedido.numero.trim() || !formPedido.fornecedor.trim()) { setErroPedido('Número e fornecedor são obrigatórios.'); return }
+    if (!formPedido.fornecedor.trim()) { setErroPedido('Fornecedor é obrigatório.'); return }
     if (pedidoEquips.length === 0) { setErroPedido('Selecione ao menos um equipamento.'); return }
     setSalvandoPedido(true); setErroPedido('')
-    const dados = { numero: formPedido.numero.trim(), chamado: formPedido.chamado.trim() || null, data_abertura: formPedido.data_abertura || null, fornecedor: formPedido.fornecedor.trim(), numero_pedido: formPedido.numero_pedido.trim() || null, valor_global: parseFloat(formPedido.valor_global) || null, observacoes: formPedido.observacoes.trim() || null, status: 'em_andamento' }
+    const dados = {
+      numero: formPedido.chamado ? `CAL-${formPedido.chamado}` : `CAL-${new Date().getFullYear()}-${String(pedidos.length + 1).padStart(3, '0')}`,
+      chamado: formPedido.chamado.trim() || null, data_abertura: formPedido.data_abertura || null, fornecedor: formPedido.fornecedor.trim(), numero_pedido: formPedido.numero_pedido.trim() || null, valor_global: parseFloat(formPedido.valor_global) || null, observacoes: formPedido.observacoes.trim() || null, status: 'em_andamento' }
     let pedidoId
     if (editandoPedido) {
       const { error } = await supabase.from('calibracao_pedidos').update(dados).eq('id', editandoPedido.id)
@@ -769,13 +771,13 @@ export default function Patrimonio({ isAdmin = false }) {
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', paddingTop:12, borderTop:'1px solid var(--border)' }}>
                   <div style={{ fontSize:12, color:'var(--muted)' }}>{itensP.length} equipamento{itensP.length!==1?'s':''}</div>
                   <div style={{ display:'flex', gap:6 }}>
-                    {isAdmin && pedido.status==='em_andamento' && <>
-                      <button style={S.btnSm} onClick={()=>abrirEditarPedido(pedido)}>Editar</button>
+                    {isAdmin && pedido.status==='em_andamento' && (
                       <button style={S.btnGreen} onClick={()=>abrirConcluir(pedido)}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>Concluir serviço</button>
-                    </>}
+                    )}
                     {isAdmin && pedido.status==='concluido' && (
                       <button style={S.btnGreen} onClick={()=>abrirConcluir(pedido)}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Solicitar Pagamento</button>
                     )}
+                    {isAdmin && <button style={S.btnSm} onClick={()=>abrirEditarPedido(pedido)}>Editar</button>}
                     {isAdmin && <button style={S.btnDanger} onClick={()=>excluirPedido(pedido.id)}>✕</button>}
                   </div>
                 </div>
@@ -909,18 +911,13 @@ export default function Patrimonio({ isAdmin = false }) {
             <div style={S.modalTitle}>{editandoPedido?'Editar Pedido':'Novo Pedido de Calibração'}</div>
             <div style={S.modalSub}>Preencha os dados do processo de compras e selecione os equipamentos</div>
             {erroPedido&&<div style={S.erro}>{erroPedido}</div>}
-            <div style={S.sectionLabel}>Identificação</div>
-            <div style={S.fieldRow}>
-              <div style={S.field}><label style={S.label}>Número (interno) *</label><input style={S.input} value={formPedido.numero} onChange={e=>setFormPedido({...formPedido,numero:e.target.value})} placeholder="Ex: PED-2026-001"/></div>
-              <div style={S.field}><label style={S.label}>Fornecedor *</label><input style={S.input} value={formPedido.fornecedor} onChange={e=>setFormPedido({...formPedido,fornecedor:e.target.value})} placeholder="Nome da empresa"/></div>
-            </div>
-            <div style={S.sectionLabel}>Chamado e Compras</div>
+            <div style={S.field}><label style={S.label}>Fornecedor *</label><input style={S.input} value={formPedido.fornecedor} onChange={e=>setFormPedido({...formPedido,fornecedor:e.target.value})} placeholder="Nome da empresa executora"/></div>
             <div style={S.fieldRow}>
               <div style={S.field}><label style={S.label}>Nº Chamado (Compras)</label><input style={S.input} value={formPedido.chamado} onChange={e=>setFormPedido({...formPedido,chamado:e.target.value})} placeholder="Ex: 1420100"/></div>
               <div style={S.field}><label style={S.label}>Data de Abertura</label><input type="date" style={S.input} value={formPedido.data_abertura} onChange={e=>setFormPedido({...formPedido,data_abertura:e.target.value})}/></div>
             </div>
             <div style={S.fieldRow}>
-              <div style={S.field}><label style={S.label}>Nº do Pedido <span style={{ color:'var(--muted)', fontWeight:400 }}>(após adjudicação)</span></label><input style={S.input} value={formPedido.numero_pedido} onChange={e=>setFormPedido({...formPedido,numero_pedido:e.target.value})} placeholder="Preenchido após adjudicação"/></div>
+              <div style={S.field}><label style={S.label}>Nº do Pedido <span style={{ color:'var(--muted)', fontWeight:400 }}>(após adjudicação)</span></label><input style={S.input} value={formPedido.numero_pedido} onChange={e=>setFormPedido({...formPedido,numero_pedido:e.target.value})} placeholder="Preenchido quando compras devolver"/></div>
               <div style={S.field}><label style={S.label}>Valor Global (R$)</label><input type="number" style={S.input} value={formPedido.valor_global} onChange={e=>setFormPedido({...formPedido,valor_global:e.target.value})} placeholder="Ex: 4200.00"/></div>
             </div>
             <div style={S.sectionLabel}>Equipamentos</div>
