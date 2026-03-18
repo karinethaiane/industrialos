@@ -462,7 +462,8 @@ export default function Patrimonio({ isAdmin = false }) {
         origem:              'calibracao',
         calibracao_pedido_id: pedidoConcluindo.id,
       }
-      await supabase.from('solicitacoes_pagamento').insert(dadosPag)
+      const { error: errPag } = await supabase.from('solicitacoes_pagamento').insert(dadosPag)
+      if (errPag) { alert('Erro ao enviar para o Financeiro: ' + errPag.message); setSalvandoConcluir(false); return }
       await supabase.from('calibracao_pedidos').update({ status: 'pag_solicitado' }).eq('id', pedidoConcluindo.id)
     }
     setSalvandoConcluir(false); setModalConcluir(false); carregar()
