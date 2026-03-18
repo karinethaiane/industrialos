@@ -18,6 +18,7 @@ const S = {
   search: { background: 'var(--surface2)', border: '1px solid var(--border2)', borderRadius: 7, padding: '8px 12px', color: 'var(--text)', fontSize: 13, outline: 'none', fontFamily: 'inherit', width: 260 },
   filtro: (on) => ({ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? 'rgba(59,130,246,.25)' : 'var(--border2)'}`, background: on ? 'var(--blue-dim)' : 'var(--subtle)', color: on ? 'var(--blue)' : 'var(--text2)', fontFamily: 'inherit' }),
   filtroConsultoria: (on) => ({ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? 'rgba(167,139,250,.3)' : 'var(--border2)'}`, background: on ? 'rgba(167,139,250,.1)' : 'var(--subtle)', color: on ? '#a78bfa' : 'var(--text2)', fontFamily: 'inherit' }),
+  fselSm: { background: 'var(--surface2)', border: '1px solid var(--border2)', borderRadius: 6, padding: '5px 10px', color: 'var(--text2)', fontSize: 12, outline: 'none', fontFamily: 'inherit', cursor: 'pointer', height: 30 },
   btn: { background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' },
   btnSm: { background: 'var(--subtle)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 6, padding: '4px 9px', fontSize: 11, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' },
   btnDanger: { background: 'var(--red-dim)', color: 'var(--red)', border: '1px solid transparent', borderRadius: 6, padding: '4px 8px', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' },
@@ -44,11 +45,36 @@ const S = {
 }
 
 const STATUS_NF = ['Em execução', 'Concluído']
-const STATUS_PAG = ['em_andamento', 'ajustes', 'aguardando_desbloqueio', 'concluido', 'cancelado']
-const STATUS_PAG_LABEL = { em_andamento: 'Em andamento', ajustes: 'Ajustes', aguardando_desbloqueio: 'Aguard. Desbloqueio', concluido: 'Concluído', cancelado: 'Cancelado' }
-const STATUS_PAG_COR = { em_andamento: 'var(--blue)', ajustes: 'var(--amber)', aguardando_desbloqueio: 'var(--red)', concluido: 'var(--green)', cancelado: 'var(--muted)' }
-const STATUS_RESPONSAVEL = { em_andamento: 'Financeiro', ajustes: 'Solicitante', aguardando_desbloqueio: 'Gerência', concluido: 'Financeiro', cancelado: 'Financeiro' }
+
+// ── Status de Pagamento — inclui novo status aguardando_abertura_chamado ──────
+const STATUS_PAG = ['aguardando_abertura_chamado', 'em_andamento', 'ajustes', 'aguardando_desbloqueio', 'concluido', 'cancelado']
+const STATUS_PAG_LABEL = {
+  aguardando_abertura_chamado: 'Ag. Abertura Chamado',
+  em_andamento: 'Em andamento',
+  ajustes: 'Ajustes',
+  aguardando_desbloqueio: 'Aguard. Desbloqueio',
+  concluido: 'Concluído',
+  cancelado: 'Cancelado',
+}
+const STATUS_PAG_COR = {
+  aguardando_abertura_chamado: 'var(--purple)',
+  em_andamento: 'var(--blue)',
+  ajustes: 'var(--amber)',
+  aguardando_desbloqueio: 'var(--red)',
+  concluido: 'var(--green)',
+  cancelado: 'var(--muted)',
+}
+// Responsável: aguardando_abertura_chamado → Solicitante (quem precisa abrir o chamado)
+const STATUS_RESPONSAVEL = {
+  aguardando_abertura_chamado: 'Solicitante',
+  em_andamento: 'Financeiro',
+  ajustes: 'Solicitante',
+  aguardando_desbloqueio: 'Gerência',
+  concluido: 'Financeiro',
+  cancelado: 'Financeiro',
+}
 const RESPONSAVEL_COR = { Financeiro: 'var(--blue)', Solicitante: 'var(--amber)', Gerência: 'var(--red)' }
+const RESPONSAVEIS_LISTA = [...new Set(Object.values(STATUS_RESPONSAVEL))]
 
 function statusNfBadge(s) {
   const cfg = { 'Em execução': ['var(--blue-dim)', 'var(--blue)'], 'Concluído': ['var(--green-dim)', 'var(--green)'] }[s] || ['var(--subtle)', 'var(--muted)']
@@ -67,12 +93,14 @@ function responsavelBadge(s) {
 }
 
 function origemBadge(origem) {
-  if (!origem || origem !== 'consultoria') return null
-  return (
-    <span style={{ fontSize: 10, fontWeight: 600, color: '#a78bfa', background: 'rgba(167,139,250,.1)', border: '1px solid rgba(167,139,250,.2)', borderRadius: 4, padding: '1px 6px', marginLeft: 6, whiteSpace: 'nowrap' }}>
-      Consultoria
-    </span>
-  )
+  if (!origem) return null
+  const map = {
+    consultoria: ['rgba(167,139,250,.1)', 'rgba(167,139,250,.2)', '#a78bfa', 'Consultoria'],
+    calibracao:  ['rgba(52,211,153,.1)',  'rgba(52,211,153,.2)',  'var(--green)', 'Calibração'],
+  }
+  const [bg, border, cor, label] = map[origem] || []
+  if (!label) return null
+  return <span style={{ fontSize: 10, fontWeight: 600, color: cor, background: bg, border: `1px solid ${border}`, borderRadius: 4, padding: '1px 6px', marginLeft: 6, whiteSpace: 'nowrap' }}>{label}</span>
 }
 
 function fmtData(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) }
@@ -85,6 +113,7 @@ export default function Financeiro({ isAdmin = false }) {
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
   const [filtroStatus, setFiltroStatus] = useState('')
+  const [filtroResp, setFiltroResp] = useState('')          // ← novo filtro responsável
   const [modalNF, setModalNF] = useState(false)
   const [modalPag, setModalPag] = useState(false)
   const [modalObs, setModalObs] = useState(null)
@@ -95,7 +124,7 @@ export default function Financeiro({ isAdmin = false }) {
   const [erro, setErro] = useState('')
 
   const [formNF, setFormNF] = useState({ id_sgt: '', empresa: '', status_sgt: 'Em execução', data_conclusao_sgt: '', consultor: '', nf_boleto_enviado: false, data_solicitacao_envio: '', numero_nf: '', valor_parcela: '', numero_parcelas: 1, observacoes: '' })
-  const [formPag, setFormPag] = useState({ numero_chamado: '', tipo_tarefa: 'Solicitação de Pagamento', solicitante: '', numero_nf_boleto_al: '', descricao: '', razao_social: '', status: 'em_andamento', valor: '', previsao_pagamento: '', observacoes: '' })
+  const [formPag, setFormPag] = useState({ numero_chamado: '', tipo_tarefa: 'Solicitação de Pagamento', solicitante: '', numero_nf_boleto_al: '', descricao: '', razao_social: '', status: 'aguardando_abertura_chamado', valor: '', previsao_pagamento: '', observacoes: '' })
 
   useEffect(() => { init() }, [])
 
@@ -112,8 +141,8 @@ export default function Financeiro({ isAdmin = false }) {
 
   function abrirNovoNF() { setEditandoNF(null); setErro(''); setFormNF({ id_sgt: '', empresa: '', status_sgt: 'Em execução', data_conclusao_sgt: '', consultor: '', nf_boleto_enviado: false, data_solicitacao_envio: '', numero_nf: '', valor_parcela: '', numero_parcelas: 1, observacoes: '' }); setModalNF(true) }
   function abrirEditarNF(r) { setEditandoNF(r); setErro(''); setFormNF({ id_sgt: r.id_sgt, empresa: r.empresa, status_sgt: r.status_sgt || 'Em execução', data_conclusao_sgt: r.data_conclusao_sgt || '', consultor: r.consultor || '', nf_boleto_enviado: r.nf_boleto_enviado || false, data_solicitacao_envio: r.data_solicitacao_envio || '', numero_nf: r.numero_nf || '', valor_parcela: r.valor_parcela || '', numero_parcelas: r.numero_parcelas || 1, observacoes: r.observacoes || '' }); setModalNF(true) }
-  function abrirNovoPag() { setEditandoPag(null); setErro(''); setFormPag({ numero_chamado: '', tipo_tarefa: 'Solicitação de Pagamento', solicitante: '', numero_nf_boleto_al: '', descricao: '', razao_social: '', status: 'em_andamento', valor: '', previsao_pagamento: '', observacoes: '' }); setModalPag(true) }
-  function abrirEditarPag(r) { setEditandoPag(r); setErro(''); setFormPag({ numero_chamado: r.numero_chamado, tipo_tarefa: r.tipo_tarefa || 'Solicitação de Pagamento', solicitante: r.solicitante || '', numero_nf_boleto_al: r.numero_nf_boleto_al || '', descricao: r.descricao || '', razao_social: r.razao_social || '', status: r.status || 'em_andamento', valor: r.valor || '', previsao_pagamento: r.previsao_pagamento || '', observacoes: r.observacoes || '' }); setModalPag(true) }
+  function abrirNovoPag() { setEditandoPag(null); setErro(''); setFormPag({ numero_chamado: '', tipo_tarefa: 'Solicitação de Pagamento', solicitante: '', numero_nf_boleto_al: '', descricao: '', razao_social: '', status: 'aguardando_abertura_chamado', valor: '', previsao_pagamento: '', observacoes: '' }); setModalPag(true) }
+  function abrirEditarPag(r) { setEditandoPag(r); setErro(''); setFormPag({ numero_chamado: r.numero_chamado, tipo_tarefa: r.tipo_tarefa || 'Solicitação de Pagamento', solicitante: r.solicitante || '', numero_nf_boleto_al: r.numero_nf_boleto_al || '', descricao: r.descricao || '', razao_social: r.razao_social || '', status: r.status || 'aguardando_abertura_chamado', valor: r.valor || '', previsao_pagamento: r.previsao_pagamento || '', observacoes: r.observacoes || '' }); setModalPag(true) }
 
   async function salvarNF() {
     if (!formNF.id_sgt || !formNF.empresa) { setErro('ID SGT e Empresa são obrigatórios.'); return }
@@ -130,9 +159,9 @@ export default function Financeiro({ isAdmin = false }) {
   }
 
   async function salvarPag() {
-    if (!formPag.numero_chamado) { setErro('Número do chamado é obrigatório.'); return }
+    if (!formPag.numero_chamado && formPag.status !== 'aguardando_abertura_chamado') { setErro('Número do chamado é obrigatório.'); return }
     setSalvando(true); setErro('')
-    const dados = { numero_chamado: formPag.numero_chamado.trim(), tipo_tarefa: formPag.tipo_tarefa, solicitante: formPag.solicitante || null, numero_nf_boleto_al: formPag.numero_nf_boleto_al || null, descricao: formPag.descricao || null, razao_social: formPag.razao_social || null, status: formPag.status, valor: parseFloat(formPag.valor) || null, previsao_pagamento: formPag.previsao_pagamento || null, observacoes: formPag.observacoes || null }
+    const dados = { numero_chamado: formPag.numero_chamado.trim() || null, tipo_tarefa: formPag.tipo_tarefa, solicitante: formPag.solicitante || null, numero_nf_boleto_al: formPag.numero_nf_boleto_al || null, descricao: formPag.descricao || null, razao_social: formPag.razao_social || null, status: formPag.status, valor: parseFloat(formPag.valor) || null, previsao_pagamento: formPag.previsao_pagamento || null, observacoes: formPag.observacoes || null }
     let error
     if (editandoPag) { ({ error } = await supabase.from('solicitacoes_pagamento').update(dados).eq('id', editandoPag.id)) }
     else { ({ error } = await supabase.from('solicitacoes_pagamento').insert(dados)) }
@@ -146,7 +175,6 @@ export default function Financeiro({ isAdmin = false }) {
 
   const totalNF = (r) => (parseFloat(r.valor_parcela) || 0) * (parseInt(r.numero_parcelas) || 1)
 
-  // ── FILTRO com suporte a origem 'consultoria' ─────────────────────────────
   const emissoesFiltradas = emissoes.filter(r => {
     if (filtroStatus === 'consultoria') return r.origem === 'consultoria'
     if (filtroStatus && r.status_sgt !== filtroStatus) return false
@@ -156,7 +184,11 @@ export default function Financeiro({ isAdmin = false }) {
 
   const pagamentosFiltrados = pagamentos.filter(r => {
     if (filtroStatus && r.status !== filtroStatus) return false
-    if (busca) { const b = busca.toLowerCase(); return r.numero_chamado?.toLowerCase().includes(b) || r.razao_social?.toLowerCase().includes(b) || r.solicitante?.toLowerCase().includes(b) }
+    if (filtroResp) {
+      const resp = STATUS_RESPONSAVEL[r.status] || ''
+      if (resp !== filtroResp) return false
+    }
+    if (busca) { const b = busca.toLowerCase(); return (r.numero_chamado || '').toLowerCase().includes(b) || (r.razao_social || '').toLowerCase().includes(b) || (r.solicitante || '').toLowerCase().includes(b) }
     return true
   })
 
@@ -164,6 +196,7 @@ export default function Financeiro({ isAdmin = false }) {
   const valorTotalNFs = emissoes.reduce((acc, r) => acc + totalNF(r), 0)
   const totalParcelas = (parseFloat(formNF.valor_parcela) || 0) * (parseInt(formNF.numero_parcelas) || 1)
   const totalConsultoria = emissoes.filter(e => e.origem === 'consultoria').length
+  const totalAgAbChamado = pagamentos.filter(p => p.status === 'aguardando_abertura_chamado').length
 
   return (
     <div style={S.wrap}>
@@ -179,11 +212,11 @@ export default function Financeiro({ isAdmin = false }) {
 
       <div style={S.stats}>
         {[
-          ['var(--blue)', emissoes.length, 'Total NFs'],
-          ['var(--blue)', emissoes.filter(e => e.status_sgt === 'Em execução').length, 'Em Execução'],
-          ['var(--green)', emissoes.filter(e => e.status_sgt === 'Concluído' && e.nf_boleto_enviado).length, 'NFs Concluídas'],
-          ['#a78bfa', totalConsultoria, 'Via Consultoria'],
-          ['var(--amber)', pagamentos.filter(p => p.status === 'aguardando_desbloqueio').length, 'Aguard. Desbloqueio'],
+          ['var(--blue)',   emissoes.length,                                                             'Total NFs'],
+          ['var(--blue)',   emissoes.filter(e => e.status_sgt === 'Em execução').length,                 'Em Execução'],
+          ['var(--green)',  emissoes.filter(e => e.status_sgt === 'Concluído' && e.nf_boleto_enviado).length, 'NFs Concluídas'],
+          ['#a78bfa',       totalConsultoria,                                                            'Via Consultoria'],
+          ['var(--purple)', totalAgAbChamado,                                                            'Ag. Abertura Chamado'],
         ].map(([cor, val, lbl]) => (
           <div key={lbl} style={S.statCard}>
             <div style={S.statVal(cor)}>{val}</div>
@@ -194,23 +227,23 @@ export default function Financeiro({ isAdmin = false }) {
       </div>
 
       <div style={S.tabs}>
-        <button style={S.tab(aba === 'nf')} onClick={() => { setAba('nf'); setBusca(''); setFiltroStatus('') }}>
+        <button style={S.tab(aba === 'nf')} onClick={() => { setAba('nf'); setBusca(''); setFiltroStatus(''); setFiltroResp('') }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           Emissão de NFs <span style={S.tabCount(aba === 'nf')}>{emissoes.length}</span>
         </button>
-        <button style={S.tab(aba === 'pag')} onClick={() => { setAba('pag'); setBusca(''); setFiltroStatus('') }}>
+        <button style={S.tab(aba === 'pag')} onClick={() => { setAba('pag'); setBusca(''); setFiltroStatus(''); setFiltroResp('') }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
           Solicitações de Pagamento <span style={S.tabCount(aba === 'pag')}>{pagamentos.length}</span>
         </button>
       </div>
 
+      {/* ══ ABA NF ══ */}
       {aba === 'nf' && (
         <>
           <div style={S.toolbar}>
             <input style={S.search} placeholder="Buscar empresa, ID SGT, consultor..." value={busca} onChange={e => setBusca(e.target.value)} />
             <button style={S.filtro(!filtroStatus)} onClick={() => setFiltroStatus('')}>Todos</button>
             {STATUS_NF.map(s => <button key={s} style={S.filtro(filtroStatus === s)} onClick={() => setFiltroStatus(s)}>{s}</button>)}
-            {/* Filtro Consultoria */}
             <button style={S.filtroConsultoria(filtroStatus === 'consultoria')} onClick={() => setFiltroStatus('consultoria')}>
               Consultoria {totalConsultoria > 0 && <span style={{ background: 'rgba(167,139,250,.2)', color: '#a78bfa', borderRadius: 8, padding: '0 5px', fontSize: 10, fontWeight: 700, marginLeft: 2 }}>{totalConsultoria}</span>}
             </button>
@@ -233,10 +266,7 @@ export default function Financeiro({ isAdmin = false }) {
                 <tr key={r.id} {...trHover}>
                   <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', color: 'var(--blue)', fontWeight: 500 }}>{r.id_sgt}</td>
                   <td style={{ ...S.td, color: 'var(--text)', fontWeight: 500, maxWidth: 200 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-                      {r.empresa}
-                      {origemBadge(r.origem)}
-                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>{r.empresa}{origemBadge(r.origem)}</div>
                   </td>
                   <td style={S.td}>{statusNfBadge(r.status_sgt)}</td>
                   <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12 }}>{fmtData(r.data_conclusao_sgt)}</td>
@@ -256,12 +286,28 @@ export default function Financeiro({ isAdmin = false }) {
         </>
       )}
 
+      {/* ══ ABA PAGAMENTOS ══ */}
       {aba === 'pag' && (
         <>
           <div style={S.toolbar}>
             <input style={S.search} placeholder="Buscar chamado, razão social, solicitante..." value={busca} onChange={e => setBusca(e.target.value)} />
+            {/* Filtro Status */}
             <button style={S.filtro(!filtroStatus)} onClick={() => setFiltroStatus('')}>Todos</button>
             {STATUS_PAG.map(s => <button key={s} style={S.filtro(filtroStatus === s)} onClick={() => setFiltroStatus(s)}>{STATUS_PAG_LABEL[s]}</button>)}
+          </div>
+          {/* Filtro Responsável — linha separada */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'center' }}>
+            <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>Responsável:</span>
+            <button style={S.filtro(!filtroResp)} onClick={() => setFiltroResp('')}>Todos</button>
+            {RESPONSAVEIS_LISTA.map(r => {
+              const cor = RESPONSAVEL_COR[r] || 'var(--muted)'
+              const on = filtroResp === r
+              return (
+                <button key={r} onClick={() => setFiltroResp(r)} style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? `${cor}40` : 'var(--border2)'}`, background: on ? `${cor}18` : 'var(--subtle)', color: on ? cor : 'var(--text2)', fontFamily: 'inherit' }}>
+                  {r}
+                </button>
+              )
+            })}
           </div>
           <div style={S.tableWrap}><table style={S.table}>
             <thead><tr>
@@ -278,11 +324,20 @@ export default function Financeiro({ isAdmin = false }) {
             <tbody>
               {pagamentosFiltrados.map(r => (
                 <tr key={r.id} {...trHover}>
-                  <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', color: 'var(--blue)', fontWeight: 500 }}>{r.numero_chamado}</td>
+                  <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', color: 'var(--blue)', fontWeight: 500 }}>
+                    {r.numero_chamado
+                      ? r.numero_chamado
+                      : <span style={{ color: 'var(--muted)', fontStyle: 'italic', fontSize: 11 }}>A abrir</span>}
+                  </td>
                   <td style={S.td}>{r.tipo_tarefa}</td>
                   <td style={S.td}>{r.solicitante || '—'}</td>
                   <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--purple)' }}>{r.numero_nf_boleto_al || '—'}</td>
-                  <td style={{ ...S.td, color: 'var(--text)', fontWeight: 500, maxWidth: 180 }}>{r.razao_social || '—'}</td>
+                  <td style={{ ...S.td, color: 'var(--text)', fontWeight: 500, maxWidth: 180 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      {r.razao_social || '—'}
+                      {origemBadge(r.origem)}
+                    </div>
+                  </td>
                   <td style={S.td}>{statusPagBadge(r.status)}</td>
                   <td style={S.td}>{responsavelBadge(r.status)}</td>
                   <td style={S.td}>
@@ -293,9 +348,7 @@ export default function Financeiro({ isAdmin = false }) {
                           {r.previsao_pagamento ? `Prev. ${fmtData(r.previsao_pagamento)}` : 'Sem previsão'}
                         </span>
                       </div>
-                    ) : (
-                      <span style={{ color: 'var(--border2)', fontSize: 12 }}>—</span>
-                    )}
+                    ) : <span style={{ color: 'var(--border2)', fontSize: 12 }}>—</span>}
                   </td>
                   {isAdmin && (
                     <td style={S.td}>
@@ -322,49 +375,33 @@ export default function Financeiro({ isAdmin = false }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
               <div>
                 <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>Detalhes da Solicitação</div>
-                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--blue)', fontWeight: 500 }}>Chamado #{modalDet.numero_chamado}</div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--blue)', fontWeight: 500 }}>
+                  {modalDet.numero_chamado ? `Chamado #${modalDet.numero_chamado}` : <span style={{ color: 'var(--muted)', fontStyle: 'italic' }}>Chamado a abrir</span>}
+                </div>
               </div>
               <button onClick={() => setModalDet(null)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 22, lineHeight: 1, padding: 0 }}>×</button>
             </div>
-
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
-              <div>
-                <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 5 }}>Solicitante</div>
-                <div style={{ fontSize: 13, color: 'var(--text)' }}>{modalDet.solicitante || '—'}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 5 }}>Nº NF / Boleto / AL</div>
-                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: '#a78bfa' }}>{modalDet.numero_nf_boleto_al || '—'}</div>
-              </div>
-              <div style={{ gridColumn: 'span 2' }}>
-                <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 5 }}>Razão Social</div>
-                <div style={{ fontSize: 13, color: 'var(--text)' }}>{modalDet.razao_social || '—'}</div>
-              </div>
+              <div><div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 5 }}>Solicitante</div><div style={{ fontSize: 13, color: 'var(--text)' }}>{modalDet.solicitante || '—'}</div></div>
+              <div><div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 5 }}>Nº NF / Boleto / AL</div><div style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: '#a78bfa' }}>{modalDet.numero_nf_boleto_al || '—'}</div></div>
+              <div style={{ gridColumn: 'span 2' }}><div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 5 }}>Razão Social</div><div style={{ fontSize: 13, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>{modalDet.razao_social || '—'}{origemBadge(modalDet.origem)}</div></div>
             </div>
-
             <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 8 }}>Descrição</div>
-            <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px', fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 16 }}>
-              {modalDet.descricao || '—'}
-            </div>
-
+            <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px', fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 16 }}>{modalDet.descricao || '—'}</div>
             <div style={{ background: 'linear-gradient(135deg, rgba(59,130,246,.07), rgba(6,182,212,.04))', border: '1px solid rgba(59,130,246,.2)', borderRadius: 10, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 6 }}>Valor</div>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 22, fontWeight: 500, color: 'var(--blue)' }}>{fmtVal(modalDet.valor)}</div>
-                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>
-                  {modalDet.previsao_pagamento ? `Previsão: ${fmtData(modalDet.previsao_pagamento)}` : 'Sem previsão de pagamento'}
-                </div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>{modalDet.previsao_pagamento ? `Previsão: ${fmtData(modalDet.previsao_pagamento)}` : 'Sem previsão de pagamento'}</div>
               </div>
               <div>{statusPagBadge(modalDet.status)}</div>
             </div>
-
             {modalDet.observacoes && (
               <div style={{ background: 'rgba(167,139,250,.06)', border: '1px solid rgba(167,139,250,.2)', borderRadius: 8, padding: '12px 14px', marginTop: 14 }}>
                 <div style={{ fontSize: 10, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 6 }}>Observações</div>
                 <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6 }}>{modalDet.observacoes}</div>
               </div>
             )}
-
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
               <button style={S.btnSm} onClick={() => setModalDet(null)}>Fechar</button>
               {isAdmin && <button style={S.btn} onClick={() => { setModalDet(null); abrirEditarPag(modalDet) }}>Editar</button>}
@@ -380,17 +417,12 @@ export default function Financeiro({ isAdmin = false }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Observações</div>
-                <div style={{ fontSize: 12, fontFamily: 'DM Mono, monospace', color: 'var(--blue)', marginTop: 3 }}>Chamado {modalObs.numero_chamado}</div>
+                <div style={{ fontSize: 12, fontFamily: 'DM Mono, monospace', color: 'var(--blue)', marginTop: 3 }}>Chamado {modalObs.numero_chamado || '(a abrir)'}</div>
               </div>
               <button onClick={() => setModalObs(null)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: 0 }}>×</button>
             </div>
-            <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px', fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-              {modalObs.observacoes}
-            </div>
-            <div style={{ marginTop: 14, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              {statusPagBadge(modalObs.status)}
-              {responsavelBadge(modalObs.status)}
-            </div>
+            <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px', fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{modalObs.observacoes}</div>
+            <div style={{ marginTop: 14, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>{statusPagBadge(modalObs.status)}{responsavelBadge(modalObs.status)}</div>
           </div>
         </div>
       )}
@@ -431,8 +463,15 @@ export default function Financeiro({ isAdmin = false }) {
             <div style={S.modalTitle}>{editandoPag ? 'Editar Solicitação' : 'Nova Solicitação de Pagamento'}</div>
             {erro && <div style={S.erro}>{erro}</div>}
             <div style={S.fieldRow}>
-              <div style={S.field}><label style={S.label}>Nº Chamado *</label><input style={S.input} value={formPag.numero_chamado} onChange={e => setFormPag({ ...formPag, numero_chamado: e.target.value })} placeholder="1346676" /></div>
-              <div style={S.field}><label style={S.label}>Status</label><select style={S.fsel} value={formPag.status} onChange={e => setFormPag({ ...formPag, status: e.target.value })}>{STATUS_PAG.map(s => <option key={s} value={s}>{STATUS_PAG_LABEL[s]}</option>)}</select></div>
+              <div style={S.field}>
+                <label style={S.label}>Nº Chamado <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(opcional se ainda não aberto)</span></label>
+                <input style={S.input} value={formPag.numero_chamado} onChange={e => setFormPag({ ...formPag, numero_chamado: e.target.value })} placeholder="Ex: 1346676" />
+              </div>
+              <div style={S.field}><label style={S.label}>Status</label>
+                <select style={S.fsel} value={formPag.status} onChange={e => setFormPag({ ...formPag, status: e.target.value })}>
+                  {STATUS_PAG.map(s => <option key={s} value={s}>{STATUS_PAG_LABEL[s]}</option>)}
+                </select>
+              </div>
             </div>
             <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 7, padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 12, color: 'var(--muted)' }}>Responsável atual</span>

@@ -449,15 +449,15 @@ export default function Patrimonio({ isAdmin = false }) {
     }
     if (enviarFinanceiro) {
       const dadosPag = {
-        numero_chamado: pedidoConcluindo.chamado || pedidoConcluindo.numero,
-        tipo_tarefa: 'Solicitação de Pagamento',
-        solicitante: 'Patrimônio — Calibração',
-        numero_nf_boleto_al: pedidoConcluindo.numero_pedido || null,
-        razao_social: pedidoConcluindo.fornecedor,
-        descricao: `Serviço de calibração · Pedido ${pedidoConcluindo.numero}`,
-        status: 'em_andamento',
-        valor: pedidoConcluindo.valor_global || null,
-        origem: 'calibracao',
+        numero_chamado:      null,                            // chamado ainda não aberto
+        tipo_tarefa:         'Solicitação de Pagamento',
+        solicitante:         'IST - MPP - ENERGIA',
+        numero_nf_boleto_al: null,                            // preenchido depois no Financeiro
+        razao_social:        pedidoConcluindo.fornecedor,     // puxado do pedido
+        descricao:           `Serviço de calibração · Pedido ${pedidoConcluindo.numero}`,
+        status:              'aguardando_abertura_chamado',   // novo status
+        valor:               pedidoConcluindo.valor_global || null,
+        origem:              'calibracao',
         calibracao_pedido_id: pedidoConcluindo.id,
       }
       await supabase.from('solicitacoes_pagamento').insert(dadosPag)
