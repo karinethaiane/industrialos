@@ -224,7 +224,7 @@ export default function App() {
               {IC.bolt}
             </div>
             <div style={{ opacity: sbOpen ? 1 : 0, transition: 'opacity .15s .06s' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--sb-text)', letterSpacing: '.05em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>IndustrialOS</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--sb-text)', letterSpacing: '.05em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>GestãoDeProcessos</div>
               <div style={{ fontSize: 9, color: 'var(--sb-muted)', marginTop: 1, whiteSpace: 'nowrap' }}>IST · MPP · Energia</div>
             </div>
           </div>
