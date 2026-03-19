@@ -937,7 +937,7 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                               <span style={S.chipReg(ativas<3)}>{ativas} empresa{ativas!==1?'s':''} ativa{ativas!==1?'s':''}</span>
                               {feriasConflito && (
                                 <span style={{display:'inline-flex',alignItems:'center',gap:3,padding:'2px 8px',borderRadius:4,fontSize:10,fontWeight:600,background:'rgba(240,90,90,.08)',color:'var(--red)',border:'1px solid rgba(240,90,90,.18)'}}>
-                                  ?? {new Date(feriasConflito.data_inicio+'T00:00:00').toLocaleDateString('pt-BR')} – {new Date(feriasConflito.data_fim+'T00:00:00').toLocaleDateString('pt-BR')}
+                                  🏖 {fmtData(feriasConflito.data_inicio)} – {fmtData(feriasConflito.data_fim)}
                                 </span>
                               )}
                             </div>
@@ -983,7 +983,7 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                               <span style={S.chipReg(ativas<3)}>{ativas} empresa{ativas!==1?'s':''} ativa{ativas!==1?'s':''}</span>
                               {feriasConflito && (
                                 <span style={{display:'inline-flex',alignItems:'center',gap:3,padding:'2px 8px',borderRadius:4,fontSize:10,fontWeight:600,background:'rgba(240,90,90,.08)',color:'var(--red)',border:'1px solid rgba(240,90,90,.18)'}}>
-                                  ?? {new Date(feriasConflito.data_inicio+'T00:00:00').toLocaleDateString('pt-BR')} – {new Date(feriasConflito.data_fim+'T00:00:00').toLocaleDateString('pt-BR')}
+                                  🏖 {fmtData(feriasConflito.data_inicio)} – {fmtData(feriasConflito.data_fim)}
                                 </span>
                               )}
                             </div>
@@ -1054,7 +1054,7 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                   {/* Aviso férias */}
                   {sessoes.some(s=>isConsultorEmFerias(s.data, s.responsavel)) && (
                     <div style={{background:'rgba(167,139,250,.07)',border:'1px solid rgba(167,139,250,.2)',borderRadius:7,padding:'8px 12px',marginBottom:12,fontSize:12,color:'var(--purple)'}}>
-                      ?? {sessoes.filter(s=>isConsultorEmFerias(s.data, s.responsavel)).length} sessão(ões) coincidem com período de férias do responsável — revise as datas abaixo.
+                      🏖 {sessoes.filter(s=>isConsultorEmFerias(s.data, s.responsavel)).length} sessão(ões) coincidem com período de férias do responsável — revise as datas abaixo.
                     </div>
                   )}
 
@@ -1070,7 +1070,7 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                         }} value={s.data} onChange={e=>editarSessao(s.id,'data',e.target.value)} />
                         {isFeriadoCached(s.data) && <div style={S.feriadoWarn}>⚠ {nomeFeriado(s.data)}</div>}
                         {!isFeriadoCached(s.data) && isConsultorEmFerias(s.data,s.responsavel) && (
-                          <div style={{fontSize:10,color:'var(--purple)',background:'rgba(167,139,250,.1)',padding:'2px 6px',borderRadius:4,marginTop:3,display:'inline-flex',alignItems:'center',gap:3}}>?? Férias do responsável</div>
+                          <div style={{fontSize:10,color:'var(--purple)',background:'rgba(167,139,250,.1)',padding:'2px 6px',borderRadius:4,marginTop:3,display:'inline-flex',alignItems:'center',gap:3}}>🏖 Férias do responsável</div>
                         )}
                       </div>
                       <input style={{...S.input,padding:'5px 8px',fontSize:12,color:'var(--text)'}} value={s.atividade} onChange={e=>editarSessao(s.id,'atividade',e.target.value)} />
