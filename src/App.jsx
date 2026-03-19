@@ -77,7 +77,7 @@ function Inicio({ onNavegar, tema, nomeUsuario }) {
     : 'Karine'
 
   return (
-    <div style={{ padding: '44px 48px', maxWidth: 960, margin: '0 auto' }}>
+    <div style={{ padding: '36px 40px' }}>
       {/* Saudação */}
       <div style={{ marginBottom: 40 }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 8, fontFamily: 'DM Mono, monospace' }}>
