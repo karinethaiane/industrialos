@@ -1134,7 +1134,7 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                     <td style={S.td}>{r.consultor||<span style={{color:'var(--border2)'}}>—</span>}
                       {r.status==='aguardando' && r.motivo_pendencia && <div style={{fontSize:10,color:'#fb923c',marginTop:2}}>⏳ {r.motivo_pendencia}</div>}
                     </td>
-                    <td style={{...S.td,fontFamily:'JetBrains Mono', monospace}}>{r.horas_total?`${r.horas_total}h`:'—'}</td>
+                    <td style={{...S.td,fontFamily:"'JetBrains Mono', monospace"}}>{r.horas_total?`${r.horas_total}h`:'—'}</td>
                     <td style={{...S.td,fontFamily:"'JetBrains Mono', monospace",color:'var(--green)'}}>{fmtMoeda(r.receita)}</td>
                     <td style={S.td}>
                       <span style={{background:`${cor}18`,color:cor,padding:'2px 8px',borderRadius:4,fontSize:11,fontWeight:600}}>● {STATUS_AT_LABEL[r.status]||r.status}</span>
@@ -1188,7 +1188,7 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                     <td style={S.td}>{r.consultor||<span style={{color:'var(--border2)'}}>—</span>}
                       {r.status==='aguardando' && r.motivo_pendencia && <div style={{fontSize:10,color:'#fb923c',marginTop:2}}>⏳ {r.motivo_pendencia}</div>}
                     </td>
-                    <td style={{...S.td,fontFamily:'JetBrains Mono', monospace}}>{r.horas_total?`${r.horas_total}h`:'—'}</td>
+                    <td style={{...S.td,fontFamily:"'JetBrains Mono', monospace"}}>{r.horas_total?`${r.horas_total}h`:'—'}</td>
                     <td style={{...S.td,fontFamily:"'JetBrains Mono', monospace",color:'var(--green)'}}>{fmtMoeda(r.receita)}</td>
                     <td style={S.td}>
                       <span style={{background:`${cor}18`,color:cor,padding:'2px 8px',borderRadius:4,fontSize:11,fontWeight:600}}>● {STATUS_AT_LABEL[r.status]||r.status}</span>
