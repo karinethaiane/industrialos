@@ -1064,7 +1064,7 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                   {sessoes.map(s => (
                     <div key={s.id} style={S.sessaoRow}>
                       <div>
-                        <input type="date" style={{...S.input,padding:'5px 8px',fontSize:12,
+                        <input type="date" style={{...S.input,padding:'5px 8px',fontSize:12,color:'var(--text)',
                           borderColor: isFeriadoCached(s.data)?'rgba(245,158,11,.5)': isConsultorEmFerias(s.data,s.responsavel)?'rgba(167,139,250,.5)':undefined,
                           background:  isFeriadoCached(s.data)?'rgba(245,158,11,.05)': isConsultorEmFerias(s.data,s.responsavel)?'rgba(167,139,250,.05)':undefined
                         }} value={s.data} onChange={e=>editarSessao(s.id,'data',e.target.value)} />
@@ -1073,13 +1073,13 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                           <div style={{fontSize:10,color:'var(--purple)',background:'rgba(167,139,250,.1)',padding:'2px 6px',borderRadius:4,marginTop:3,display:'inline-flex',alignItems:'center',gap:3}}>?? Férias do responsável</div>
                         )}
                       </div>
-                      <input style={{...S.input,padding:'5px 8px',fontSize:12}} value={s.atividade} onChange={e=>editarSessao(s.id,'atividade',e.target.value)} />
-                      <select style={{...S.fsel,padding:'5px 8px',fontSize:11}} value={s.responsavel} onChange={e=>editarSessao(s.id,'responsavel',e.target.value)}>
+                      <input style={{...S.input,padding:'5px 8px',fontSize:12,color:'var(--text)'}} value={s.atividade} onChange={e=>editarSessao(s.id,'atividade',e.target.value)} />
+                      <select style={{...S.fsel,padding:'5px 8px',fontSize:11,color:'var(--text)'}} value={s.responsavel} onChange={e=>editarSessao(s.id,'responsavel',e.target.value)}>
                         <option value={gen.consultorSelecionado}>{gen.consultorSelecionado} (CT)</option>
                         {espOptions.map(e=><option key={e.id} value={e.nome}>{e.nome} ({e.cargo})</option>)}
                         <option value="EDUCAÇÃO">EDUCAÇÃO</option>
                       </select>
-                      <input type="number" step="0.5" min="1" style={{...S.input,padding:'5px 8px',fontSize:12}} value={s.horas} onChange={e=>editarSessao(s.id,'horas',parseFloat(e.target.value))} />
+                      <input type="number" step="0.5" min="1" style={{...S.input,padding:'5px 8px',fontSize:12,color:'var(--text)'}} value={s.horas} onChange={e=>editarSessao(s.id,'horas',parseFloat(e.target.value))} />
                     </div>
                   ))}
 
