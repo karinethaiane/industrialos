@@ -762,15 +762,15 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                   const porteCor = PORTE_COR[r.porte] || 'var(--muted)'
                   return (
                     <tr key={r.id} {...trHover} style={{background: hj?'rgba(245,158,11,.03)':semData?'rgba(59,130,246,.02)':undefined}}>
-                      <td style={{...S.td,fontFamily:'JetBrains Mono', monospace,color:'var(--blue)',fontWeight:500}}>{r.id_sgt}</td>
+                      <td style={{...S.td,fontFamily:"'JetBrains Mono', monospace",color:'var(--blue)',fontWeight:500}}>{r.id_sgt}</td>
                       <td style={{...S.td,color:'var(--text)',fontWeight:500}}>{r.empresa}</td>
                       <td style={S.td}>{r.consultor||<span style={{color:'var(--border2)'}}>—</span>}</td>
-                      <td style={{...S.td,fontFamily:'JetBrains Mono', monospace,fontSize:12}}>
+                      <td style={{...S.td,fontFamily:"'JetBrains Mono', monospace",fontSize:12}}>
                         {hj ? <span style={{color:'var(--amber)',fontWeight:700}}>Hoje</span>
                             : semData ? <span style={{color:'var(--blue)',fontSize:11,fontStyle:'italic'}}>A definir</span>
                             : fmtData(r.data_kickoff)}
                       </td>
-                      <td style={{...S.td,fontFamily:'JetBrains Mono', monospace,color:'var(--amber)',fontWeight:600}}>
+                      <td style={{...S.td,fontFamily:"'JetBrains Mono', monospace",color:'var(--amber)',fontWeight:600}}>
                         {r.horas_kickoff ? `${r.horas_kickoff}h` : r.horas ? `${r.horas}h` : '—'}
                       </td>
                       <td style={S.td}><span style={{background:`${porteCor}18`,color:porteCor,padding:'2px 8px',borderRadius:4,fontSize:11,fontWeight:600}}>{r.porte||'—'}</span></td>
@@ -882,7 +882,7 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                     return (
                       <div style={{...S.hintBox, borderColor:ok?'rgba(59,130,246,.15)':'rgba(239,68,68,.3)', background:ok?'rgba(59,130,246,.06)':'var(--red-dim)', color:ok?'var(--blue)':'var(--red)'}}>
                         <span>Duração total</span>
-                        <span style={{fontFamily:'JetBrains Mono', monospace,fontWeight:600}}>{dias} dias {ok?'✓':`⚠ mínimo ${minDias}`}</span>
+                        <span style={{fontFamily:"'JetBrains Mono', monospace",fontWeight:600}}>{dias} dias {ok?'✓':`⚠ mínimo ${minDias}`}</span>
                       </div>
                     )
                   })()}
@@ -1087,7 +1087,7 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                       return (
                         <div key={tipo} style={{display:'flex',alignItems:'center',gap:8}}>
                           <span style={{display:'inline-flex',padding:'2px 7px',borderRadius:4,fontSize:10,fontWeight:600,background:bg,color}}>{tipo}</span>
-                          <span style={{fontFamily:'JetBrains Mono', monospace,fontWeight:600,color:'var(--text)'}}>{h}h</span>
+                          <span style={{fontFamily:"'JetBrains Mono', monospace",fontWeight:600,color:'var(--text)'}}>{h}h</span>
                         </div>
                       )
                     })}
@@ -1128,14 +1128,14 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                 const cor = STATUS_AT_COR[r.status]||'var(--muted)'
                 return (
                   <tr key={r.id} {...trHover}>
-                    <td style={{...S.td,fontFamily:'JetBrains Mono', monospace,color:'var(--blue)',fontWeight:500}}>{r.id_sgt}</td>
-                    <td style={{...S.td,fontFamily:'JetBrains Mono', monospace,fontSize:12,color:'var(--purple)'}}>{r.numero_proposta||<span style={{color:'var(--border2)'}}>—</span>}</td>
+                    <td style={{...S.td,fontFamily:"'JetBrains Mono', monospace",color:'var(--blue)',fontWeight:500}}>{r.id_sgt}</td>
+                    <td style={{...S.td,fontFamily:"'JetBrains Mono', monospace",fontSize:12,color:'var(--purple)'}}>{r.numero_proposta||<span style={{color:'var(--border2)'}}>—</span>}</td>
                     <td style={{...S.td,color:'var(--text)',fontWeight:500}}>{r.empresa}</td>
                     <td style={S.td}>{r.consultor||<span style={{color:'var(--border2)'}}>—</span>}
                       {r.status==='aguardando' && r.motivo_pendencia && <div style={{fontSize:10,color:'#fb923c',marginTop:2}}>⏳ {r.motivo_pendencia}</div>}
                     </td>
                     <td style={{...S.td,fontFamily:'JetBrains Mono', monospace}}>{r.horas_total?`${r.horas_total}h`:'—'}</td>
-                    <td style={{...S.td,fontFamily:'JetBrains Mono', monospace,color:'var(--green)'}}>{fmtMoeda(r.receita)}</td>
+                    <td style={{...S.td,fontFamily:"'JetBrains Mono', monospace",color:'var(--green)'}}>{fmtMoeda(r.receita)}</td>
                     <td style={S.td}>
                       <span style={{background:`${cor}18`,color:cor,padding:'2px 8px',borderRadius:4,fontSize:11,fontWeight:600}}>● {STATUS_AT_LABEL[r.status]||r.status}</span>
                       {r.status==='concluido' && r.data_conclusao && <div style={{fontSize:10,color:'var(--muted)',marginTop:2}}>{fmtData(r.data_conclusao)}</div>}
@@ -1182,14 +1182,14 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                 const corNF = STATUS_NF_COR[r.status_nf]||'var(--muted)'
                 return (
                   <tr key={r.id} {...trHover}>
-                    <td style={{...S.td,fontFamily:'JetBrains Mono', monospace,color:'var(--blue)',fontWeight:500}}>{r.id_sgt}</td>
-                    <td style={{...S.td,fontFamily:'JetBrains Mono', monospace,fontSize:12,color:'var(--purple)'}}>{r.numero_proposta||<span style={{color:'var(--border2)'}}>—</span>}</td>
+                    <td style={{...S.td,fontFamily:"'JetBrains Mono', monospace",color:'var(--blue)',fontWeight:500}}>{r.id_sgt}</td>
+                    <td style={{...S.td,fontFamily:"'JetBrains Mono', monospace",fontSize:12,color:'var(--purple)'}}>{r.numero_proposta||<span style={{color:'var(--border2)'}}>—</span>}</td>
                     <td style={{...S.td,color:'var(--text)',fontWeight:500}}>{r.empresa}</td>
                     <td style={S.td}>{r.consultor||<span style={{color:'var(--border2)'}}>—</span>}
                       {r.status==='aguardando' && r.motivo_pendencia && <div style={{fontSize:10,color:'#fb923c',marginTop:2}}>⏳ {r.motivo_pendencia}</div>}
                     </td>
                     <td style={{...S.td,fontFamily:'JetBrains Mono', monospace}}>{r.horas_total?`${r.horas_total}h`:'—'}</td>
-                    <td style={{...S.td,fontFamily:'JetBrains Mono', monospace,color:'var(--green)'}}>{fmtMoeda(r.receita)}</td>
+                    <td style={{...S.td,fontFamily:"'JetBrains Mono', monospace",color:'var(--green)'}}>{fmtMoeda(r.receita)}</td>
                     <td style={S.td}>
                       <span style={{background:`${cor}18`,color:cor,padding:'2px 8px',borderRadius:4,fontSize:11,fontWeight:600}}>● {STATUS_AT_LABEL[r.status]||r.status}</span>
                       {r.status==='concluido' && r.data_conclusao && <div style={{fontSize:10,color:'var(--muted)',marginTop:2}}>{fmtData(r.data_conclusao)}</div>}
@@ -1455,11 +1455,11 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                 <div style={{background:'var(--blue-dim)',border:'1px solid rgba(79,142,247,.2)',borderRadius:8,padding:'12px 16px',marginBottom:14,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                   <div>
                     <div style={{fontSize:10,color:'var(--blue)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:3}}>Valor Total</div>
-                    <div style={{fontFamily:'JetBrains Mono', monospace,fontSize:20,fontWeight:500,color:'var(--blue)'}}>{total.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
+                    <div style={{fontFamily:"'JetBrains Mono', monospace",fontSize:20,fontWeight:500,color:'var(--blue)'}}>{total.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
                   </div>
                   <div style={{textAlign:'right'}}>
                     <div style={{fontSize:10,color:'var(--muted)',marginBottom:3}}>Receita cadastrada</div>
-                    <div style={{fontFamily:'JetBrains Mono', monospace,fontSize:13,color:'var(--muted)'}}>{receita.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
+                    <div style={{fontFamily:"'JetBrains Mono', monospace",fontSize:13,color:'var(--muted)'}}>{receita.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
                   </div>
                 </div>
               )
