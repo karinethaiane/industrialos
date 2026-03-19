@@ -172,7 +172,7 @@ function fmtMoeda(v) { if (!v&&v!==0) return '—'; return Number(v).toLocaleStr
 
 // ── ESTILOS ───────────────────────────────────────────────────────────────────
 const S = {
-  wrap:        { padding:32, background:'var(--bg)', minHeight:'100vh' },
+  wrap:        { padding:32, background:'var(--bg)', minHeight:'100vh', fontFamily:"'Plus Jakarta Sans', sans-serif" },
   header:      { display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 },
   title:       { fontSize:21, fontWeight:700, color:'var(--text)', letterSpacing:'-.02em' },
   sub:         { fontSize:13, color:'var(--muted)', marginTop:3 },
@@ -182,30 +182,30 @@ const S = {
   abasInt:     { display:'flex', borderBottom:'1px solid var(--border)', marginBottom:20 },
   abaInt:      (on) => ({ padding:'8px 16px', fontSize:13, fontWeight:600, cursor:'pointer', color: on?'var(--blue)':'var(--muted)', background:'none', border:'none', borderBottom:`2px solid ${on?'var(--blue)':'transparent'}`, fontFamily:'inherit', marginBottom:-1, display:'flex', alignItems:'center', gap:5 }),
   stats:       { display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))', gap:10, marginBottom:22 },
-  statCard:    { background:'var(--surface)', border:'1px solid var(--border)', borderRadius:10, padding:'14px 16px', position:'relative', overflow:'hidden' },
+  statCard:    { background:'var(--surface)', border:'1px solid var(--border)', borderRadius:10, padding:'14px 16px', position:'relative', overflow:'hidden', boxShadow:'0 1px 4px var(--shadow)' },
   statBar:     (c) => ({ position:'absolute', bottom:0, left:0, right:0, height:2, background:c, opacity:.5 }),
-  statVal:     (c) => ({ fontFamily:'DM Mono, monospace', fontSize:26, fontWeight:500, color:c, lineHeight:1, marginBottom:5 }),
+  statVal:     (c) => ({ fontFamily:"'JetBrains Mono', monospace", fontSize:26, fontWeight:500, color:c, lineHeight:1, marginBottom:5 }),
   statLbl:     { fontSize:10, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.08em', fontWeight:500 },
   alerta:      { background:'linear-gradient(135deg,rgba(245,158,11,.08),rgba(239,68,68,.04))', border:'1px solid rgba(245,158,11,.25)', borderRadius:10, padding:'14px 18px', marginBottom:18, display:'flex', alignItems:'flex-start', gap:12 },
   alertaIcon:  { width:36, height:36, borderRadius:9, background:'rgba(245,158,11,.12)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:1 },
-  alertaRadar: { background:'linear-gradient(135deg,rgba(59,130,246,.07),rgba(6,182,212,.04))', border:'1px solid rgba(59,130,246,.2)', borderRadius:10, padding:'14px 18px', marginBottom:18, display:'flex', alignItems:'flex-start', gap:12 },
+  alertaRadar: { background:'linear-gradient(135deg,rgba(99,102,241,.07),rgba(165,180,252,.04))', border:'1px solid rgba(99,102,241,.2)', borderRadius:10, padding:'14px 18px', marginBottom:18, display:'flex', alignItems:'flex-start', gap:12 },
   toolbar:     { display:'flex', gap:8, marginBottom:8, alignItems:'center', flexWrap:'wrap' },
   toolbar2:    { display:'flex', gap:8, marginBottom:14, alignItems:'center', flexWrap:'wrap' },
   search:      { background:'var(--surface2)', border:'1px solid var(--border2)', borderRadius:7, padding:'8px 12px', color:'var(--text)', fontSize:13, outline:'none', fontFamily:'inherit', width:220 },
-  filtro:      (on) => ({ padding:'5px 12px', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer', border:`1px solid ${on?'rgba(59,130,246,.25)':'var(--border2)'}`, background: on?'var(--blue-dim)':'var(--subtle)', color: on?'var(--blue)':'var(--text2)', fontFamily:'inherit' }),
+  filtro:      (on) => ({ padding:'5px 12px', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer', border:`1px solid ${on?'rgba(99,102,241,.25)':'var(--border2)'}`, background: on?'var(--blue-dim)':'var(--subtle)', color: on?'var(--blue)':'var(--text2)', fontFamily:'inherit' }),
   fselSm:      { background:'var(--surface2)', border:'1px solid var(--border2)', borderRadius:6, padding:'5px 10px', color:'var(--text2)', fontSize:12, outline:'none', fontFamily:'inherit', cursor:'pointer', height:30 },
   inputSm:     { background:'var(--surface2)', border:'1px solid var(--border2)', borderRadius:6, padding:'5px 10px', color:'var(--text2)', fontSize:12, outline:'none', fontFamily:'inherit', height:30, width:130 },
   btn:         { background:'var(--blue)', color:'#fff', border:'none', borderRadius:8, padding:'9px 18px', fontWeight:600, fontSize:13, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', gap:6 },
   btnSm:       { background:'var(--subtle)', color:'var(--text2)', border:'1px solid var(--border2)', borderRadius:6, padding:'4px 9px', fontSize:11, fontWeight:500, cursor:'pointer', fontFamily:'inherit' },
-  btnApropriar:{ background:'rgba(16,185,129,.1)', color:'var(--green)', border:'1px solid rgba(16,185,129,.2)', borderRadius:6, padding:'4px 10px', fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', gap:4 },
+  btnApropriar:{ background:'var(--green-dim)', color:'var(--green)', border:'1px solid rgba(16,185,129,.2)', borderRadius:6, padding:'4px 10px', fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', gap:4 },
   btnDanger:   { background:'var(--red-dim)', color:'var(--red)', border:'1px solid transparent', borderRadius:6, padding:'4px 8px', fontSize:11, cursor:'pointer', fontFamily:'inherit' },
   btnLimpar:   { background:'none', border:'none', color:'var(--muted)', fontSize:11, cursor:'pointer', fontFamily:'inherit', textDecoration:'underline', padding:'0 4px' },
   btnGreen:    { background:'var(--green-dim)', color:'var(--green)', border:'1px solid rgba(16,185,129,.2)', borderRadius:8, padding:'9px 18px', fontWeight:600, fontSize:13, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', gap:6 },
-  btnNF:       { background:'rgba(167,139,250,.1)', color:'#a78bfa', border:'1px solid rgba(167,139,250,.2)', borderRadius:6, padding:'4px 10px', fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', gap:4 },
-  tableWrap:   { background:'var(--surface)', border:'1px solid var(--border)', borderRadius:10, overflow:'hidden' },
+  btnNF:       { background:'var(--purple-dim)', color:'var(--purple)', border:'1px solid rgba(124,58,237,.2)', borderRadius:6, padding:'4px 10px', fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', gap:4 },
+  tableWrap:   { background:'var(--surface)', border:'1px solid var(--border)', borderRadius:10, overflow:'hidden', boxShadow:'0 1px 4px var(--shadow)' },
   table:       { width:'100%', borderCollapse:'collapse' },
-  th:          { textAlign:'left', padding:'11px 16px', fontSize:10.5, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.08em', borderBottom:'1px solid var(--border)', background:'var(--surface2)', whiteSpace:'nowrap' },
-  td:          { padding:'12px 16px', fontSize:13, color:'var(--text2)', borderBottom:'1px solid var(--border)' },
+  th:          { textAlign:'left', padding:'10px 14px', fontSize:10.5, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.08em', borderBottom:'1px solid var(--border)', background:'var(--surface2)', whiteSpace:'nowrap' },
+  td:          { padding:'11px 14px', fontSize:13, color:'var(--text2)', borderBottom:'1px solid var(--border)' },
   modal:       { position:'fixed', inset:0, background:'rgba(0,0,0,.7)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:100, backdropFilter:'blur(4px)' },
   modalBox:    { background:'var(--surface)', border:'1px solid var(--border2)', borderRadius:12, padding:28, width:'90%', maxWidth:520, maxHeight:'90vh', overflowY:'auto', boxShadow:'0 8px 32px var(--shadow)' },
   modalTitle:  { fontSize:16, fontWeight:700, color:'var(--text)', marginBottom:18 },
@@ -216,22 +216,21 @@ const S = {
   fsel:        { background:'var(--surface2)', border:'1px solid var(--border2)', borderRadius:7, padding:'9px 12px', color:'var(--text)', fontSize:13, outline:'none', fontFamily:'inherit', width:'100%', cursor:'pointer' },
   row:         { display:'flex', gap:8, justifyContent:'flex-end', marginTop:18 },
   erro:        { background:'var(--red-dim)', border:'1px solid rgba(239,68,68,.25)', borderRadius:6, padding:'8px 12px', color:'var(--red)', fontSize:12, marginBottom:10 },
-  hintBox:     { background:'rgba(59,130,246,.06)', border:'1px solid rgba(59,130,246,.15)', borderRadius:7, padding:'8px 14px', marginBottom:14, fontSize:12, color:'var(--blue)', display:'flex', justifyContent:'space-between', alignItems:'center' },
-  infoBox:     { background:'rgba(59,130,246,.06)', border:'1px solid rgba(59,130,246,.15)', borderRadius:7, padding:'10px 14px', marginBottom:14, fontSize:12, color:'var(--blue)' },
+  hintBox:     { background:'var(--blue-dim)', border:'1px solid rgba(99,102,241,.2)', borderRadius:7, padding:'8px 14px', marginBottom:14, fontSize:12, color:'var(--blue)', display:'flex', justifyContent:'space-between', alignItems:'center' },
+  infoBox:     { background:'var(--blue-dim)', border:'1px solid rgba(99,102,241,.15)', borderRadius:7, padding:'10px 14px', marginBottom:14, fontSize:12, color:'var(--blue)' },
   infoGreen:   { background:'var(--green-dim)', border:'1px solid rgba(16,185,129,.2)', borderRadius:7, padding:'10px 14px', marginBottom:14, fontSize:12, color:'var(--green)' },
   sectionLbl:  { fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.08em', marginBottom:10, marginTop:4, paddingBottom:6, borderBottom:'1px solid var(--border)' },
   geradorLayout:{ display:'grid', gridTemplateColumns:'320px 1fr', gap:20, alignItems:'start' },
-  card:        { background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, padding:22 },
+  card:        { background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, padding:22, boxShadow:'0 1px 4px var(--shadow)' },
   cardTitle:   { fontSize:13, fontWeight:700, color:'var(--text)', marginBottom:16, display:'flex', alignItems:'center', gap:8 },
   regrasBox:   { background:'rgba(245,158,11,.05)', border:'1px solid rgba(245,158,11,.15)', borderRadius:8, padding:'10px 14px', marginBottom:14, fontSize:12, color:'var(--text2)', lineHeight:1.6 },
-  dataChip:    (sel) => ({ padding:'7px 14px', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', border:`1px solid ${sel?'rgba(59,130,246,.4)':'var(--border2)'}`, background: sel?'var(--blue-dim)':'var(--subtle)', color: sel?'var(--blue)':'var(--text2)', fontFamily:'inherit', marginRight:8, marginBottom:8 }),
+  dataChip:    (sel) => ({ padding:'7px 14px', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', border:`1px solid ${sel?'rgba(99,102,241,.4)':'var(--border2)'}`, background: sel?'var(--blue-dim)':'var(--subtle)', color: sel?'var(--blue)':'var(--text2)', fontFamily:'inherit', marginRight:8, marginBottom:8 }),
   sessaoRow:   { display:'grid', gridTemplateColumns:'130px 1fr 180px 60px', gap:8, padding:'6px 0', borderBottom:'1px solid var(--border)', alignItems:'start' },
-  chipReg:     (match) => ({ display:'inline-flex', alignItems:'center', gap:4, padding:'2px 8px', borderRadius:4, fontSize:10, fontWeight:600, background: match?'rgba(16,185,129,.1)':'var(--subtle)', color: match?'var(--green)':'var(--muted)', border:`1px solid ${match?'rgba(16,185,129,.2)':'var(--border2)'}`, marginRight:4 }),
-  feriadoWarn: { fontSize:10, color:'var(--amber)', background:'rgba(245,158,11,.1)', padding:'2px 6px', borderRadius:4, marginTop:3, display:'inline-flex', alignItems:'center', gap:3 },
+  chipReg:     (match) => ({ display:'inline-flex', alignItems:'center', gap:4, padding:'2px 8px', borderRadius:4, fontSize:10, fontWeight:600, background: match?'var(--green-dim)':'var(--subtle)', color: match?'var(--green)':'var(--muted)', border:`1px solid ${match?'rgba(16,185,129,.2)':'var(--border2)'}`, marginRight:4 }),
+  feriadoWarn: { fontSize:10, color:'var(--amber)', background:'var(--amber-dim)', padding:'2px 6px', borderRadius:4, marginTop:3, display:'inline-flex', alignItems:'center', gap:3 },
   divLabel:    { fontSize:10, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.07em', marginBottom:8, marginTop:14, paddingTop:14, borderTop:'1px solid var(--border)' },
-  avisoFora:   { fontSize:11, color:'var(--amber)', background:'rgba(245,158,11,.07)', border:'1px solid rgba(245,158,11,.15)', borderRadius:6, padding:'6px 10px', marginBottom:10 },
+  avisoFora:   { fontSize:11, color:'var(--amber)', background:'var(--amber-dim)', border:'1px solid rgba(245,158,11,.2)', borderRadius:6, padding:'6px 10px', marginBottom:10 },
 }
-
 const BP_FORM_VAZIO       = { id_sgt:'', empresa:'', consultor:'', data_kickoff:'', horas_kickoff:'4', porte:'Médio', status:'aguardando_cronograma', status_atendimento:'nao_iniciado' }
 const OUTRAS_FORM_VAZIO   = { id_sgt:'', numero_proposta:'', empresa:'', consultor:'', horas_total:'', receita:'', status:'em_execucao', motivo_pendencia:'', observacoes:'', data_conclusao:'' }
 const SOLICITAR_NF_VAZIO  = { numero_parcelas:1, valor_parcela:'', observacoes:'' }
@@ -345,11 +344,7 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
   const [erroGen, setErroGen]           = useState('')
   const [salvandoCron, setSalvandoCron] = useState(false)
 
-  useEffect(() => {
-  // Acorda o Render ao carregar a página (evita cold start no momento de gerar)
-  fetch('https://cronograma-api-3id0.onrender.com/').catch(() => {})
-  carregar()
-}, [])
+  useEffect(() => { carregar() }, [])
 
   async function carregar() {
     setLoading(true)
@@ -939,7 +934,7 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                               <span style={S.chipReg(ativas<3)}>{ativas} empresa{ativas!==1?'s':''} ativa{ativas!==1?'s':''}</span>
                               {feriasConflito && (
                                 <span style={{display:'inline-flex',alignItems:'center',gap:3,padding:'2px 8px',borderRadius:4,fontSize:10,fontWeight:600,background:'rgba(240,90,90,.08)',color:'var(--red)',border:'1px solid rgba(240,90,90,.18)'}}>
-                                  🏖 {new Date(feriasConflito.data_inicio+'T00:00:00').toLocaleDateString('pt-BR')} – {new Date(feriasConflito.data_fim+'T00:00:00').toLocaleDateString('pt-BR')}
+                                  ?? {new Date(feriasConflito.data_inicio+'T00:00:00').toLocaleDateString('pt-BR')} – {new Date(feriasConflito.data_fim+'T00:00:00').toLocaleDateString('pt-BR')}
                                 </span>
                               )}
                             </div>
@@ -985,7 +980,7 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                               <span style={S.chipReg(ativas<3)}>{ativas} empresa{ativas!==1?'s':''} ativa{ativas!==1?'s':''}</span>
                               {feriasConflito && (
                                 <span style={{display:'inline-flex',alignItems:'center',gap:3,padding:'2px 8px',borderRadius:4,fontSize:10,fontWeight:600,background:'rgba(240,90,90,.08)',color:'var(--red)',border:'1px solid rgba(240,90,90,.18)'}}>
-                                  🏖 {new Date(feriasConflito.data_inicio+'T00:00:00').toLocaleDateString('pt-BR')} – {new Date(feriasConflito.data_fim+'T00:00:00').toLocaleDateString('pt-BR')}
+                                  ?? {new Date(feriasConflito.data_inicio+'T00:00:00').toLocaleDateString('pt-BR')} – {new Date(feriasConflito.data_fim+'T00:00:00').toLocaleDateString('pt-BR')}
                                 </span>
                               )}
                             </div>
@@ -1056,7 +1051,7 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                   {/* Aviso férias */}
                   {sessoes.some(s=>isConsultorEmFerias(s.data, s.responsavel)) && (
                     <div style={{background:'rgba(167,139,250,.07)',border:'1px solid rgba(167,139,250,.2)',borderRadius:7,padding:'8px 12px',marginBottom:12,fontSize:12,color:'var(--purple)'}}>
-                      🏖 {sessoes.filter(s=>isConsultorEmFerias(s.data, s.responsavel)).length} sessão(ões) coincidem com período de férias do responsável — revise as datas abaixo.
+                      ?? {sessoes.filter(s=>isConsultorEmFerias(s.data, s.responsavel)).length} sessão(ões) coincidem com período de férias do responsável — revise as datas abaixo.
                     </div>
                   )}
 
@@ -1072,7 +1067,7 @@ export default function Consultoria({ isAdmin = false, isEspecialista = false })
                         }} value={s.data} onChange={e=>editarSessao(s.id,'data',e.target.value)} />
                         {isFeriadoCached(s.data) && <div style={S.feriadoWarn}>⚠ {nomeFeriado(s.data)}</div>}
                         {!isFeriadoCached(s.data) && isConsultorEmFerias(s.data,s.responsavel) && (
-                          <div style={{fontSize:10,color:'var(--purple)',background:'rgba(167,139,250,.1)',padding:'2px 6px',borderRadius:4,marginTop:3,display:'inline-flex',alignItems:'center',gap:3}}>🏖 Férias do responsável</div>
+                          <div style={{fontSize:10,color:'var(--purple)',background:'rgba(167,139,250,.1)',padding:'2px 6px',borderRadius:4,marginTop:3,display:'inline-flex',alignItems:'center',gap:3}}>?? Férias do responsável</div>
                         )}
                       </div>
                       <input style={{...S.input,padding:'5px 8px',fontSize:12}} value={s.atividade} onChange={e=>editarSessao(s.id,'atividade',e.target.value)} />
