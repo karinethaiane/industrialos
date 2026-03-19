@@ -92,3 +92,20 @@ html, body, #root {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* ── INPUTS DE DATA — dark mode ──────────────────────────────────────── */
+[data-tema="dark"] input[type="date"],
+[data-tema="dark"] input[type="time"],
+[data-tema="dark"] input[type="datetime-local"] {
+  color-scheme: dark;
+  color: var(--text);
+  background: var(--surface2);
+}
+
+[data-tema="light"] input[type="date"],
+[data-tema="light"] input[type="time"],
+[data-tema="light"] input[type="datetime-local"] {
+  color-scheme: light;
+  color: var(--text);
+  background: var(--surface2);
+}
