@@ -108,7 +108,7 @@ function origemBadge(origem) {
 // ── Formulários vazios ─────────────────────────────────────────────────────────
 const NF_VAZIO     = { id_sgt: '', empresa: '', status_sgt: 'Em execução', data_conclusao_sgt: '', consultor: '', nf_boleto_enviado: false, data_solicitacao_envio: '', numero_nf: '', valor_parcela: '', numero_parcelas: 1, observacoes: '' }
 const PAG_VAZIO    = { numero_chamado: '', tipo_tarefa: 'Solicitação de Pagamento', solicitante: '', numero_nf_boleto_al: '', descricao: '', razao_social: '', status: 'aguardando_abertura_chamado', valor: '', previsao_pagamento: '', observacoes: '' }
-const DIARIA_VAZIO = { numero_chamado: '', op: '', solicitante: 'IST - MPP - ENERGIA', destino: '', data_inicio: '', data_fim: '', status: 'aguardando_abertura_chamado', valor: '', previsao_pagamento: '', observacoes: '' }
+const DIARIA_VAZIO = { numero_chamado: '', op: '', solicitante: 'IST - MPP - ENERGIA', destino: '', data_inicio: '', data_fim: '', status: 'aguardando_abertura_chamado', valor: '', previsao_pagamento: '', descricao: '', observacoes: '' }
 
 export default function Financeiro({ isAdmin = false }) {
   const [aba, setAba]               = useState('nf')
@@ -135,6 +135,7 @@ export default function Financeiro({ isAdmin = false }) {
   const [editandoDiaria, setEditandoDiaria] = useState(null)
   const [formDiaria, setFormDiaria]         = useState(DIARIA_VAZIO)
   const [modalDetDiaria, setModalDetDiaria] = useState(null)
+  const [modalObsDiaria, setModalObsDiaria]   = useState(null)
 
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro]         = useState('')
@@ -201,13 +202,13 @@ export default function Financeiro({ isAdmin = false }) {
   function abrirNovaDiaria()    { setEditandoDiaria(null); setErro(''); setFormDiaria(DIARIA_VAZIO); setModalDiaria(true) }
   function abrirEditarDiaria(r) {
     setEditandoDiaria(r); setErro('')
-    setFormDiaria({ numero_chamado: r.numero_chamado || '', op: r.op || '', solicitante: r.solicitante || 'IST - MPP - ENERGIA', destino: r.destino || '', data_inicio: r.data_inicio || '', data_fim: r.data_fim || '', status: r.status || 'aguardando_abertura_chamado', valor: r.valor || '', previsao_pagamento: r.previsao_pagamento || '', observacoes: r.observacoes || '' })
+    setFormDiaria({ numero_chamado: r.numero_chamado || '', op: r.op || '', solicitante: r.solicitante || 'IST - MPP - ENERGIA', destino: r.destino || '', data_inicio: r.data_inicio || '', data_fim: r.data_fim || '', status: r.status || 'aguardando_abertura_chamado', valor: r.valor || '', previsao_pagamento: r.previsao_pagamento || '', descricao: r.descricao || '', observacoes: r.observacoes || '' })
     setModalDiaria(true)
   }
   async function salvarDiaria() {
     if (!formDiaria.destino || !formDiaria.data_inicio || !formDiaria.data_fim) { setErro('Destino e período são obrigatórios.'); return }
     setSalvando(true); setErro('')
-    const dados = { numero_chamado: formDiaria.numero_chamado.trim() || null, op: formDiaria.op.trim() || null, solicitante: formDiaria.solicitante || null, destino: formDiaria.destino.trim(), data_inicio: formDiaria.data_inicio, data_fim: formDiaria.data_fim, status: formDiaria.status, valor: parseFloat(formDiaria.valor) || null, previsao_pagamento: formDiaria.previsao_pagamento || null, observacoes: formDiaria.observacoes || null }
+    const dados = { numero_chamado: formDiaria.numero_chamado.trim() || null, op: formDiaria.op.trim() || null, solicitante: formDiaria.solicitante || null, destino: formDiaria.destino.trim(), data_inicio: formDiaria.data_inicio, data_fim: formDiaria.data_fim, status: formDiaria.status, valor: parseFloat(formDiaria.valor) || null, previsao_pagamento: formDiaria.previsao_pagamento || null, descricao: formDiaria.descricao || null, observacoes: formDiaria.observacoes || null }
     let error
     if (editandoDiaria) { ({ error } = await supabase.from('diarias_viagem').update(dados).eq('id', editandoDiaria.id)) }
     else                { ({ error } = await supabase.from('diarias_viagem').insert(dados)) }
@@ -432,6 +433,7 @@ export default function Financeiro({ isAdmin = false }) {
                 </td>
                 {isAdmin && <td style={S.td}><div style={{ display: 'flex', gap: 4 }}>
                   <button style={S.btnDetTeal} onClick={() => setModalDetDiaria(r)}>Detalhes</button>
+                  {r.observacoes && <button style={S.btnObs} onClick={() => setModalObsDiaria(r)}>Obs.</button>}
                   <button style={S.btnSm} onClick={() => abrirEditarDiaria(r)}>Editar</button>
                   <button style={S.btnDanger} onClick={() => excluirDiaria(r.id)}>✕</button>
                 </div></td>}
@@ -504,6 +506,10 @@ export default function Financeiro({ isAdmin = false }) {
                 <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: 'var(--text)' }}>{fmtData(modalDetDiaria.data_inicio)} – {fmtData(modalDetDiaria.data_fim)}</div>
               </div>
             </div>
+            {modalDetDiaria.descricao && (<>
+              <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 8 }}>Descrição</div>
+              <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px', fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 16 }}>{modalDetDiaria.descricao}</div>
+            </>)}
             <div style={{ background: 'rgba(13,148,136,.07)', border: '1px solid rgba(13,148,136,.2)', borderRadius: 10, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: modalDetDiaria.observacoes ? 14 : 0 }}>
               <div>
                 <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 6 }}>Valor / Previsão</div>
@@ -537,6 +543,23 @@ export default function Financeiro({ isAdmin = false }) {
             </div>
             <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px', fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{modalObs.observacoes}</div>
             <div style={{ marginTop: 14, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>{statusPagBadge(modalObs.status)}{responsavelBadge(modalObs.status)}</div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ MODAL OBS DIÁRIA ══ */}
+      {modalObsDiaria && (
+        <div style={S.modal} onClick={e => e.target === e.currentTarget && setModalObsDiaria(null)}>
+          <div style={S.modalBoxSm}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Observações</div>
+                <div style={{ fontSize: 12, fontFamily: "'JetBrains Mono', monospace", color: '#0d9488', marginTop: 3 }}>{modalObsDiaria.destino}{modalObsDiaria.numero_chamado ? ` · #${modalObsDiaria.numero_chamado}` : ''}</div>
+              </div>
+              <button onClick={() => setModalObsDiaria(null)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: 0 }}>×</button>
+            </div>
+            <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px', fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{modalObsDiaria.observacoes}</div>
+            <div style={{ marginTop: 14, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>{statusPagBadge(modalObsDiaria.status)}{responsavelBadge(modalObsDiaria.status)}</div>
           </div>
         </div>
       )}
@@ -632,6 +655,7 @@ export default function Financeiro({ isAdmin = false }) {
 
             <div style={S.sectionLbl}>Viagem</div>
             <div style={S.field}><label style={S.label}>Destino *</label><input style={S.input} value={formDiaria.destino} onChange={e => setFormDiaria({ ...formDiaria, destino: e.target.value })} placeholder="Ex: Garanhuns - PE" /></div>
+            <div style={S.field}><label style={S.label}>Descrição</label><textarea style={S.textarea} value={formDiaria.descricao} onChange={e => setFormDiaria({ ...formDiaria, descricao: e.target.value })} placeholder="Detalhes da viagem..." /></div>
             <div style={S.fieldRow}>
               <div style={S.field}><label style={S.label}>Data de início *</label><input type="date" style={S.input} value={formDiaria.data_inicio} onChange={e => setFormDiaria({ ...formDiaria, data_inicio: e.target.value })} /></div>
               <div style={S.field}><label style={S.label}>Data de fim *</label><input type="date" style={S.input} value={formDiaria.data_fim} onChange={e => setFormDiaria({ ...formDiaria, data_fim: e.target.value })} /></div>
@@ -644,7 +668,7 @@ export default function Financeiro({ isAdmin = false }) {
                   {STATUS_PAG.map(s => <option key={s} value={s}>{STATUS_PAG_LABEL[s]}</option>)}
                 </select>
               </div>
-              <div style={S.field}><label style={S.label}>Valor / Previsão (R$)</label><input type="number" step="0.01" style={S.input} value={formDiaria.valor} onChange={e => setFormDiaria({ ...formDiaria, valor: e.target.value })} placeholder="0,00" /></div>
+              <div style={S.field}><label style={S.label}>Valor (R$)</label><input type="number" step="0.01" style={S.input} value={formDiaria.valor} onChange={e => setFormDiaria({ ...formDiaria, valor: e.target.value })} placeholder="0,00" /></div>
             </div>
             <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 7, padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 12, color: 'var(--muted)' }}>Responsável atual</span>{responsavelBadge(formDiaria.status)}
