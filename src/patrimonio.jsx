@@ -711,7 +711,7 @@ export default function Patrimonio({ isAdmin = false }) {
     // Deletar na ordem certa (FK)
     await supabase.from('patrimonio_historico').delete().neq('id', '00000000-0000-0000-0000-000000000000')
     await supabase.from('ocorrencias_patrimonio').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-    await supabase.from('calibracao_itens').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+    await supabase.from('calibracao_pedido_itens').delete().neq('id', '00000000-0000-0000-0000-000000000000')
     await supabase.from('calibracao_pedidos').delete().neq('id', '00000000-0000-0000-0000-000000000000')
     await supabase.from('patrimonios').delete().neq('id', '00000000-0000-0000-0000-000000000000')
     setLimpando(false)
