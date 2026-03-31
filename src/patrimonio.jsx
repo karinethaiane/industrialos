@@ -127,6 +127,136 @@ function ProgBar({ pct, st }) {
   return (
     <div style={S.progBar}>
       <div style={{ height: '100%', borderRadius: 2, width: `${Math.min(100, pct)}%`, background: cor }} />
+
+      {/* ── MODAL DIFF ── */}
+      {modalDiff && diffResult && (
+        <div style={S.modal} onClick={e => e.target === e.currentTarget && setModalDiff(false)}>
+          <div style={{ ...S.modalBox, maxWidth: 680 }}>
+            <div style={S.modalTitle}>Comparação de arquivos</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 18 }}>
+              Revise as diferenças detectadas e escolha o que aplicar.
+            </div>
+
+            {/* Resumo */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 }}>
+              <div style={{ background: 'var(--green-dim)', border: '1px solid rgba(5,150,105,.2)', borderRadius: 8, padding: '12px 14px' }}>
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 24, fontWeight: 500, color: 'var(--green)', lineHeight: 1, marginBottom: 4 }}>{diffResult.novos.length}</div>
+                <div style={{ fontSize: 11, color: 'var(--green)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.07em' }}>Novos bens</div>
+              </div>
+              <div style={{ background: 'var(--amber-dim)', border: '1px solid rgba(217,119,6,.2)', borderRadius: 8, padding: '12px 14px' }}>
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 24, fontWeight: 500, color: 'var(--amber)', lineHeight: 1, marginBottom: 4 }}>{diffResult.alterados.length}</div>
+                <div style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.07em' }}>Com alterações</div>
+              </div>
+              <div style={{ background: 'var(--red-dim)', border: '1px solid rgba(220,38,38,.2)', borderRadius: 8, padding: '12px 14px' }}>
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 24, fontWeight: 500, color: 'var(--red)', lineHeight: 1, marginBottom: 4 }}>{diffResult.removidos.length}</div>
+                <div style={{ fontSize: 11, color: 'var(--red)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.07em' }}>Removidos</div>
+              </div>
+            </div>
+
+            {/* Bens novos */}
+            {diffResult.novos.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--green)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--green)', display: 'inline-block' }}></span>
+                  Novos bens ({diffResult.novos.length})
+                </div>
+                <div style={{ background: 'var(--surface2)', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)', maxHeight: 160, overflowY: 'auto' }}>
+                  {diffResult.novos.map((b, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
+                      <span style={{ color: 'var(--text)', fontWeight: 500 }}>{b.descricao}</span>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--green)', fontSize: 11 }}>{b.codigo_barra}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Bens alterados */}
+            {diffResult.alterados.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--amber)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--amber)', display: 'inline-block' }}></span>
+                  Alterados ({diffResult.alterados.length})
+                </div>
+                <div style={{ background: 'var(--surface2)', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)', maxHeight: 180, overflowY: 'auto' }}>
+                  {diffResult.alterados.map((b, i) => (
+                    <div key={i} style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)' }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 6, display: 'flex', justifyContent: 'space-between' }}>
+                        <span>{b.descricao}</span>
+                        <span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--muted)', fontSize: 11 }}>{b.codigo_barra}</span>
+                      </div>
+                      {b._diffs.map((d, j) => (
+                        <div key={j} style={{ display: 'flex', gap: 8, fontSize: 11, marginBottom: 3, alignItems: 'center' }}>
+                          <span style={{ color: 'var(--muted)', width: 100, flexShrink: 0, textTransform: 'capitalize' }}>{d.campo.replace(/_/g,' ')}</span>
+                          <span style={{ color: 'var(--red)', textDecoration: 'line-through', flex: 1 }}>{d.anterior}</span>
+                          <span style={{ color: 'var(--mu)', margin: '0 4px' }}>→</span>
+                          <span style={{ color: 'var(--green)', flex: 1, fontWeight: 600 }}>{d.novo}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Bens removidos */}
+            {diffResult.removidos.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--red)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--red)', display: 'inline-block' }}></span>
+                  Removidos do novo arquivo ({diffResult.removidos.length})
+                </div>
+                <div style={{ background: 'var(--surface2)', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)', maxHeight: 140, overflowY: 'auto' }}>
+                  {diffResult.removidos.map((b, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
+                      <span style={{ color: 'var(--text)', opacity: .6, textDecoration: 'line-through' }}>{b.descricao}</span>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--red)', fontSize: 11 }}>{b.codigo_barra}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {diffResult.novos.length === 0 && diffResult.alterados.length === 0 && diffResult.removidos.length === 0 && (
+              <div style={{ background: 'var(--green-dim)', border: '1px solid rgba(5,150,105,.2)', borderRadius: 8, padding: '14px 18px', marginBottom: 16, fontSize: 13, color: 'var(--green)', fontWeight: 600, textAlign: 'center' }}>
+                Nenhuma diferença encontrada — o arquivo está idêntico ao banco.
+              </div>
+            )}
+
+            <div style={{ ...S.row, gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <button style={S.btnSm} onClick={() => setModalDiff(false)}>Cancelar</button>
+              {(diffResult.novos.length > 0 || diffResult.alterados.length > 0) && (
+                <button
+                  style={{ ...S.btn, background: 'var(--amber)', opacity: aplicando ? .6 : 1 }}
+                  disabled={aplicando}
+                  onClick={() => aplicarDiff({ novos: true, alterados: true, removidos: false })}
+                >
+                  {aplicando ? 'Aplicando...' : `Aplicar novos + alterados (${diffResult.novos.length + diffResult.alterados.length})`}
+                </button>
+              )}
+              {diffResult.removidos.length > 0 && (
+                <button
+                  style={{ ...S.btn, background: 'var(--red)', opacity: aplicando ? .6 : 1 }}
+                  disabled={aplicando}
+                  onClick={() => aplicarDiff({ novos: true, alterados: true, removidos: true })}
+                >
+                  {aplicando ? 'Aplicando...' : 'Aplicar tudo (incluir remoções)'}
+                </button>
+              )}
+              {(diffResult.novos.length > 0 || diffResult.alterados.length > 0 || diffResult.removidos.length > 0) && (
+                <button
+                  style={{ ...S.btn, background: 'var(--green)', opacity: aplicando ? .6 : 1 }}
+                  disabled={aplicando}
+                  onClick={() => aplicarDiff({ novos: true, alterados: true, removidos: false })}
+                >
+                  {aplicando ? 'Aplicando...' : 'Sincronizar'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
@@ -166,6 +296,10 @@ export default function Patrimonio({ isAdmin = false }) {
   const [erroOcor, setErroOcor]     = useState('')
   const [importando, setImportando] = useState(false)
   const [erroImport, setErroImport] = useState('')
+  const [limpando, setLimpando]     = useState(false)
+  const [modalDiff, setModalDiff]   = useState(false)
+  const [diffResult, setDiffResult] = useState(null)   // { novos, alterados, removidos }
+  const [aplicando, setAplicando]   = useState(false)
 
   const [modalPedido, setModalPedido]       = useState(false)
   const [editandoPedido, setEditandoPedido] = useState(null)
@@ -469,6 +603,20 @@ export default function Patrimonio({ isAdmin = false }) {
     setSalvandoConcluir(false); setModalConcluir(false); carregar()
   }
 
+  async function limparTudo() {
+    if (!confirm('Isso vai excluir TODOS os bens patrimoniais, ocorrências e histórico. Confirma?')) return
+    setLimpando(true)
+    // Deletar na ordem certa (FK)
+    await supabase.from('patrimonio_historico').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+    await supabase.from('ocorrencias_patrimonio').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+    await supabase.from('calibracao_itens').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+    await supabase.from('calibracao_pedidos').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+    await supabase.from('patrimonios').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+    setLimpando(false)
+    setErroImport('Todos os registros foram excluídos.')
+    carregar()
+  }
+
   async function importarExcel(e) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -502,6 +650,104 @@ export default function Patrimonio({ isAdmin = false }) {
     setImportando(false); e.target.value = ''
   }
 
+  async function compararExcel(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImportando(true); setErroImport('')
+    try {
+      const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs')
+      const buf  = await file.arrayBuffer()
+      const wb   = XLSX.read(new Uint8Array(buf), { type: 'array' })
+      const ws   = wb.Sheets[wb.SheetNames[0]]
+      const rawData = XLSX.utils.sheet_to_json(ws, { header: 1 })
+
+      const extractType = (desc) => { const d = (desc || '').toUpperCase(); if (d.includes('NOTEBOOK') || d.includes('DESKTOP') || d.includes('COMPUTADOR')) return 'Computador'; if (d.includes('MONITOR') || d.includes('TECLADO') || d.includes('MOUSE') || d.includes('IMPRESSORA') || d.includes('SCANNER')) return 'Periférico'; if (d.includes('MULTÍMETRO') || d.includes('ANALISADOR') || d.includes('MEDIDOR')) return 'Instrumento de Medição'; if (d.includes('MESA') || d.includes('CADEIRA') || d.includes('ARMÁRIO') || d.includes('ESTANTE')) return 'Móvel'; return 'Outro' }
+      const formatDate = (v) => { if (!v) return null; if (typeof v === 'number') return new Date((v - 25569) * 86400 * 1000).toISOString().split('T')[0]; if (typeof v === 'string') { const m = v.match(/(\d{2})\/(\d{2})\/(\d{4})/); if (m) return `${m[3]}-${m[2]}-${m[1]}`; if (/\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0, 10) } return null }
+
+      // Parsear arquivo novo
+      const novosMap = {}
+      let currentResponsavel = '', currentLocal = '', dataStart = 38
+      for (let i = 30; i < 50; i++) { const row = rawData[i]; if (row && row.some(c => String(c || '').includes('Cod. Barra'))) { dataStart = i + 1; break } }
+      for (let i = dataStart; i < rawData.length; i++) {
+        const row = rawData[i]; if (!row || row.length === 0) continue
+        const rowStr = row.map(c => String(c || '')).join('|')
+        if (rowStr.includes('Total do Responsável')) { const m = rowStr.match(/Total do Responsável \[([^\]]+)\]/); if (m) currentResponsavel = m[1].trim(); continue }
+        if (rowStr.includes('Total do Local')) { const m = rowStr.match(/Total do Local \[([^\]]+)\]/); if (m) currentLocal = m[1].trim(); continue }
+        if (rowStr.includes('Total do') || rowStr.includes('Total da') || rowStr.includes('Total de')) continue
+        let barCode = '', description = '', compl = '', situation = '', dtAquis = null, vlrAquis = '', saldo = ''
+        for (let c = 5; c <= 8; c++) { const v = String(row[c] || '').trim(); if (v && v !== 'Cod. Barra' && /^\d{5,}/.test(v)) { barCode = v; description = String(row[c + 2] || '').trim(); compl = String(row[c + 5] || '').trim(); situation = String(row[c + 10] || '').trim(); dtAquis = formatDate(row[c + 13]); vlrAquis = String(row[c + 17] || '').trim(); saldo = String(row[c + 28] || '').trim(); break } }
+        if (!barCode || !description || description === 'Descr. Padrao') continue
+        novosMap[barCode] = { codigo_barra: barCode, descricao: description, descricao_complementar: compl || null, tipo_bem: extractType(description), situacao: situation || 'Em uso', local: currentLocal || null, responsavel: currentResponsavel || null, data_aquisicao: dtAquis, valor_aquisicao: vlrAquis || null, saldo_contabil: saldo || null }
+      }
+
+      // Buscar atual do banco
+      const { data: atual } = await supabase.from('patrimonios').select('*')
+      const atualMap = {}
+      ;(atual || []).forEach(b => { atualMap[b.codigo_barra] = b })
+
+      const camposComparar = ['descricao','situacao','local','responsavel','valor_aquisicao','saldo_contabil']
+      const novos = [], alterados = [], removidos = []
+
+      // Novos e alterados
+      Object.values(novosMap).forEach(item => {
+        const existing = atualMap[item.codigo_barra]
+        if (!existing) {
+          novos.push(item)
+        } else {
+          const diffs = []
+          camposComparar.forEach(campo => {
+            const vNovo = String(item[campo] || '').trim()
+            const vAnt  = String(existing[campo] || '').trim()
+            if (vNovo !== vAnt) diffs.push({ campo, anterior: vAnt || '—', novo: vNovo || '—' })
+          })
+          if (diffs.length > 0) alterados.push({ ...item, _diffs: diffs, _id: existing.id })
+        }
+      })
+
+      // Removidos
+      Object.values(atualMap).forEach(item => {
+        if (!novosMap[item.codigo_barra]) removidos.push(item)
+      })
+
+      setDiffResult({ novos, alterados, removidos, novosMap })
+      setModalDiff(true)
+    } catch (err) { setErroImport('Erro ao comparar: ' + err.message) }
+    setImportando(false); e.target.value = ''
+  }
+
+  async function aplicarDiff(opcoes) {
+    // opcoes: { novos: bool, alterados: bool, removidos: bool }
+    if (!diffResult) return
+    setAplicando(true)
+    let ok = 0, erros = 0
+
+    if (opcoes.novos) {
+      for (const item of diffResult.novos) {
+        const { error } = await supabase.from('patrimonios').insert(item)
+        error ? erros++ : ok++
+      }
+    }
+    if (opcoes.alterados) {
+      for (const item of diffResult.alterados) {
+        const { _diffs, _id, ...dados } = item
+        const { error } = await supabase.from('patrimonios').update(dados).eq('id', _id)
+        error ? erros++ : ok++
+      }
+    }
+    if (opcoes.removidos) {
+      for (const item of diffResult.removidos) {
+        await supabase.from('patrimonios').delete().eq('id', item.id)
+        ok++
+      }
+    }
+
+    setAplicando(false)
+    setModalDiff(false)
+    setDiffResult(null)
+    setErroImport(`Sincronização concluída: ${ok} alterações aplicadas.${erros > 0 ? ` ${erros} erros.` : ''}`)
+    carregar()
+  }
+
   const trHover = { onMouseEnter: e => e.currentTarget.style.background='var(--subtle)', onMouseLeave: e => e.currentTarget.style.background='transparent' }
 
   return (
@@ -510,6 +756,19 @@ export default function Patrimonio({ isAdmin = false }) {
         <div><div style={S.title}>Patrimônio</div><div style={S.sub}>Gestão e controle de bens patrimoniais</div></div>
         {isAdmin && (
           <div style={{ display:'flex', gap:8 }}>
+            <button
+              onClick={limparTudo}
+              disabled={limpando}
+              style={{ ...S.btn, background:'var(--red-dim)', color:'var(--red)', border:'1px solid rgba(239,68,68,.2)' }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+              {limpando ? 'Limpando...' : 'Limpar tudo'}
+            </button>
+            <label style={{ ...S.btn, background:'rgba(99,102,241,.1)', color:'var(--blue)', border:'1px solid rgba(99,102,241,.2)', cursor:'pointer' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+              {importando ? 'Comparando...' : 'Comparar Excel'}
+              <input type="file" accept=".xlsx,.xls" style={{ display:'none' }} onChange={compararExcel} disabled={importando} />
+            </label>
             <label style={{ ...S.btn, background:'var(--subtle)', color:'var(--text2)', border:'1px solid var(--border2)', cursor:'pointer' }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               {importando ? 'Importando...' : 'Importar Excel'}
@@ -1013,6 +1272,136 @@ export default function Patrimonio({ isAdmin = false }) {
           </div>
         </div>
       )}
+
+      {/* ── MODAL DIFF ── */}
+      {modalDiff && diffResult && (
+        <div style={S.modal} onClick={e => e.target === e.currentTarget && setModalDiff(false)}>
+          <div style={{ ...S.modalBox, maxWidth: 680 }}>
+            <div style={S.modalTitle}>Comparação de arquivos</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 18 }}>
+              Revise as diferenças detectadas e escolha o que aplicar.
+            </div>
+
+            {/* Resumo */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 }}>
+              <div style={{ background: 'var(--green-dim)', border: '1px solid rgba(5,150,105,.2)', borderRadius: 8, padding: '12px 14px' }}>
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 24, fontWeight: 500, color: 'var(--green)', lineHeight: 1, marginBottom: 4 }}>{diffResult.novos.length}</div>
+                <div style={{ fontSize: 11, color: 'var(--green)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.07em' }}>Novos bens</div>
+              </div>
+              <div style={{ background: 'var(--amber-dim)', border: '1px solid rgba(217,119,6,.2)', borderRadius: 8, padding: '12px 14px' }}>
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 24, fontWeight: 500, color: 'var(--amber)', lineHeight: 1, marginBottom: 4 }}>{diffResult.alterados.length}</div>
+                <div style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.07em' }}>Com alterações</div>
+              </div>
+              <div style={{ background: 'var(--red-dim)', border: '1px solid rgba(220,38,38,.2)', borderRadius: 8, padding: '12px 14px' }}>
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 24, fontWeight: 500, color: 'var(--red)', lineHeight: 1, marginBottom: 4 }}>{diffResult.removidos.length}</div>
+                <div style={{ fontSize: 11, color: 'var(--red)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.07em' }}>Removidos</div>
+              </div>
+            </div>
+
+            {/* Bens novos */}
+            {diffResult.novos.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--green)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--green)', display: 'inline-block' }}></span>
+                  Novos bens ({diffResult.novos.length})
+                </div>
+                <div style={{ background: 'var(--surface2)', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)', maxHeight: 160, overflowY: 'auto' }}>
+                  {diffResult.novos.map((b, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
+                      <span style={{ color: 'var(--text)', fontWeight: 500 }}>{b.descricao}</span>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--green)', fontSize: 11 }}>{b.codigo_barra}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Bens alterados */}
+            {diffResult.alterados.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--amber)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--amber)', display: 'inline-block' }}></span>
+                  Alterados ({diffResult.alterados.length})
+                </div>
+                <div style={{ background: 'var(--surface2)', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)', maxHeight: 180, overflowY: 'auto' }}>
+                  {diffResult.alterados.map((b, i) => (
+                    <div key={i} style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)' }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 6, display: 'flex', justifyContent: 'space-between' }}>
+                        <span>{b.descricao}</span>
+                        <span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--muted)', fontSize: 11 }}>{b.codigo_barra}</span>
+                      </div>
+                      {b._diffs.map((d, j) => (
+                        <div key={j} style={{ display: 'flex', gap: 8, fontSize: 11, marginBottom: 3, alignItems: 'center' }}>
+                          <span style={{ color: 'var(--muted)', width: 100, flexShrink: 0, textTransform: 'capitalize' }}>{d.campo.replace(/_/g,' ')}</span>
+                          <span style={{ color: 'var(--red)', textDecoration: 'line-through', flex: 1 }}>{d.anterior}</span>
+                          <span style={{ color: 'var(--mu)', margin: '0 4px' }}>→</span>
+                          <span style={{ color: 'var(--green)', flex: 1, fontWeight: 600 }}>{d.novo}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Bens removidos */}
+            {diffResult.removidos.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--red)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--red)', display: 'inline-block' }}></span>
+                  Removidos do novo arquivo ({diffResult.removidos.length})
+                </div>
+                <div style={{ background: 'var(--surface2)', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)', maxHeight: 140, overflowY: 'auto' }}>
+                  {diffResult.removidos.map((b, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
+                      <span style={{ color: 'var(--text)', opacity: .6, textDecoration: 'line-through' }}>{b.descricao}</span>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--red)', fontSize: 11 }}>{b.codigo_barra}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {diffResult.novos.length === 0 && diffResult.alterados.length === 0 && diffResult.removidos.length === 0 && (
+              <div style={{ background: 'var(--green-dim)', border: '1px solid rgba(5,150,105,.2)', borderRadius: 8, padding: '14px 18px', marginBottom: 16, fontSize: 13, color: 'var(--green)', fontWeight: 600, textAlign: 'center' }}>
+                Nenhuma diferença encontrada — o arquivo está idêntico ao banco.
+              </div>
+            )}
+
+            <div style={{ ...S.row, gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <button style={S.btnSm} onClick={() => setModalDiff(false)}>Cancelar</button>
+              {(diffResult.novos.length > 0 || diffResult.alterados.length > 0) && (
+                <button
+                  style={{ ...S.btn, background: 'var(--amber)', opacity: aplicando ? .6 : 1 }}
+                  disabled={aplicando}
+                  onClick={() => aplicarDiff({ novos: true, alterados: true, removidos: false })}
+                >
+                  {aplicando ? 'Aplicando...' : `Aplicar novos + alterados (${diffResult.novos.length + diffResult.alterados.length})`}
+                </button>
+              )}
+              {diffResult.removidos.length > 0 && (
+                <button
+                  style={{ ...S.btn, background: 'var(--red)', opacity: aplicando ? .6 : 1 }}
+                  disabled={aplicando}
+                  onClick={() => aplicarDiff({ novos: true, alterados: true, removidos: true })}
+                >
+                  {aplicando ? 'Aplicando...' : 'Aplicar tudo (incluir remoções)'}
+                </button>
+              )}
+              {(diffResult.novos.length > 0 || diffResult.alterados.length > 0 || diffResult.removidos.length > 0) && (
+                <button
+                  style={{ ...S.btn, background: 'var(--green)', opacity: aplicando ? .6 : 1 }}
+                  disabled={aplicando}
+                  onClick={() => aplicarDiff({ novos: true, alterados: true, removidos: false })}
+                >
+                  {aplicando ? 'Aplicando...' : 'Sincronizar'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
