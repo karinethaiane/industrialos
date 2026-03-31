@@ -297,6 +297,7 @@ export default function Patrimonio({ isAdmin = false }) {
   const [importando, setImportando] = useState(false)
   const [erroImport, setErroImport] = useState('')
   const [limpando, setLimpando]     = useState(false)
+  const [showOcorPainel, setShowOcorPainel] = useState(false)
   const [exportando, setExportando] = useState(false)
   const [modalDiff, setModalDiff]   = useState(false)
   const [diffResult, setDiffResult] = useState(null)   // { novos, alterados, removidos }
@@ -381,6 +382,7 @@ export default function Patrimonio({ isAdmin = false }) {
   const totalDisponivel = itens.filter(i => i.situacao === 'Disponível').length
   const totalManutencao = itens.filter(i => i.situacao === 'Em manutenção').length
   const ocorAbertas     = todasOcor.filter(o => o.status === 'Aberto')
+  const bensComOcorAberta = new Set(ocorAbertas.map(o => o.patrimonio_id))
   const resumoOcor = {
     'Manutenção':             ocorAbertas.filter(o => o.tipo === 'Manutenção').length,
     'Reimpressão de plaqueta':ocorAbertas.filter(o => o.tipo === 'Reimpressão de plaqueta').length,
@@ -908,21 +910,56 @@ export default function Patrimonio({ isAdmin = false }) {
 
       {aba === 'bens' && (<>
         {ocorAbertas.length > 0 && (
-          <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:10, padding:'14px 18px', marginBottom:18 }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-              <span style={{ fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.07em' }}>Ocorrências abertas</span>
-              <button style={{ ...S.btnSm, fontSize:11 }} onClick={()=>setAba('ocorrencias')}>Ver todas →</button>
+          <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:10, marginBottom:18, overflow:'hidden' }}>
+            {/* Header recolhível */}
+            <div
+              onClick={() => setShowOcorPainel(v => !v)}
+              style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 18px', cursor:'pointer', userSelect:'none' }}
+            >
+              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2" strokeLinecap="round">
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <span style={{ fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.07em' }}>
+                  Ocorrências abertas
+                </span>
+                <span style={{ background:'rgba(245,158,11,.12)', color:'var(--amber)', borderRadius:10, padding:'1px 8px', fontSize:11, fontWeight:700 }}>
+                  {ocorAbertas.length}
+                </span>
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <button style={{ ...S.btnSm, fontSize:11 }} onClick={e=>{e.stopPropagation();setAba('ocorrencias')}}>Ver todas →</button>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2"
+                  style={{ transform: showOcorPainel ? 'rotate(180deg)' : 'rotate(0deg)', transition:'transform .2s' }}>
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </div>
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8, marginBottom:12 }}>
-              {Object.entries(resumoOcor).map(([tipo, qtd]) => {
-                const [bg, cor] = OCOR_RESUMO_COR[tipo] || ['var(--subtle)','var(--muted)']
-                return <div key={tipo} style={{ background:qtd>0?bg:'var(--subtle)', borderRadius:8, padding:'10px 12px', opacity:qtd===0?.4:1 }}><div style={{ fontFamily:'DM Mono, monospace', fontSize:20, fontWeight:500, color:qtd>0?cor:'var(--muted)', lineHeight:1, marginBottom:3 }}>{qtd}</div><div style={{ fontSize:10, color:qtd>0?cor:'var(--muted)', fontWeight:600 }}>{tipo}</div></div>
-              })}
-            </div>
-            <div style={{ borderTop:'1px solid var(--border)', paddingTop:10 }}>
-              {ocorAbertas.slice(0,4).map(o => { const [,cor] = OCOR_RESUMO_COR[o.tipo]||['var(--subtle)','var(--muted)']; return <div key={o.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'5px 0', borderBottom:'1px solid var(--border)' }}><div style={{ display:'flex', gap:8, alignItems:'center', minWidth:0 }}><span style={{ ...S.chip('var(--subtle)',cor), flexShrink:0 }}>{o.tipo}</span><span style={{ fontSize:12, color:'var(--text)', fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o.patrimonios?.descricao||'—'}</span></div><span style={{ fontSize:11, color:'var(--muted)', flexShrink:0, marginLeft:8 }}>{o.data_abertura?new Date(o.data_abertura+'T00:00:00').toLocaleDateString('pt-BR'):'—'}</span></div> })}
-              {ocorAbertas.length>4&&<div style={{ paddingTop:8, fontSize:11, color:'var(--muted)', textAlign:'center' }}>+ {ocorAbertas.length-4} outras</div>}
-            </div>
+            {/* Conteúdo recolhível */}
+            {showOcorPainel && (
+              <div style={{ padding:'0 18px 16px', borderTop:'1px solid var(--border)' }}>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8, marginBottom:12, marginTop:12 }}>
+                  {Object.entries(resumoOcor).map(([tipo, qtd]) => {
+                    const [bg, cor] = OCOR_RESUMO_COR[tipo] || ['var(--subtle)','var(--muted)']
+                    return <div key={tipo} style={{ background:qtd>0?bg:'var(--subtle)', borderRadius:8, padding:'10px 12px', opacity:qtd===0?.4:1 }}><div style={{ fontFamily:"'JetBrains Mono', monospace", fontSize:20, fontWeight:500, color:qtd>0?cor:'var(--muted)', lineHeight:1, marginBottom:3 }}>{qtd}</div><div style={{ fontSize:10, color:qtd>0?cor:'var(--muted)', fontWeight:600 }}>{tipo}</div></div>
+                  })}
+                </div>
+                <div style={{ borderTop:'1px solid var(--border)', paddingTop:10 }}>
+                  {ocorAbertas.slice(0,6).map(o => {
+                    const [,cor] = OCOR_RESUMO_COR[o.tipo]||['var(--subtle)','var(--muted)']
+                    return (
+                      <div key={o.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'6px 0', borderBottom:'1px solid var(--border)' }}>
+                        <span style={{ ...S.chip('var(--subtle)',cor), flexShrink:0 }}>{o.tipo}</span>
+                        <span style={{ fontFamily:"'JetBrains Mono', monospace", fontSize:11, color:'var(--blue)', flexShrink:0, width:90, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o.patrimonios?.codigo_barra||'—'}</span>
+                        <span style={{ fontSize:12, color:'var(--text)', fontWeight:500, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o.patrimonios?.descricao||'—'}</span>
+                        <span style={{ fontSize:11, color:'var(--muted)', flexShrink:0 }}>{o.data_abertura?new Date(o.data_abertura+'T00:00:00').toLocaleDateString('pt-BR'):'—'}</span>
+                      </div>
+                    )
+                  })}
+                  {ocorAbertas.length>6&&<div style={{ paddingTop:8, fontSize:11, color:'var(--muted)', textAlign:'center' }}>+ {ocorAbertas.length-6} outras — ver todas na aba Ocorrências</div>}
+                </div>
+              </div>
+            )}
           </div>
         )}
         <div style={S.stats}>
@@ -953,8 +990,13 @@ export default function Patrimonio({ isAdmin = false }) {
                 <tr key={item.id} {...trHover}>
                   <td style={{ ...S.td, fontFamily:'DM Mono, monospace', color:'var(--blue)', fontWeight:500, fontSize:12 }}>{item.codigo_barra}</td>
                   <td style={{ ...S.td, color:'var(--text)', fontWeight:500, maxWidth:220 }}>
-                    <div style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.descricao}</div>
-                    {item.codigo_interno && <div style={{ fontSize:11, color:'var(--purple)', marginTop:2, fontFamily:'DM Mono, monospace' }}>{item.codigo_interno}</div>}
+                    <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                      <div style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.descricao}</div>
+                      {bensComOcorAberta.has(item.id) && (
+                        <span title="Ocorrência aberta" style={{ flexShrink:0, width:7, height:7, borderRadius:'50%', background:'var(--amber)', display:'inline-block' }}></span>
+                      )}
+                    </div>
+                    {item.codigo_interno && <div style={{ fontSize:11, color:'var(--purple)', marginTop:2, fontFamily:"'JetBrains Mono', monospace" }}>{item.codigo_interno}</div>}
                     {item.descricao_complementar && <div style={{ fontSize:11, color:'var(--muted)', marginTop:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.descricao_complementar}</div>}
                   </td>
                   <td style={S.td}>{item.tipo_bem?<span style={S.chip('var(--blue-dim)','var(--blue)')}>{item.tipo_bem}</span>:<span style={{ color:'var(--border2)' }}>—</span>}</td>
@@ -986,14 +1028,15 @@ export default function Patrimonio({ isAdmin = false }) {
             <span style={{ fontSize:11, color:'var(--muted)', marginLeft:'auto' }}>{ocorFiltradas.length} de {todasOcor.length} ocorrências</span>
           </div>
           <div style={S.tableWrap}><table style={S.table}>
-            <thead><tr><th style={S.th}>Data</th><th style={S.th}>Tipo</th><th style={S.th}>Bem</th><th style={S.th}>Local · Usuário</th><th style={S.th}>Descrição</th><th style={S.th}>Chamado</th><th style={S.th}>Status</th><th style={S.th}></th></tr></thead>
+            <thead><tr><th style={S.th}>Data</th><th style={S.th}>Tipo</th><th style={S.th}>Código</th><th style={S.th}>Bem</th><th style={S.th}>Local · Usuário</th><th style={S.th}>Descrição</th><th style={S.th}>Chamado</th><th style={S.th}>Status</th><th style={S.th}></th></tr></thead>
             <tbody>
               {ocorFiltradas.map(o => {
                 const [bg,cor] = OCOR_COR[o.tipo]||OCOR_COR['Outro']
                 return (
                   <tr key={o.id} {...trHover}>
-                    <td style={{ ...S.td, fontFamily:'DM Mono, monospace', fontSize:11, whiteSpace:'nowrap' }}>{fmtData(o.data_abertura)}</td>
+                    <td style={{ ...S.td, fontFamily:"'JetBrains Mono', monospace", fontSize:11, whiteSpace:'nowrap' }}>{fmtData(o.data_abertura)}</td>
                     <td style={S.td}><span style={S.chip(bg,cor)}>{o.tipo}</span></td>
+                    <td style={{ ...S.td, fontFamily:"'JetBrains Mono', monospace", fontSize:11, color:'var(--blue)', fontWeight:500 }}>{o.patrimonios?.codigo_barra||'—'}</td>
                     <td style={{ ...S.td, color:'var(--text)', fontWeight:500, maxWidth:180 }}><div style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o.patrimonios?.descricao||'—'}</div></td>
                     <td style={{ ...S.td, fontSize:11 }}><div style={{ color:'var(--text2)' }}>{o.patrimonios?.local||<span style={{ color:'var(--border2)' }}>—</span>}</div>{o.patrimonios?.usuario_patrimonio&&<div style={{ marginTop:2 }}><span style={S.chip('var(--green-dim)','var(--green)')}>{o.patrimonios.usuario_patrimonio}</span></div>}</td>
                     <td style={{ ...S.td, maxWidth:200 }}><div style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o.descricao}</div></td>
@@ -1007,7 +1050,7 @@ export default function Patrimonio({ isAdmin = false }) {
                   </tr>
                 )
               })}
-              {ocorFiltradas.length===0&&<tr><td colSpan={8} style={{ ...S.td, textAlign:'center', padding:40, color:'var(--muted)' }}>Nenhuma ocorrência encontrada.</td></tr>}
+              {ocorFiltradas.length===0&&<tr><td colSpan={9} style={{ ...S.td, textAlign:'center', padding:40, color:'var(--muted)' }}>Nenhuma ocorrência encontrada.</td></tr>}
             </tbody>
           </table></div>
         </div>
