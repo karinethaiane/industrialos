@@ -297,6 +297,7 @@ export default function Patrimonio({ isAdmin = false }) {
   const [importando, setImportando] = useState(false)
   const [erroImport, setErroImport] = useState('')
   const [limpando, setLimpando]     = useState(false)
+  const [exportando, setExportando] = useState(false)
   const [modalDiff, setModalDiff]   = useState(false)
   const [diffResult, setDiffResult] = useState(null)   // { novos, alterados, removidos }
   const [aplicando, setAplicando]   = useState(false)
@@ -603,6 +604,107 @@ export default function Patrimonio({ isAdmin = false }) {
     setSalvandoConcluir(false); setModalConcluir(false); carregar()
   }
 
+  async function exportarExcel() {
+    setExportando(true)
+    try {
+      const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs')
+
+      // ── Aba 1: Bens ──
+      const { data: bens } = await supabase.from('patrimonios').select('*').order('descricao')
+      const rowsBens = (bens || []).map(b => ({
+        'Código de Barras':        b.codigo_barra || '',
+        'Descrição':               b.descricao || '',
+        'Descrição Complementar':  b.descricao_complementar || '',
+        'Tipo':                    b.tipo_bem || '',
+        'Situação':                b.situacao || '',
+        'Local':                   b.local || '',
+        'Responsável':             b.responsavel || '',
+        'Usuário':                 b.usuario_patrimonio || '',
+        'Unidade':                 b.unidade || '',
+        'Data Aquisição':          b.data_aquisicao || '',
+        'Valor Aquisição':         b.valor_aquisicao || '',
+        'Saldo Contábil':          b.saldo_contabil || '',
+        'Código Interno':          b.codigo_interno || '',
+        'Requer Calibração':       b.requer_calibracao ? 'Sim' : 'Não',
+        'Periodicidade Calibração':b.periodicidade_calibracao || '',
+        'Última Calibração':       b.ultima_calibracao || '',
+        'Próxima Calibração':      b.proxima_calibracao || '',
+      }))
+
+      // ── Aba 2: Ocorrências ──
+      const { data: ocors } = await supabase
+        .from('patrimonio_ocorrencias')
+        .select('*, patrimonios(codigo_barra, descricao)')
+        .order('created_at', { ascending: false })
+      const rowsOcor = (ocors || []).map(o => ({
+        'Código de Barras': o.patrimonios?.codigo_barra || '',
+        'Bem':              o.patrimonios?.descricao || '',
+        'Tipo':             o.tipo || '',
+        'Status':           o.status || '',
+        'Descrição':        o.descricao || '',
+        'Data Abertura':    o.data_abertura || '',
+        'Data Resolução':   o.data_resolucao || '',
+        'Responsável':      o.responsavel || '',
+        'Observações':      o.observacoes || '',
+      }))
+
+      // ── Aba 3: Calibrações ──
+      const { data: peds } = await supabase
+        .from('calibracao_pedidos')
+        .select('*, calibracao_pedido_itens(*, patrimonios(codigo_barra, descricao, codigo_interno))')
+        .order('created_at', { ascending: false })
+      const rowsCalib = []
+      ;(peds || []).forEach(p => {
+        ;(p.calibracao_pedido_itens || []).forEach(item => {
+          rowsCalib.push({
+            'Nº Pedido':          p.numero_pedido || '',
+            'Chamado':            p.numero_chamado || '',
+            'Fornecedor':         p.fornecedor || '',
+            'Status Pedido':      p.status || '',
+            'Data Pedido':        p.created_at ? p.created_at.slice(0,10) : '',
+            'Código de Barras':   item.patrimonios?.codigo_barra || '',
+            'Código Interno':     item.patrimonios?.codigo_interno || '',
+            'Bem':                item.patrimonios?.descricao || '',
+            'Status Item':        item.status || '',
+            'Dt. Prev. Retorno':  item.data_prevista_retorno || '',
+            'Dt. Real Retorno':   item.data_retorno || '',
+            'Nova Calibração':    item.nova_data_calibracao || '',
+          })
+        })
+      })
+
+      // Montar workbook
+      const wb = XLSX.utils.book_new()
+
+      const wsBens = XLSX.utils.json_to_sheet(rowsBens.length ? rowsBens : [{}])
+      const wsOcor = XLSX.utils.json_to_sheet(rowsOcor.length ? rowsOcor : [{}])
+      const wsCalib = XLSX.utils.json_to_sheet(rowsCalib.length ? rowsCalib : [{}])
+
+      // Larguras automáticas
+      const autoWidth = (ws, rows) => {
+        if (!rows.length) return
+        const cols = Object.keys(rows[0])
+        ws['!cols'] = cols.map(col => ({
+          wch: Math.min(40, Math.max(col.length, ...rows.map(r => String(r[col] || '').length)))
+        }))
+      }
+      autoWidth(wsBens, rowsBens)
+      autoWidth(wsOcor, rowsOcor)
+      autoWidth(wsCalib, rowsCalib)
+
+      XLSX.utils.book_append_sheet(wb, wsBens,  'Bens')
+      XLSX.utils.book_append_sheet(wb, wsOcor,  'Ocorrências')
+      XLSX.utils.book_append_sheet(wb, wsCalib, 'Calibrações')
+
+      const data = new Date()
+      const stamp = `${data.getFullYear()}${String(data.getMonth()+1).padStart(2,'0')}${String(data.getDate()).padStart(2,'0')}`
+      XLSX.writeFile(wb, `Patrimônio_${stamp}.xlsx`)
+    } catch (err) {
+      alert('Erro ao exportar: ' + err.message)
+    }
+    setExportando(false)
+  }
+
   async function limparTudo() {
     if (!confirm('Isso vai excluir TODOS os bens patrimoniais, ocorrências e histórico. Confirma?')) return
     setLimpando(true)
@@ -756,6 +858,14 @@ export default function Patrimonio({ isAdmin = false }) {
         <div><div style={S.title}>Patrimônio</div><div style={S.sub}>Gestão e controle de bens patrimoniais</div></div>
         {isAdmin && (
           <div style={{ display:'flex', gap:8 }}>
+            <button
+              onClick={exportarExcel}
+              disabled={exportando}
+              style={{ ...S.btn, background:'var(--green-dim)', color:'var(--green)', border:'1px solid rgba(5,150,105,.2)' }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              {exportando ? 'Exportando...' : 'Exportar Excel'}
+            </button>
             <button
               onClick={limparTudo}
               disabled={limpando}
