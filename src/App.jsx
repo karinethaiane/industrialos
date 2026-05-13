@@ -80,7 +80,7 @@ function Inicio({ onNavegar, tema, nomeUsuario }) {
     <div style={{ padding: '36px 40px' }}>
       {/* Saudação */}
       <div style={{ marginBottom: 40 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 8, fontFamily: 'DM Mono, monospace' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 8, fontFamily: "'JetBrains Mono', monospace" }}>
           {getSaudacao()}
         </div>
         <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--text)', letterSpacing: '-.03em', lineHeight: 1.2 }}>
@@ -154,11 +154,12 @@ export default function App() {
       if (session) carregarPerfil(session.user.id)
       else setLoading(false)
     })
-    supabase.auth.onAuthStateChange((_e, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       setSession(session)
       if (session) carregarPerfil(session.user.id)
       else { setPerfil(null); setLoading(false) }
     })
+    return () => subscription.unsubscribe()
   }, [])
 
   async function carregarPerfil(userId) {
@@ -224,7 +225,7 @@ export default function App() {
               {IC.bolt}
             </div>
             <div style={{ opacity: sbOpen ? 1 : 0, transition: 'opacity .15s .06s' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--sb-text)', letterSpacing: '.05em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Administrativo</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--sb-text)', letterSpacing: '.05em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>IndustrialOS</div>
               <div style={{ fontSize: 9, color: 'var(--sb-muted)', marginTop: 1, whiteSpace: 'nowrap' }}>IST · MPP · Energia</div>
             </div>
           </div>
