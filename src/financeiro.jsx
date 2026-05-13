@@ -108,7 +108,7 @@ function origemBadge(origem) {
 // ── Formulários vazios ─────────────────────────────────────────────────────────
 const NF_VAZIO     = { id_sgt: '', empresa: '', status_sgt: 'Em execução', data_conclusao_sgt: '', consultor: '', nf_boleto_enviado: false, data_solicitacao_envio: '', numero_nf: '', valor_parcela: '', numero_parcelas: 1, observacoes: '' }
 const PAG_VAZIO    = { numero_chamado: '', tipo_tarefa: 'Solicitação de Pagamento', solicitante: '', numero_nf_boleto_al: '', descricao: '', razao_social: '', status: 'aguardando_abertura_chamado', valor: '', previsao_pagamento: '', observacoes: '' }
-const DIARIA_VAZIO = { numero_chamado: '', op: '', solicitante: 'IST - MPP - ENERGIA', destino: '', data_inicio: '', data_fim: '', status: 'aguardando_abertura_chamado', valor: '', previsao_pagamento: '', descricao: '', observacoes: '' }
+const DIARIA_VAZIO = { numero_chamado: '', op: '', solicitante: '', destino: '', data_inicio: '', data_fim: '', status: 'aguardando_abertura_chamado', valor: '', previsao_pagamento: '', descricao: '', observacoes: '', hospedagem: false, voucher_recebido: false, passagem_aerea: 'nao', chamado_hospedagem: '' }
 
 export default function Financeiro({ isAdmin = false }) {
   const [aba, setAba]               = useState('nf')
@@ -136,6 +136,13 @@ export default function Financeiro({ isAdmin = false }) {
   const [formDiaria, setFormDiaria]         = useState(DIARIA_VAZIO)
   const [modalDetDiaria, setModalDetDiaria] = useState(null)
   const [modalObsDiaria, setModalObsDiaria]   = useState(null)
+  const [colaboradores, setColaboradores]     = useState([])
+  // filtros diárias
+  const [filtroPeriodoIni, setFiltroPeriodoIni] = useState('')
+  const [filtroPeriodoFim, setFiltroPeriodoFim] = useState('')
+  const [filtroSolicitante, setFiltroSolicitante] = useState('')
+  const [filtroHospedagem, setFiltroHospedagem] = useState('')
+  const [showFiltroPanel, setShowFiltroPanel] = useState(false)
 
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro]         = useState('')
@@ -144,18 +151,20 @@ export default function Financeiro({ isAdmin = false }) {
 
   async function init() {
     setLoading(true)
-    const [e, p, d] = await Promise.all([
+    const [e, p, d, c] = await Promise.all([
       supabase.from('emissoes_nf').select('*').order('created_at', { ascending: false }),
       supabase.from('solicitacoes_pagamento').select('*').order('created_at', { ascending: false }),
       supabase.from('diarias_viagem').select('*').order('created_at', { ascending: false }),
+      supabase.from('colaboradores').select('id, nome').eq('ativo', true).order('nome'),
     ])
     setEmissoes(e.data || [])
     setPagamentos(p.data || [])
     setDiarias(d.data || [])
+    setColaboradores(c.data || [])
     setLoading(false)
   }
 
-  function trocarAba(nova) { setAba(nova); setBusca(''); setFiltroStatus(''); setFiltroResp('') }
+  function trocarAba(nova) { setAba(nova); setBusca(''); setFiltroStatus(''); setFiltroResp(''); setFiltroPeriodoIni(''); setFiltroPeriodoFim(''); setFiltroSolicitante(''); setFiltroHospedagem(''); setShowFiltroPanel(false) }
 
   // ── NF CRUD ──────────────────────────────────────────────────────────────────
   function abrirNovoNF()    { setEditandoNF(null); setErro(''); setFormNF(NF_VAZIO); setModalNF(true) }
@@ -202,13 +211,13 @@ export default function Financeiro({ isAdmin = false }) {
   function abrirNovaDiaria()    { setEditandoDiaria(null); setErro(''); setFormDiaria(DIARIA_VAZIO); setModalDiaria(true) }
   function abrirEditarDiaria(r) {
     setEditandoDiaria(r); setErro('')
-    setFormDiaria({ numero_chamado: r.numero_chamado || '', op: r.op || '', solicitante: r.solicitante || 'IST - MPP - ENERGIA', destino: r.destino || '', data_inicio: r.data_inicio || '', data_fim: r.data_fim || '', status: r.status || 'aguardando_abertura_chamado', valor: r.valor || '', previsao_pagamento: r.previsao_pagamento || '', descricao: r.descricao || '', observacoes: r.observacoes || '' })
+    setFormDiaria({ numero_chamado: r.numero_chamado || '', op: r.op || '', solicitante: r.solicitante || '', destino: r.destino || '', data_inicio: r.data_inicio || '', data_fim: r.data_fim || '', status: r.status || 'aguardando_abertura_chamado', valor: r.valor || '', previsao_pagamento: r.previsao_pagamento || '', descricao: r.descricao || '', observacoes: r.observacoes || '', hospedagem: r.hospedagem || false, voucher_recebido: r.voucher_recebido || false, passagem_aerea: r.passagem_aerea || 'nao', chamado_hospedagem: r.chamado_hospedagem || '' })
     setModalDiaria(true)
   }
   async function salvarDiaria() {
     if (!formDiaria.destino || !formDiaria.data_inicio || !formDiaria.data_fim) { setErro('Destino e período são obrigatórios.'); return }
     setSalvando(true); setErro('')
-    const dados = { numero_chamado: formDiaria.numero_chamado.trim() || null, op: formDiaria.op.trim() || null, solicitante: formDiaria.solicitante || null, destino: formDiaria.destino.trim(), data_inicio: formDiaria.data_inicio, data_fim: formDiaria.data_fim, status: formDiaria.status, valor: parseFloat(formDiaria.valor) || null, previsao_pagamento: formDiaria.previsao_pagamento || null, descricao: formDiaria.descricao || null, observacoes: formDiaria.observacoes || null }
+    const dados = { numero_chamado: formDiaria.numero_chamado.trim() || null, op: formDiaria.op.trim() || null, solicitante: formDiaria.solicitante || null, destino: formDiaria.destino.trim(), data_inicio: formDiaria.data_inicio, data_fim: formDiaria.data_fim, status: formDiaria.status, valor: parseFloat(formDiaria.valor) || null, previsao_pagamento: formDiaria.previsao_pagamento || null, descricao: formDiaria.descricao || null, observacoes: formDiaria.observacoes || null, hospedagem: formDiaria.hospedagem, voucher_recebido: formDiaria.voucher_recebido, passagem_aerea: formDiaria.passagem_aerea, chamado_hospedagem: formDiaria.chamado_hospedagem.trim() || null }
     let error
     if (editandoDiaria) { ({ error } = await supabase.from('diarias_viagem').update(dados).eq('id', editandoDiaria.id)) }
     else                { ({ error } = await supabase.from('diarias_viagem').insert(dados)) }
@@ -241,6 +250,18 @@ export default function Financeiro({ isAdmin = false }) {
   const diariasFiltradas = diarias.filter(r => {
     if (filtroStatus && r.status !== filtroStatus) return false
     if (filtroResp && (STATUS_RESPONSAVEL[r.status] || '') !== filtroResp) return false
+    if (filtroSolicitante && r.solicitante !== filtroSolicitante) return false
+    if (filtroHospedagem === 'sim' && !r.hospedagem) return false
+    if (filtroHospedagem === 'nao' && r.hospedagem) return false
+    if (filtroHospedagem === 'voucher_pendente' && !(r.hospedagem && !r.voucher_recebido)) return false
+    if (filtroPeriodoIni) {
+      const ini = r.data_inicio ? r.data_inicio.slice(0, 7) : ''
+      if (ini < filtroPeriodoIni) return false
+    }
+    if (filtroPeriodoFim) {
+      const ini = r.data_inicio ? r.data_inicio.slice(0, 7) : ''
+      if (ini > filtroPeriodoFim) return false
+    }
     if (busca) { const b = busca.toLowerCase(); return (r.numero_chamado || '').toLowerCase().includes(b) || (r.destino || '').toLowerCase().includes(b) || (r.solicitante || '').toLowerCase().includes(b) || (r.op || '').toLowerCase().includes(b) }
     return true
   })
@@ -258,6 +279,16 @@ export default function Financeiro({ isAdmin = false }) {
       })}
     </div>
   )
+
+  // chips de filtros ativos nas diárias
+  const filtrosAtivos = [
+    filtroSolicitante && { label: filtroSolicitante, clear: () => setFiltroSolicitante('') },
+    filtroStatus      && { label: STATUS_PAG_LABEL[filtroStatus] || filtroStatus, clear: () => setFiltroStatus('') },
+    filtroHospedagem  && { label: filtroHospedagem === 'sim' ? 'Com hospedagem' : filtroHospedagem === 'nao' ? 'Sem hospedagem' : 'Voucher pendente', clear: () => setFiltroHospedagem('') },
+    (filtroPeriodoIni || filtroPeriodoFim) && { label: `${filtroPeriodoIni || '…'} → ${filtroPeriodoFim || '…'}`, clear: () => { setFiltroPeriodoIni(''); setFiltroPeriodoFim('') } },
+  ].filter(Boolean)
+
+  const limparFiltrosDiarias = () => { setFiltroStatus(''); setFiltroResp(''); setFiltroSolicitante(''); setFiltroHospedagem(''); setFiltroPeriodoIni(''); setFiltroPeriodoFim(''); setBusca('') }
 
   return (
     <div style={S.wrap}>
@@ -398,16 +429,80 @@ export default function Financeiro({ isAdmin = false }) {
 
       {/* ══ ABA DIÁRIAS ══ */}
       {aba === 'diarias' && (<>
-        <div style={S.toolbar}>
-          <input style={S.search} placeholder="Buscar chamado, destino, OP, solicitante..." value={busca} onChange={e => setBusca(e.target.value)} />
-          <button style={S.filtro(!filtroStatus)} onClick={() => setFiltroStatus('')}>Todos</button>
-          {STATUS_PAG.map(s => <button key={s} style={S.filtro(filtroStatus === s)} onClick={() => setFiltroStatus(s)}>{STATUS_PAG_LABEL[s]}</button>)}
+        {/* Barra principal */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <input style={S.search} placeholder="Buscar destino, chamado, OP..." value={busca} onChange={e => setBusca(e.target.value)} />
+          <button
+            onClick={() => setShowFiltroPanel(v => !v)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', border: filtrosAtivos.length > 0 ? '1px solid rgba(13,148,136,.4)' : '1px solid var(--border2)', background: filtrosAtivos.length > 0 ? 'rgba(13,148,136,.08)' : 'var(--subtle)', color: filtrosAtivos.length > 0 ? '#0d9488' : 'var(--text2)', transition: 'all .15s' }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+            Filtros
+            {filtrosAtivos.length > 0 && <span style={{ background: 'rgba(13,148,136,.2)', color: '#0d9488', borderRadius: 99, padding: '1px 6px', fontSize: 10, fontWeight: 700 }}>{filtrosAtivos.length}</span>}
+          </button>
+          <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--muted)' }}>{diariasFiltradas.length} de {diarias.length} diárias</span>
         </div>
-        {filtroRespRow}
+
+        {/* Chips de filtros ativos */}
+        {filtrosAtivos.length > 0 && (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8, alignItems: 'center' }}>
+            {filtrosAtivos.map((f, i) => (
+              <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 600, background: 'rgba(13,148,136,.1)', color: '#0d9488', border: '1px solid rgba(13,148,136,.2)' }}>
+                {f.label}
+                <span onClick={f.clear} style={{ cursor: 'pointer', fontSize: 13, lineHeight: 1, opacity: .7, marginLeft: 2 }}>×</span>
+              </span>
+            ))}
+            <button onClick={limparFiltrosDiarias} style={{ fontSize: 11, color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px' }}>limpar tudo</button>
+          </div>
+        )}
+
+        {/* Painel de filtros recolhível */}
+        {showFiltroPanel && (
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', marginBottom: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text2)', marginBottom: 6 }}>Solicitante</div>
+                <select style={S.fsel} value={filtroSolicitante} onChange={e => setFiltroSolicitante(e.target.value)}>
+                  <option value="">Todos</option>
+                  {[...new Set(diarias.map(d => d.solicitante).filter(Boolean))].sort().map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text2)', marginBottom: 6 }}>Status</div>
+                <select style={S.fsel} value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}>
+                  <option value="">Todos</option>
+                  {STATUS_PAG.map(s => <option key={s} value={s}>{STATUS_PAG_LABEL[s]}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text2)', marginBottom: 6 }}>Hospedagem</div>
+                <select style={S.fsel} value={filtroHospedagem} onChange={e => setFiltroHospedagem(e.target.value)}>
+                  <option value="">Todas</option>
+                  <option value="sim">Com hospedagem</option>
+                  <option value="nao">Sem hospedagem</option>
+                  <option value="voucher_pendente">Voucher pendente</option>
+                </select>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text2)', marginBottom: 6 }}>Período — início</div>
+                <input type="month" style={S.input} value={filtroPeriodoIni} onChange={e => setFiltroPeriodoIni(e.target.value)} />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text2)', marginBottom: 6 }}>Período — fim</div>
+                <input type="month" style={S.input} value={filtroPeriodoFim} onChange={e => setFiltroPeriodoFim(e.target.value)} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button style={S.btnSm} onClick={limparFiltrosDiarias}>Limpar tudo</button>
+              <button style={{ ...S.btn, background: '#0d9488' }} onClick={() => setShowFiltroPanel(false)}>Aplicar</button>
+            </div>
+          </div>
+        )}
         <div style={S.tableWrap}><table style={S.table}>
           <thead><tr>
             <th style={S.th}>Chamado</th><th style={S.th}>OP</th><th style={S.th}>Solicitante</th>
             <th style={S.th}>Destino</th><th style={S.th}>Período</th>
+            <th style={S.th}>Hospedagem</th>
             <th style={S.th}>Status</th><th style={S.th}>Responsável</th><th style={S.th}>Valor / Previsão</th>
             {isAdmin && <th style={S.th}></th>}
           </tr></thead>
@@ -422,6 +517,19 @@ export default function Financeiro({ isAdmin = false }) {
                 <td style={{ ...S.td, color: 'var(--text)', fontWeight: 500 }}>{r.destino}</td>
                 <td style={{ ...S.td, fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>
                   {r.data_inicio && r.data_fim ? <span>{fmtData(r.data_inicio)} – {fmtData(r.data_fim)}</span> : '—'}
+                </td>
+                <td style={S.td}>
+                  {r.hospedagem ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      <span style={{ background: 'rgba(13,148,136,.1)', color: '#0d9488', padding: '2px 7px', borderRadius: 4, fontSize: 10, fontWeight: 600, width: 'fit-content' }}>Hospedagem</span>
+                      {r.voucher_recebido
+                        ? <span style={{ background: 'var(--green-dim)', color: 'var(--green)', padding: '2px 7px', borderRadius: 4, fontSize: 10, fontWeight: 600, width: 'fit-content' }}>Voucher OK</span>
+                        : <span style={{ background: 'var(--amber-dim)', color: 'var(--amber)', padding: '2px 7px', borderRadius: 4, fontSize: 10, fontWeight: 600, width: 'fit-content' }}>Voucher pend.</span>}
+                      {r.passagem_aerea && r.passagem_aerea !== 'nao' && <span style={{ background: 'rgba(99,102,241,.1)', color: 'var(--blue)', padding: '2px 7px', borderRadius: 4, fontSize: 10, fontWeight: 600, width: 'fit-content' }}>{r.passagem_aerea === 'pendente' ? 'Passagem pend.' : 'Passagem OK'}</span>}
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>—</span>
+                  )}
                 </td>
                 <td style={S.td}>{statusPagBadge(r.status)}</td>
                 <td style={S.td}>{responsavelBadge(r.status)}</td>
@@ -439,7 +547,7 @@ export default function Financeiro({ isAdmin = false }) {
                 </div></td>}
               </tr>
             ))}
-            {diariasFiltradas.length === 0 && <tr><td colSpan={isAdmin ? 9 : 8} style={{ ...S.td, textAlign: 'center', padding: 40, color: 'var(--muted)' }}>{loading ? 'Carregando...' : 'Nenhum registro de diárias.'}</td></tr>}
+            {diariasFiltradas.length === 0 && <tr><td colSpan={isAdmin ? 10 : 9} style={{ ...S.td, textAlign: 'center', padding: 40, color: 'var(--muted)' }}>{loading ? 'Carregando...' : 'Nenhum registro de diárias.'}</td></tr>}
           </tbody>
         </table></div>
       </>)}
@@ -510,6 +618,20 @@ export default function Financeiro({ isAdmin = false }) {
               <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 8 }}>Descrição</div>
               <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px', fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 16 }}>{modalDetDiaria.descricao}</div>
             </>)}
+            {(modalDetDiaria.hospedagem || (modalDetDiaria.passagem_aerea && modalDetDiaria.passagem_aerea !== 'nao')) && (
+              <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px', marginBottom: 14 }}>
+                <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 8 }}>Hospedagem e passagens</div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {modalDetDiaria.hospedagem && <span style={{ background: 'rgba(13,148,136,.1)', color: '#0d9488', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>Hospedagem</span>}
+                  {modalDetDiaria.hospedagem && (modalDetDiaria.voucher_recebido
+                    ? <span style={{ background: 'var(--green-dim)', color: 'var(--green)', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>Voucher recebido</span>
+                    : <span style={{ background: 'var(--amber-dim)', color: 'var(--amber)', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>Voucher pendente</span>)}
+                  {modalDetDiaria.passagem_aerea === 'pendente' && <span style={{ background: 'var(--blue-dim)', color: 'var(--blue)', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>Passagem pendente</span>}
+                  {modalDetDiaria.passagem_aerea === 'emitida'  && <span style={{ background: 'var(--green-dim)', color: 'var(--green)', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>Passagem emitida</span>}
+                  {modalDetDiaria.chamado_hospedagem && <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'var(--blue)', padding: '2px 8px', borderRadius: 4, background: 'var(--blue-dim)' }}>#{modalDetDiaria.chamado_hospedagem}</span>}
+                </div>
+              </div>
+            )}
             <div style={{ background: 'rgba(13,148,136,.07)', border: '1px solid rgba(13,148,136,.2)', borderRadius: 10, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: modalDetDiaria.observacoes ? 14 : 0 }}>
               <div>
                 <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 6 }}>Valor / Previsão</div>
@@ -647,10 +769,17 @@ export default function Financeiro({ isAdmin = false }) {
             </div>
             <div style={S.fieldRow}>
               <div style={S.field}>
+                <label style={S.label}>Solicitante</label>
+                <select style={S.fsel} value={formDiaria.solicitante} onChange={e => setFormDiaria({ ...formDiaria, solicitante: e.target.value })}>
+                  <option value="">Selecionar...</option>
+                  {colaboradores.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
+                  <option value="IST - MPP - ENERGIA">IST - MPP - ENERGIA</option>
+                </select>
+              </div>
+              <div style={S.field}>
                 <label style={S.label}>Tipo de Tarefa</label>
                 <input style={{ ...S.input, opacity: .6, cursor: 'not-allowed' }} value="Diárias de Viagem" disabled />
               </div>
-              <div style={S.field}><label style={S.label}>Solicitante</label><input style={S.input} value={formDiaria.solicitante} onChange={e => setFormDiaria({ ...formDiaria, solicitante: e.target.value })} /></div>
             </div>
 
             <div style={S.sectionLbl}>Viagem</div>
@@ -660,6 +789,44 @@ export default function Financeiro({ isAdmin = false }) {
               <div style={S.field}><label style={S.label}>Data de início *</label><input type="date" style={S.input} value={formDiaria.data_inicio} onChange={e => setFormDiaria({ ...formDiaria, data_inicio: e.target.value })} /></div>
               <div style={S.field}><label style={S.label}>Data de fim *</label><input type="date" style={S.input} value={formDiaria.data_fim} onChange={e => setFormDiaria({ ...formDiaria, data_fim: e.target.value })} /></div>
             </div>
+
+            <div style={S.sectionLbl}>Hospedagem e passagens</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
+              <div style={S.field}>
+                <label style={S.label}>Hospedagem?</label>
+                <select style={S.fsel} value={formDiaria.hospedagem ? 'sim' : 'nao'} onChange={e => setFormDiaria({ ...formDiaria, hospedagem: e.target.value === 'sim', voucher_recebido: false })}>
+                  <option value="nao">Não</option>
+                  <option value="sim">Sim</option>
+                </select>
+              </div>
+              <div style={S.field}>
+                <label style={S.label}>Voucher recebido?</label>
+                <select style={S.fsel} value={formDiaria.voucher_recebido ? 'sim' : 'nao'} onChange={e => setFormDiaria({ ...formDiaria, voucher_recebido: e.target.value === 'sim' })} disabled={!formDiaria.hospedagem}>
+                  <option value="nao">Não</option>
+                  <option value="sim">Sim</option>
+                </select>
+              </div>
+              <div style={S.field}>
+                <label style={S.label}>Passagem aérea?</label>
+                <select style={S.fsel} value={formDiaria.passagem_aerea} onChange={e => setFormDiaria({ ...formDiaria, passagem_aerea: e.target.value })}>
+                  <option value="nao">Não</option>
+                  <option value="pendente">Sim — pendente</option>
+                  <option value="emitida">Sim — emitida</option>
+                </select>
+              </div>
+            </div>
+            {(formDiaria.hospedagem || formDiaria.passagem_aerea !== 'nao') && (
+              <div style={S.field}>
+                <label style={S.label}>Nº chamado hospedagem / passagem <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(opcional)</span></label>
+                <input style={S.input} value={formDiaria.chamado_hospedagem} onChange={e => setFormDiaria({ ...formDiaria, chamado_hospedagem: e.target.value })} placeholder="Ex: #1399021" />
+              </div>
+            )}
+            {formDiaria.hospedagem && !formDiaria.voucher_recebido && (
+              <div style={{ background: 'rgba(201,125,16,.07)', border: '1px solid rgba(201,125,16,.2)', borderRadius: 7, padding: '9px 12px', marginBottom: 14, fontSize: 11, color: 'var(--amber)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                Hospedagem confirmada — voucher ainda não recebido
+              </div>
+            )}
 
             <div style={S.sectionLbl}>Situação</div>
             <div style={S.fieldRow}>
