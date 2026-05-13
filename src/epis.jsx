@@ -14,7 +14,7 @@ const S = {
   stats: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 10, marginBottom: 18 },
   statCard: () => ({ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', position: 'relative', overflow: 'hidden', boxShadow: '0 1px 4px var(--shadow)' }),
   statBar: (cor) => ({ position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, background: cor, opacity: .5 }),
-  statVal: (cor) => ({ fontFamily: 'DM Mono, monospace', fontSize: 26, fontWeight: 500, color: cor, lineHeight: 1, marginBottom: 5 }),
+  statVal: (cor) => ({ fontFamily: "'JetBrains Mono', monospace", fontSize: 26, fontWeight: 500, color: cor, lineHeight: 1, marginBottom: 5 }),
   statLbl: { fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.08em', fontWeight: 500 },
   tabs: { display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 16 },
   tab: (on) => ({ padding: '9px 18px', fontSize: 13, fontWeight: on ? 600 : 500, cursor: 'pointer', color: on ? 'var(--blue)' : 'var(--muted)', background: 'none', border: 'none', borderBottom: on ? '2px solid var(--blue)' : '2px solid transparent', marginBottom: -1, fontFamily: 'inherit', transition: 'all .15s' }),
@@ -26,7 +26,7 @@ const S = {
   modalBox: { background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 12, padding: 28, width: '90%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 32px var(--shadow)' },
   modalBoxLg: { background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 12, padding: 28, width: '90%', maxWidth: 640, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 32px var(--shadow)' },
   modalTitle: { fontSize: 16, fontWeight: 700, color: 'var(--text)', letterSpacing: '-.01em', marginBottom: 6 },
-  modalSub: { fontSize: 12, color: 'var(--muted)', fontFamily: 'DM Mono, monospace', marginBottom: 18 },
+  modalSub: { fontSize: 12, color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 18 },
   field: { display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 14 },
   label: { fontSize: 12, fontWeight: 500, color: 'var(--text2)' },
   input: { background: 'var(--surface2)', border: '1px solid var(--border2)', borderRadius: 7, padding: '9px 12px', color: 'var(--text)', fontSize: 13, outline: 'none', fontFamily: 'inherit', width: '100%' },
@@ -37,7 +37,7 @@ const S = {
   colabCard: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, marginBottom: 10, overflow: 'hidden' },
   colabCardHeader: { padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' },
   colabCardName: { fontWeight: 600, fontSize: 14, color: 'var(--text)' },
-  colabCardMat: { fontSize: 11, color: 'var(--muted)', fontFamily: 'DM Mono, monospace', marginTop: 2 },
+  colabCardMat: { fontSize: 11, color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginTop: 2 },
   checkItem: (ok) => ({ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px', borderTop: '1px solid var(--border)', background: ok ? 'transparent' : 'rgba(239,68,68,.03)' }),
   checkIcon: (ok) => ({ width: 20, height: 20, borderRadius: '50%', background: ok ? 'var(--green-dim)' : 'var(--red-dim)', color: ok ? 'var(--green)' : 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, flexShrink: 0 }),
 }
@@ -59,9 +59,17 @@ function normalizar(str) {
   return (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
 }
 
-function epiMatch(a, b) {
-  const na = normalizar(a), nb = normalizar(b)
-  return na.includes(nb) || nb.includes(na)
+// ── Compara EPI entregue com item do kit considerando grupo de equivalência ──
+function epiMatchComGrupo(epiTipo, kitItemNome, catalogoList) {
+  // match direto por nome
+  const na = normalizar(epiTipo), nb = normalizar(kitItemNome)
+  if (na.includes(nb) || nb.includes(na)) return true
+  // match por grupo_equivalencia
+  const itemCat  = catalogoList.find(c => normalizar(c.nome) === na)
+  const kitCat   = catalogoList.find(c => normalizar(c.nome) === nb)
+  if (itemCat?.grupo_equivalencia && kitCat?.grupo_equivalencia)
+    return itemCat.grupo_equivalencia === kitCat.grupo_equivalencia
+  return false
 }
 
 function Badge({ status }) {
@@ -121,23 +129,46 @@ export default function Epis({ isAdmin = false }) {
     setLoading(false)
   }
 
-  function calcProxEntrega(catalogoId, dataEntrega) {
+  // ── Calcula próxima entrega: prazo_dias × quantidade ─────────────────────
+  function calcProxEntrega(catalogoId, dataEntrega, qtd) {
     const item = catalogo.find(c => c.id === catalogoId)
     if (!item || !dataEntrega) return null
-    const d = new Date(dataEntrega)
-    d.setDate(d.getDate() + item.prazo_dias)
+    const quantidade = parseInt(qtd) || 1
+    const totalDias  = item.prazo_dias * quantidade
+    const d = new Date(dataEntrega + 'T00:00:00')
+    d.setDate(d.getDate() + totalDias)
     return d.toISOString().split('T')[0]
+  }
+
+  // ── Info do cálculo para exibir no modal ─────────────────────────────────
+  function calcInfo(catalogoId, qtd) {
+    const item = catalogo.find(c => c.id === catalogoId)
+    if (!item) return null
+    const quantidade = parseInt(qtd) || 1
+    return { prazo: item.prazo_dias, qtd: quantidade, total: item.prazo_dias * quantidade }
+  }
+
+  // ── Recalcula proxEntrega quando muda catalogo, data ou quantidade ────────
+  function recalcProx(catalogoId, dataEntrega, qtd) {
+    const prox = calcProxEntrega(catalogoId, dataEntrega, qtd)
+    setProxEntrega(prox)
   }
 
   async function salvar() {
     if (!form.colaborador_id || !form.catalogo_id || !form.data_entrega) return
     setSalvando(true)
     const item = catalogo.find(c => c.id === form.catalogo_id)
+    const prox = calcProxEntrega(form.catalogo_id, form.data_entrega, form.quantidade)
     await supabase.from('epis').insert({
-      colaborador_id: form.colaborador_id, tipo: item.nome,
-      quantidade: form.quantidade, data_entrega: form.data_entrega,
-      data_vencimento: proxEntrega, data_prox_entrega: proxEntrega,
-      motivo: form.motivo, ca: form.ca || null, registrado_por: 'admin'
+      colaborador_id: form.colaborador_id,
+      tipo: item.nome,
+      quantidade: parseInt(form.quantidade) || 1,
+      data_entrega: form.data_entrega,
+      data_vencimento: prox,
+      data_prox_entrega: prox,
+      motivo: form.motivo,
+      ca: form.ca || item.ca || null,
+      registrado_por: 'admin'
     })
     setForm({ colaborador_id: '', catalogo_id: '', data_entrega: '', quantidade: 1, motivo: '', ca: '' })
     setProxEntrega(null); setModal(false); setSalvando(false); init()
@@ -147,9 +178,12 @@ export default function Epis({ isAdmin = false }) {
     if (!editando) return
     setSalvando(true)
     await supabase.from('epis').update({
-      data_entrega: editForm.data_entrega, quantidade: editForm.quantidade,
-      ca: editForm.ca || null, motivo: editForm.motivo,
-      data_prox_entrega: editForm.data_prox_entrega, data_vencimento: editForm.data_prox_entrega
+      data_entrega: editForm.data_entrega,
+      quantidade: parseInt(editForm.quantidade) || 1,
+      ca: editForm.ca || null,
+      motivo: editForm.motivo,
+      data_prox_entrega: editForm.data_prox_entrega,
+      data_vencimento: editForm.data_prox_entrega
     }).eq('id', editando.id)
     setEditando(null); setSalvando(false); init()
   }
@@ -176,9 +210,9 @@ export default function Epis({ isAdmin = false }) {
     if (!busca && itens.length === 0) return null
     if (busca && !normalizar(c.nome).includes(normalizar(busca)) && !itens.some(e => normalizar(e.tipo).includes(normalizar(busca)))) return null
     const comProblema = itens.filter(e => calcStatus(e.data_prox_entrega) !== 'VIGENTE')
-    const vigentes = itens.filter(e => calcStatus(e.data_prox_entrega) === 'VIGENTE')
+    const vigentes    = itens.filter(e => calcStatus(e.data_prox_entrega) === 'VIGENTE')
     if (filtroStatus === 'PROBLEMAS' && comProblema.length === 0) return null
-    if (filtroStatus === 'VIGENTE' && comProblema.length > 0) return null
+    if (filtroStatus === 'VIGENTE'   && comProblema.length > 0)  return null
     return { colab: c, itens, comProblema, vigentes }
   }).filter(Boolean)
 
@@ -188,7 +222,7 @@ export default function Epis({ isAdmin = false }) {
       const s = calcStatus(e.data_prox_entrega)
       const colab = colaboradores.find(c => c.id === e.colaborador_id)
       if (!colab) return
-      if (s === 'VENCIDO') { if (!vencidos[e.tipo]) vencidos[e.tipo] = []; vencidos[e.tipo].push({ colab: colab.nome, data: e.data_prox_entrega }) }
+      if (s === 'VENCIDO')  { if (!vencidos[e.tipo])  vencidos[e.tipo]  = []; vencidos[e.tipo].push({ colab: colab.nome, data: e.data_prox_entrega }) }
       if (s === 'VENCENDO') { if (!vencendo[e.tipo]) vencendo[e.tipo] = []; vencendo[e.tipo].push({ colab: colab.nome, data: e.data_prox_entrega }) }
     })
     return { vencidos, vencendo }
@@ -197,30 +231,54 @@ export default function Epis({ isAdmin = false }) {
   const totalNecessidades = Object.keys(necessidades.vencidos).length + Object.keys(necessidades.vencendo).length
 
   const stats = {
-    vigente: ultimas.filter(e => calcStatus(e.data_prox_entrega) === 'VIGENTE').length,
+    vigente:  ultimas.filter(e => calcStatus(e.data_prox_entrega) === 'VIGENTE').length,
     vencendo: ultimas.filter(e => calcStatus(e.data_prox_entrega) === 'VENCENDO').length,
-    vencido: ultimas.filter(e => calcStatus(e.data_prox_entrega) === 'VENCIDO').length,
+    vencido:  ultimas.filter(e => calcStatus(e.data_prox_entrega) === 'VENCIDO').length,
   }
 
-  const checklist = colaboradores.filter(c => c.epi_kits).filter(c => !buscaCheck || normalizar(c.nome).includes(normalizar(buscaCheck))).map(c => {
-    const itensDoKit = kitItens.filter(k => k.kit_id === c.epi_kits.id)
-    const episDoColab = ultimas.filter(e => e.colaborador_id === c.id)
-    const itens = itensDoKit.map(kitItem => {
-      const entrega = episDoColab.find(e => epiMatch(e.tipo, kitItem.epi_nome))
-      return { nome: kitItem.epi_nome, entregue: !!entrega, dataEntrega: entrega?.data_entrega, dataProx: entrega?.data_prox_entrega, status: entrega ? calcStatus(entrega.data_prox_entrega) : null }
+  // ── Checklist com equivalência por grupo ──────────────────────────────────
+  const checklist = colaboradores
+    .filter(c => c.epi_kits)
+    .filter(c => !buscaCheck || normalizar(c.nome).includes(normalizar(buscaCheck)))
+    .map(c => {
+      const itensDoKit  = kitItens.filter(k => k.kit_id === c.epi_kits.id)
+      const episDoColab = ultimas.filter(e => e.colaborador_id === c.id)
+
+      const itens = itensDoKit.map(kitItem => {
+        // Procura entrega que bata pelo nome OU pelo grupo de equivalência
+        const entrega = episDoColab.find(e => epiMatchComGrupo(e.tipo, kitItem.epi_nome, catalogo))
+        const status  = entrega ? calcStatus(entrega.data_prox_entrega) : null
+        // "entregue e vigente" = realmente ok no checklist
+        const ok = !!entrega && status === 'VIGENTE'
+        return {
+          nome: kitItem.epi_nome,
+          entregue: !!entrega,
+          ok,
+          dataEntrega: entrega?.data_entrega,
+          dataProx: entrega?.data_prox_entrega,
+          status,
+        }
+      })
+
+      return {
+        ...c,
+        itens,
+        pendentes: itens.filter(i => !i.entregue).length,
+        vencidos:  itens.filter(i => i.status === 'VENCIDO').length,
+        vencendo:  itens.filter(i => i.status === 'VENCENDO').length,
+      }
     })
-    return { ...c, itens, pendentes: itens.filter(i => !i.entregue).length, vencidos: itens.filter(i => i.status === 'VENCIDO').length, vencendo: itens.filter(i => i.status === 'VENCENDO').length }
-  })
+
   const totalPendentes = checklist.reduce((a, c) => a + c.pendentes, 0)
 
   function initials(nome) { return (nome || '').split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase() }
   function avatarColor(st) {
-    if (st === 'bad') return 'linear-gradient(135deg,#ef4444,#f97316)'
+    if (st === 'bad')  return 'linear-gradient(135deg,#ef4444,#f97316)'
     if (st === 'warn') return 'linear-gradient(135deg,#f59e0b,#f97316)'
     return 'linear-gradient(135deg,#3b82f6,#06b6d4)'
   }
   function cardStatus(comProblema) {
-    if (comProblema.some(e => calcStatus(e.data_prox_entrega) === 'VENCIDO')) return 'bad'
+    if (comProblema.some(e => calcStatus(e.data_prox_entrega) === 'VENCIDO'))  return 'bad'
     if (comProblema.some(e => calcStatus(e.data_prox_entrega) === 'VENCENDO')) return 'warn'
     return 'ok'
   }
@@ -231,6 +289,11 @@ export default function Epis({ isAdmin = false }) {
     acc[h.tipo].push(h)
     return acc
   }, {})
+
+  // info do cálculo para o modal
+  const infoCalc = (form.catalogo_id && form.quantidade) ? calcInfo(form.catalogo_id, form.quantidade) : null
+  // CA padrão do catálogo selecionado
+  const catalogoSelecionado = catalogo.find(c => c.id === form.catalogo_id)
 
   return (
     <div style={S.wrap}>
@@ -249,6 +312,7 @@ export default function Epis({ isAdmin = false }) {
         ))}
       </div>
 
+      {/* Necessidades de reposição */}
       {totalNecessidades > 0 && (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, marginBottom: 18, overflow: 'hidden', boxShadow: '0 1px 6px var(--shadow)' }}>
           <div onClick={() => setAlmoExpanded(x => !x)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', cursor: 'pointer', borderBottom: almoExpanded ? '1px solid var(--border)' : 'none' }}>
@@ -275,7 +339,7 @@ export default function Epis({ isAdmin = false }) {
                           </div>
                         </div>
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 22, fontWeight: 500, color: 'var(--red)', lineHeight: 1 }}>{colabs.length}</div>
+                          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 22, fontWeight: 500, color: 'var(--red)', lineHeight: 1 }}>{colabs.length}</div>
                           <div style={{ fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginTop: 2 }}>{colabs.length === 1 ? 'unidade' : 'unidades'}</div>
                         </div>
                       </div>
@@ -294,11 +358,11 @@ export default function Epis({ isAdmin = false }) {
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>{tipo}</div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                            {colabs.map((c, i) => <span key={i} style={{ background: 'var(--subtle)', border: '1px solid var(--border2)', borderRadius: 4, padding: '2px 8px', fontSize: 11, color: 'var(--text2)' }}>{c.colab} <span style={{ color: 'var(--amber)', fontFamily: 'DM Mono, monospace', fontSize: 10 }}>vence {fmtData(c.data)}</span></span>)}
+                            {colabs.map((c, i) => <span key={i} style={{ background: 'var(--subtle)', border: '1px solid var(--border2)', borderRadius: 4, padding: '2px 8px', fontSize: 11, color: 'var(--text2)' }}>{c.colab} <span style={{ color: 'var(--amber)', fontFamily: "'JetBrains Mono', monospace", fontSize: 10 }}>vence {fmtData(c.data)}</span></span>)}
                           </div>
                         </div>
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 22, fontWeight: 500, color: 'var(--amber)', lineHeight: 1 }}>{colabs.length}</div>
+                          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 22, fontWeight: 500, color: 'var(--amber)', lineHeight: 1 }}>{colabs.length}</div>
                           <div style={{ fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginTop: 2 }}>{colabs.length === 1 ? 'unidade' : 'unidades'}</div>
                         </div>
                       </div>
@@ -318,6 +382,7 @@ export default function Epis({ isAdmin = false }) {
         </button>
       </div>
 
+      {/* ══ ABA ENTREGAS ══ */}
       {aba === 'entregas' && (
         <>
           <div style={S.toolbar}>
@@ -339,22 +404,20 @@ export default function Epis({ isAdmin = false }) {
                 const expanded = expandidosOk[colab.id]
                 return (
                   <div key={colab.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: `3px solid ${cardBorder[st]}`, borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 4px var(--shadow)' }}>
-                    {/* Header */}
                     <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)' }}>
                       <div style={{ width: 36, height: 36, borderRadius: '50%', background: avatarColor(st), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{initials(colab.nome)}</div>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{colab.nome}</div>
-                        <div style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'DM Mono, monospace', marginTop: 1 }}>{colab.matricula}</div>
+                        <div style={{ fontSize: 11, color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginTop: 1 }}>{colab.matricula}</div>
                       </div>
                       <div style={{ marginLeft: 'auto', textAlign: 'right', flexShrink: 0 }}>
                         {comProblema.length > 0
-                          ? <><div style={{ fontFamily: 'DM Mono, monospace', fontSize: 20, fontWeight: 500, color: st === 'bad' ? 'var(--red)' : 'var(--amber)', lineHeight: 1 }}>{comProblema.length}</div><div style={{ fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em' }}>{st === 'bad' ? 'vencidos' : 'vencendo'}</div></>
-                          : <><div style={{ fontFamily: 'DM Mono, monospace', fontSize: 20, fontWeight: 500, color: 'var(--green)', lineHeight: 1 }}>{vigentes.length}</div><div style={{ fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em' }}>vigentes</div></>
+                          ? <><div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 20, fontWeight: 500, color: st === 'bad' ? 'var(--red)' : 'var(--amber)', lineHeight: 1 }}>{comProblema.length}</div><div style={{ fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em' }}>{st === 'bad' ? 'vencidos' : 'vencendo'}</div></>
+                          : <><div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 20, fontWeight: 500, color: 'var(--green)', lineHeight: 1 }}>{vigentes.length}</div><div style={{ fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em' }}>vigentes</div></>
                         }
                       </div>
                     </div>
 
-                    {/* Itens com problema */}
                     {comProblema.length > 0 ? comProblema.map(e => (
                       <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: '1px solid var(--border)' }}
                         onMouseEnter={ev => ev.currentTarget.style.background = 'var(--subtle)'}
@@ -362,7 +425,7 @@ export default function Epis({ isAdmin = false }) {
                         <div style={{ width: 7, height: 7, borderRadius: '50%', background: calcStatus(e.data_prox_entrega) === 'VENCIDO' ? 'var(--red)' : 'var(--amber)', flexShrink: 0 }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 13, color: 'var(--text2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.tipo}</div>
-                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: calcStatus(e.data_prox_entrega) === 'VENCIDO' ? 'var(--red)' : 'var(--amber)', fontWeight: 600, marginTop: 2 }}>{fmtData(e.data_prox_entrega)}</div>
+                          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: calcStatus(e.data_prox_entrega) === 'VENCIDO' ? 'var(--red)' : 'var(--amber)', fontWeight: 600, marginTop: 2 }}>{fmtData(e.data_prox_entrega)}</div>
                         </div>
                         <Badge status={calcStatus(e.data_prox_entrega)} />
                         {isAdmin && <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
@@ -377,7 +440,6 @@ export default function Epis({ isAdmin = false }) {
                       </div>
                     )}
 
-                    {/* Vigentes expandíveis */}
                     {vigentes.length > 0 && expanded && vigentes.map(e => (
                       <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px', borderBottom: '1px solid var(--border)', opacity: .75 }}
                         onMouseEnter={ev => ev.currentTarget.style.background = 'var(--subtle)'}
@@ -385,7 +447,7 @@ export default function Epis({ isAdmin = false }) {
                         <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--green)', flexShrink: 0 }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 13, color: 'var(--text2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.tipo}</div>
-                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{fmtData(e.data_prox_entrega)}</div>
+                          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{fmtData(e.data_prox_entrega)}</div>
                         </div>
                         <Badge status="VIGENTE" />
                         {isAdmin && <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
@@ -406,7 +468,7 @@ export default function Epis({ isAdmin = false }) {
                     )}
 
                     <div style={{ padding: '10px 16px', display: 'flex', gap: 6, background: 'var(--surface2)', borderTop: '1px solid var(--border)' }}>
-                      {isAdmin && <button style={S.btnBlue} onClick={() => { setForm({ colaborador_id: colab.id, catalogo_id: '', data_entrega: '', quantidade: 1, motivo: '', ca: '' }); setModal(true) }}>+ Entrega</button>}
+                      {isAdmin && <button style={S.btnBlue} onClick={() => { setForm({ colaborador_id: colab.id, catalogo_id: '', data_entrega: '', quantidade: 1, motivo: '', ca: '' }); setProxEntrega(null); setModal(true) }}>+ Entrega</button>}
                       <button style={S.btnGray} onClick={() => verHistorico(colab)}>Histórico</button>
                     </div>
                   </div>
@@ -418,6 +480,7 @@ export default function Epis({ isAdmin = false }) {
         </>
       )}
 
+      {/* ══ ABA CHECKLIST ══ */}
       {aba === 'checklist' && (
         <>
           <div style={S.toolbar}>
@@ -432,18 +495,29 @@ export default function Epis({ isAdmin = false }) {
                 <div><div style={S.colabCardName}>{c.nome}</div><div style={S.colabCardMat}>{c.matricula} · {c.epi_kits?.nome}</div></div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   {c.pendentes > 0 && <span style={{ background: 'var(--red-dim)', color: 'var(--red)', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{c.pendentes} pendente{c.pendentes > 1 ? 's' : ''}</span>}
-                  {c.vencidos > 0 && <span style={{ background: 'var(--red-dim)', color: 'var(--red)', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{c.vencidos} vencido{c.vencidos > 1 ? 's' : ''}</span>}
-                  {c.vencendo > 0 && <span style={{ background: 'var(--amber-dim)', color: 'var(--amber)', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{c.vencendo} vencendo</span>}
+                  {c.vencidos  > 0 && <span style={{ background: 'var(--red-dim)', color: 'var(--red)', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{c.vencidos} vencido{c.vencidos > 1 ? 's' : ''}</span>}
+                  {c.vencendo  > 0 && <span style={{ background: 'var(--amber-dim)', color: 'var(--amber)', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{c.vencendo} vencendo</span>}
                   {c.pendentes === 0 && c.vencidos === 0 && c.vencendo === 0 && <span style={{ background: 'var(--green-dim)', color: 'var(--green)', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>✓ Tudo ok</span>}
                   <span style={{ color: 'var(--muted)', fontSize: 14 }}>{expandido === c.id ? '▲' : '▼'}</span>
                 </div>
               </div>
               {expandido === c.id && c.itens.map((item, i) => (
-                <div key={i} style={S.checkItem(item.entregue)}>
-                  <div style={S.checkIcon(item.entregue)}>{item.entregue ? '✓' : '!'}</div>
+                <div key={i} style={S.checkItem(item.ok)}>
+                  {/* Ícone reflete status real, não só "entregue" */}
+                  <div style={{
+                    width: 20, height: 20, borderRadius: '50%',
+                    background: !item.entregue ? 'var(--red-dim)' : item.status === 'VENCIDO' ? 'var(--red-dim)' : item.status === 'VENCENDO' ? 'var(--amber-dim)' : 'var(--green-dim)',
+                    color: !item.entregue ? 'var(--red)' : item.status === 'VENCIDO' ? 'var(--red)' : item.status === 'VENCENDO' ? 'var(--amber)' : 'var(--green)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, flexShrink: 0
+                  }}>
+                    {!item.entregue ? '!' : item.status === 'VIGENTE' ? '✓' : '⚠'}
+                  </div>
                   <div style={{ flex: 1, fontSize: 13, color: 'var(--text2)' }}>{item.nome}</div>
                   {item.entregue
-                    ? <div style={{ textAlign: 'right' }}><div style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'DM Mono, monospace' }}>Entregue: {fmtData(item.dataEntrega)}</div><div style={{ marginTop: 2 }}><Badge status={item.status} /></div></div>
+                    ? <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 11, color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>Entregue: {fmtData(item.dataEntrega)}</div>
+                        <div style={{ marginTop: 2 }}><Badge status={item.status} /></div>
+                      </div>
                     : <span style={{ background: 'var(--red-dim)', color: 'var(--red)', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>Sem registro</span>
                   }
                 </div>
@@ -454,50 +528,92 @@ export default function Epis({ isAdmin = false }) {
         </>
       )}
 
-      {/* Modal nova entrega */}
+      {/* ══ MODAL NOVA ENTREGA ══ */}
       {modal && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setModal(false)}>
           <div style={S.modalBox}>
             <div style={S.modalTitle}>Registrar Entrega de EPI</div>
-            <div style={S.field}><label style={S.label}>Colaborador *</label>
+
+            <div style={S.field}>
+              <label style={S.label}>Colaborador *</label>
               <select style={S.fsel} value={form.colaborador_id} onChange={e => setForm({ ...form, colaborador_id: e.target.value })}>
                 <option value="">Selecione...</option>
                 {colaboradores.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
               </select>
             </div>
-            <div style={S.field}><label style={S.label}>EPI *</label>
-              <select style={S.fsel} value={form.catalogo_id} onChange={e => { setForm({ ...form, catalogo_id: e.target.value }); if (form.data_entrega) setProxEntrega(calcProxEntrega(e.target.value, form.data_entrega)) }}>
+
+            <div style={S.field}>
+              <label style={S.label}>EPI *</label>
+              <select style={S.fsel} value={form.catalogo_id} onChange={e => {
+                const cat = catalogo.find(c => c.id === e.target.value)
+                setForm({ ...form, catalogo_id: e.target.value, ca: cat?.ca || '' })
+                recalcProx(e.target.value, form.data_entrega, form.quantidade)
+              }}>
                 <option value="">Selecione...</option>
-                {catalogo.map(c => <option key={c.id} value={c.id}>{c.nome} ({c.prazo_dias}d)</option>)}
+                {catalogo.map(c => <option key={c.id} value={c.id}>{c.nome} ({c.prazo_dias}d/un)</option>)}
               </select>
             </div>
-            <div style={S.field}><label style={S.label}>Data da Entrega *</label>
-              <input type="date" style={S.input} value={form.data_entrega} onChange={e => { setForm({ ...form, data_entrega: e.target.value }); if (form.catalogo_id) setProxEntrega(calcProxEntrega(form.catalogo_id, e.target.value)) }} />
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+              <div style={S.field}>
+                <label style={S.label}>Data da Entrega *</label>
+                <input type="date" style={S.input} value={form.data_entrega} onChange={e => {
+                  setForm({ ...form, data_entrega: e.target.value })
+                  recalcProx(form.catalogo_id, e.target.value, form.quantidade)
+                }} />
+              </div>
+              <div style={S.field}>
+                <label style={S.label}>Quantidade</label>
+                <input type="number" min="1" style={S.input} value={form.quantidade} onChange={e => {
+                  setForm({ ...form, quantidade: e.target.value })
+                  recalcProx(form.catalogo_id, form.data_entrega, e.target.value)
+                }} />
+              </div>
             </div>
-            <div style={S.field}><label style={S.label}>Quantidade</label>
-              <input type="number" min="1" style={S.input} value={form.quantidade} onChange={e => setForm({ ...form, quantidade: e.target.value })} />
-            </div>
-            {proxEntrega && (
+
+            {/* Feedback do cálculo em tempo real */}
+            {proxEntrega && infoCalc && (
               <div style={S.proxBox}>
-                <div style={S.proxLbl}>Próxima entrega calculada automaticamente</div>
-                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 15, color: 'var(--blue)', fontWeight: 500 }}>{fmtData(proxEntrega)}</div>
+                <div style={S.proxLbl}>Cálculo da próxima entrega</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: 'var(--muted)' }}>
+                    {infoCalc.prazo}d × {infoCalc.qtd} un = {infoCalc.total} dias
+                  </span>
+                  <span style={{ color: 'var(--border2)' }}>→</span>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 15, color: 'var(--blue)', fontWeight: 600 }}>{fmtData(proxEntrega)}</span>
+                </div>
               </div>
             )}
-            <div style={S.field}><label style={S.label}>Nº CA</label>
+
+            <div style={S.field}>
+              <label style={S.label}>Nº CA</label>
               <input style={S.input} placeholder="Ex: CA-12345" value={form.ca || ''} onChange={e => setForm({ ...form, ca: e.target.value })} />
+              {catalogoSelecionado?.ca && form.ca === catalogoSelecionado.ca && (
+                <span style={{ fontSize: 10, color: 'var(--muted)' }}>Preenchido automaticamente do catálogo</span>
+              )}
             </div>
-            <div style={S.field}><label style={S.label}>Motivo</label>
+
+            <div style={S.field}>
+              <label style={S.label}>Motivo</label>
               <select style={S.fsel} value={form.motivo} onChange={e => setForm({ ...form, motivo: e.target.value })}>
                 <option value="">Selecione...</option>
-                <option>1ª Entrega</option><option>Substituição por vencimento</option><option>Substituição por desgaste</option><option>Substituição por perda</option><option>Substituição por dano</option>
+                <option>1ª Entrega</option>
+                <option>Substituição por vencimento</option>
+                <option>Substituição por desgaste</option>
+                <option>Substituição por perda</option>
+                <option>Substituição por dano</option>
               </select>
             </div>
-            <div style={S.row}><button style={S.btnSm} onClick={() => { setModal(false); setProxEntrega(null) }}>Cancelar</button><button style={S.btn} onClick={salvar} disabled={salvando}>{salvando ? 'Salvando...' : 'Registrar Entrega'}</button></div>
+
+            <div style={S.row}>
+              <button style={S.btnSm} onClick={() => { setModal(false); setProxEntrega(null) }}>Cancelar</button>
+              <button style={S.btn} onClick={salvar} disabled={salvando}>{salvando ? 'Salvando...' : 'Registrar Entrega'}</button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Modal editar */}
+      {/* ══ MODAL EDITAR ══ */}
       {editando && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setEditando(null)}>
           <div style={S.modalBox}>
@@ -505,8 +621,8 @@ export default function Epis({ isAdmin = false }) {
             <div style={S.modalSub}>{editando.colaboradores?.nome} · {editando.tipo}</div>
             <div style={S.field}><label style={S.label}>Data da Entrega</label><input type="date" style={S.input} value={editForm.data_entrega} onChange={e => setEditForm({ ...editForm, data_entrega: e.target.value })} /></div>
             <div style={S.field}><label style={S.label}>Próxima Entrega</label><input type="date" style={S.input} value={editForm.data_prox_entrega} onChange={e => setEditForm({ ...editForm, data_prox_entrega: e.target.value })} /></div>
-            <div style={S.field}><label style={S.label}>Nº CA</label><input style={S.input} placeholder="Ex: CA-12345" value={editForm.ca} onChange={e => setEditForm({ ...editForm, ca: e.target.value })} /></div>
             <div style={S.field}><label style={S.label}>Quantidade</label><input type="number" min="1" style={S.input} value={editForm.quantidade} onChange={e => setEditForm({ ...editForm, quantidade: e.target.value })} /></div>
+            <div style={S.field}><label style={S.label}>Nº CA</label><input style={S.input} placeholder="Ex: CA-12345" value={editForm.ca} onChange={e => setEditForm({ ...editForm, ca: e.target.value })} /></div>
             <div style={S.field}><label style={S.label}>Motivo</label>
               <select style={S.fsel} value={editForm.motivo} onChange={e => setEditForm({ ...editForm, motivo: e.target.value })}>
                 <option value="">Selecione...</option>
@@ -518,7 +634,7 @@ export default function Epis({ isAdmin = false }) {
         </div>
       )}
 
-      {/* Modal histórico em cards por tipo */}
+      {/* ══ MODAL HISTÓRICO ══ */}
       {modalHist && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setModalHist(null)}>
           <div style={S.modalBoxLg}>
@@ -536,11 +652,11 @@ export default function Epis({ isAdmin = false }) {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px 16px' }}>
                           <div>
                             <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }}>Data Entrega</div>
-                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--text)', fontWeight: 500 }}>{fmtData(h.data_entrega)}</div>
+                            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: 'var(--text)', fontWeight: 500 }}>{fmtData(h.data_entrega)}</div>
                           </div>
                           <div>
                             <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }}>Próxima Entrega</div>
-                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--text)', fontWeight: 500 }}>{fmtData(h.data_prox_entrega)}</div>
+                            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: 'var(--text)', fontWeight: 500 }}>{fmtData(h.data_prox_entrega)}</div>
                           </div>
                           <div>
                             <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }}>Status</div>
@@ -548,11 +664,11 @@ export default function Epis({ isAdmin = false }) {
                           </div>
                           <div>
                             <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }}>Nº CA</div>
-                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--blue)', fontWeight: 500 }}>{h.ca || '—'}</div>
+                            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: 'var(--blue)', fontWeight: 500 }}>{h.ca || '—'}</div>
                           </div>
                           <div>
                             <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }}>Quantidade</div>
-                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--text)' }}>{h.quantidade}</div>
+                            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: 'var(--text)' }}>{h.quantidade}</div>
                           </div>
                           <div>
                             <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }}>Motivo</div>
