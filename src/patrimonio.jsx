@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
+import { parsePdfPatrimonio, compararPdfPatrimonio } from './utils/patrimonioPdfParser'
 
 const SITUACOES  = ['Em uso', 'Disponível', 'Em manutenção', 'Descartado']
 const TIPOS_BEM  = ['Computador', 'Periférico', 'Móvel', 'Instrumento de Medição', 'Veículo', 'Outro']
@@ -134,7 +135,7 @@ function ProgBar({ pct, st }) {
           <div style={{ ...S.modalBox, maxWidth: 680 }}>
             <div style={S.modalTitle}>Comparação de arquivos</div>
             <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 18 }}>
-              Revise as diferenças detectadas e escolha o que aplicar.
+              Comparativo por código de barras — novos bens e removidos. Alterações de valor e saldo são ignoradas.
             </div>
 
             {/* Resumo */}
@@ -721,103 +722,41 @@ export default function Patrimonio({ isAdmin = false }) {
     carregar()
   }
 
-  async function importarExcel(e) {
+  async function importarPdf(e) {
     const file = e.target.files?.[0]
     if (!file) return
     setImportando(true); setErroImport('')
     try {
-      const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs')
-      const buf  = await file.arrayBuffer()
-      const wb   = XLSX.read(new Uint8Array(buf), { type: 'array' })
-      const ws   = wb.Sheets[wb.SheetNames[0]]
-      const rawData = XLSX.utils.sheet_to_json(ws, { header: 1 })
-      const extractType = (desc) => { const d = (desc || '').toUpperCase(); if (d.includes('NOTEBOOK') || d.includes('DESKTOP') || d.includes('COMPUTADOR')) return 'Computador'; if (d.includes('MONITOR') || d.includes('TECLADO') || d.includes('MOUSE') || d.includes('IMPRESSORA') || d.includes('SCANNER')) return 'Periférico'; if (d.includes('MULTÍMETRO') || d.includes('ANALISADOR') || d.includes('MEDIDOR')) return 'Instrumento de Medição'; if (d.includes('MESA') || d.includes('CADEIRA') || d.includes('ARMÁRIO') || d.includes('ESTANTE')) return 'Móvel'; return 'Outro' }
-      const formatDate = (v) => { if (!v) return null; if (typeof v === 'number') return new Date((v - 25569) * 86400 * 1000).toISOString().split('T')[0]; if (typeof v === 'string') { const m = v.match(/(\d{2})\/(\d{2})\/(\d{4})/); if (m) return `${m[3]}-${m[2]}-${m[1]}`; if (/\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0, 10) } return null }
-      let inseridos = 0, erros = 0, currentResponsavel = '', currentLocal = '', dataStart = 38
-      for (let i = 30; i < 50; i++) { const row = rawData[i]; if (row && row.some(c => String(c || '').includes('Cod. Barra'))) { dataStart = i + 1; break } }
-      for (let i = dataStart; i < rawData.length; i++) {
-        const row = rawData[i]; if (!row || row.length === 0) continue
-        const rowStr = row.map(c => String(c || '')).join('|')
-        if (rowStr.includes('Total do Responsável')) { const m = rowStr.match(/Total do Responsável \[([^\]]+)\]/); if (m) currentResponsavel = m[1].trim(); continue }
-        if (rowStr.includes('Total do Local')) { const m = rowStr.match(/Total do Local \[([^\]]+)\]/); if (m) currentLocal = m[1].trim(); continue }
-        if (rowStr.includes('Total do') || rowStr.includes('Total da') || rowStr.includes('Total de')) continue
-        let barCode = '', description = '', compl = '', situation = '', dtAquis = null, vlrAquis = '', saldo = ''
-        for (let c = 5; c <= 8; c++) { const v = String(row[c] || '').trim(); if (v && v !== 'Cod. Barra' && /^\d{5,}/.test(v)) { barCode = v; description = String(row[c + 2] || '').trim(); compl = String(row[c + 5] || '').trim(); situation = String(row[c + 10] || '').trim(); dtAquis = formatDate(row[c + 13]); vlrAquis = String(row[c + 17] || '').trim(); saldo = String(row[c + 28] || '').trim(); break } }
-        if (!barCode || !description || description === 'Descr. Padrao') continue
-        const dados = { codigo_barra: barCode, descricao: description, descricao_complementar: compl || null, tipo_bem: extractType(description), situacao: situation || 'Em uso', local: currentLocal || null, responsavel: currentResponsavel || null, usuario_patrimonio: null, unidade: null, data_aquisicao: dtAquis, valor_aquisicao: vlrAquis || null, saldo_contabil: saldo || null }
+      const bens = await parsePdfPatrimonio(file)
+      if (bens.length === 0) {
+        setErroImport('Nenhum bem encontrado nos locais filtrados. Verifique se o PDF é o relatório correto.')
+        setImportando(false); e.target.value = ''; return
+      }
+      let inseridos = 0, erros = 0
+      for (const dados of bens) {
         const { error } = await supabase.from('patrimonios').upsert(dados, { onConflict: 'codigo_barra' })
         if (error) erros++; else inseridos++
       }
-      setErroImport(`Importação concluída: ${inseridos} registros.${erros > 0 ? ` ${erros} erros.` : ''}`)
+      setErroImport(`Importação concluída: ${inseridos} registros dos locais filtrados.${erros > 0 ? ` ${erros} erros.` : ''}`)
       carregar()
-    } catch (err) { setErroImport('Erro ao importar: ' + err.message) }
+    } catch (err) { setErroImport('Erro ao importar PDF: ' + err.message) }
     setImportando(false); e.target.value = ''
   }
 
-  async function compararExcel(e) {
+  async function compararPdf(e) {
     const file = e.target.files?.[0]
     if (!file) return
     setImportando(true); setErroImport('')
     try {
-      const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs')
-      const buf  = await file.arrayBuffer()
-      const wb   = XLSX.read(new Uint8Array(buf), { type: 'array' })
-      const ws   = wb.Sheets[wb.SheetNames[0]]
-      const rawData = XLSX.utils.sheet_to_json(ws, { header: 1 })
-
-      const extractType = (desc) => { const d = (desc || '').toUpperCase(); if (d.includes('NOTEBOOK') || d.includes('DESKTOP') || d.includes('COMPUTADOR')) return 'Computador'; if (d.includes('MONITOR') || d.includes('TECLADO') || d.includes('MOUSE') || d.includes('IMPRESSORA') || d.includes('SCANNER')) return 'Periférico'; if (d.includes('MULTÍMETRO') || d.includes('ANALISADOR') || d.includes('MEDIDOR')) return 'Instrumento de Medição'; if (d.includes('MESA') || d.includes('CADEIRA') || d.includes('ARMÁRIO') || d.includes('ESTANTE')) return 'Móvel'; return 'Outro' }
-      const formatDate = (v) => { if (!v) return null; if (typeof v === 'number') return new Date((v - 25569) * 86400 * 1000).toISOString().split('T')[0]; if (typeof v === 'string') { const m = v.match(/(\d{2})\/(\d{2})\/(\d{4})/); if (m) return `${m[3]}-${m[2]}-${m[1]}`; if (/\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0, 10) } return null }
-
-      // Parsear arquivo novo
-      const novosMap = {}
-      let currentResponsavel = '', currentLocal = '', dataStart = 38
-      for (let i = 30; i < 50; i++) { const row = rawData[i]; if (row && row.some(c => String(c || '').includes('Cod. Barra'))) { dataStart = i + 1; break } }
-      for (let i = dataStart; i < rawData.length; i++) {
-        const row = rawData[i]; if (!row || row.length === 0) continue
-        const rowStr = row.map(c => String(c || '')).join('|')
-        if (rowStr.includes('Total do Responsável')) { const m = rowStr.match(/Total do Responsável \[([^\]]+)\]/); if (m) currentResponsavel = m[1].trim(); continue }
-        if (rowStr.includes('Total do Local')) { const m = rowStr.match(/Total do Local \[([^\]]+)\]/); if (m) currentLocal = m[1].trim(); continue }
-        if (rowStr.includes('Total do') || rowStr.includes('Total da') || rowStr.includes('Total de')) continue
-        let barCode = '', description = '', compl = '', situation = '', dtAquis = null, vlrAquis = '', saldo = ''
-        for (let c = 5; c <= 8; c++) { const v = String(row[c] || '').trim(); if (v && v !== 'Cod. Barra' && /^\d{5,}/.test(v)) { barCode = v; description = String(row[c + 2] || '').trim(); compl = String(row[c + 5] || '').trim(); situation = String(row[c + 10] || '').trim(); dtAquis = formatDate(row[c + 13]); vlrAquis = String(row[c + 17] || '').trim(); saldo = String(row[c + 28] || '').trim(); break } }
-        if (!barCode || !description || description === 'Descr. Padrao') continue
-        novosMap[barCode] = { codigo_barra: barCode, descricao: description, descricao_complementar: compl || null, tipo_bem: extractType(description), situacao: situation || 'Em uso', local: currentLocal || null, responsavel: currentResponsavel || null, data_aquisicao: dtAquis, valor_aquisicao: vlrAquis || null, saldo_contabil: saldo || null }
-      }
-
-      // Buscar atual do banco
       const { data: atual } = await supabase.from('patrimonios').select('*')
-      const atualMap = {}
-      ;(atual || []).forEach(b => { atualMap[b.codigo_barra] = b })
-
-      const camposComparar = ['descricao','situacao','local','responsavel','valor_aquisicao','saldo_contabil']
-      const novos = [], alterados = [], removidos = []
-
-      // Novos e alterados
-      Object.values(novosMap).forEach(item => {
-        const existing = atualMap[item.codigo_barra]
-        if (!existing) {
-          novos.push(item)
-        } else {
-          const diffs = []
-          camposComparar.forEach(campo => {
-            const vNovo = String(item[campo] || '').trim()
-            const vAnt  = String(existing[campo] || '').trim()
-            if (vNovo !== vAnt) diffs.push({ campo, anterior: vAnt || '—', novo: vNovo || '—' })
-          })
-          if (diffs.length > 0) alterados.push({ ...item, _diffs: diffs, _id: existing.id })
-        }
-      })
-
-      // Removidos
-      Object.values(atualMap).forEach(item => {
-        if (!novosMap[item.codigo_barra]) removidos.push(item)
-      })
-
-      setDiffResult({ novos, alterados, removidos, novosMap })
+      const { novos, removidos } = await compararPdfPatrimonio(file, atual || [])
+      setDiffResult({ novos, alterados: [], removidos })
       setModalDiff(true)
-    } catch (err) { setErroImport('Erro ao comparar: ' + err.message) }
+    } catch (err) { setErroImport('Erro ao comparar PDF: ' + err.message) }
     setImportando(false); e.target.value = ''
   }
+
+
 
   async function aplicarDiff(opcoes) {
     // opcoes: { novos: bool, alterados: bool, removidos: bool }
@@ -878,13 +817,13 @@ export default function Patrimonio({ isAdmin = false }) {
             </button>
             <label style={{ ...S.btn, background:'rgba(99,102,241,.1)', color:'var(--blue)', border:'1px solid rgba(99,102,241,.2)', cursor:'pointer' }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
-              {importando ? 'Comparando...' : 'Comparar Excel'}
-              <input type="file" accept=".xlsx,.xls" style={{ display:'none' }} onChange={compararExcel} disabled={importando} />
+              {importando ? 'Comparando...' : 'Comparar PDF'}
+              <input type="file" accept=".pdf" style={{ display:'none' }} onChange={compararPdf} disabled={importando} />
             </label>
             <label style={{ ...S.btn, background:'var(--subtle)', color:'var(--text2)', border:'1px solid var(--border2)', cursor:'pointer' }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              {importando ? 'Importando...' : 'Importar Excel'}
-              <input type="file" accept=".xlsx,.xls" style={{ display:'none' }} onChange={importarExcel} disabled={importando} />
+              {importando ? 'Importando...' : 'Importar PDF'}
+              <input type="file" accept=".pdf" style={{ display:'none' }} onChange={importarPdf} disabled={importando} />
             </label>
             <button style={S.btn} onClick={abrirNovo}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
