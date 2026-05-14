@@ -1494,6 +1494,7 @@ export default function Patrimonio({ isAdmin = false }) {
         </div>
       )}
 
+
     </div>
   )
 }
