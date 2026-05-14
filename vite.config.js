@@ -3,13 +3,12 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  
   server: {
     port: 5173,
     strictPort: true,
   },
-})
-export default defineConfig({
-  plugins: [react()],
+
   optimizeDeps: {
     include: ['pdfjs-dist'],
   },
