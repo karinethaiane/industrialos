@@ -28,10 +28,18 @@ function parseMoney(str) {
 }
 
 function extrairLocal(linha) {
+  // Remove prefixo numérico tipo "19.02.14-"
   const semPrefixo = linha.replace(/^\d+\.\d+\.\d+-/, '')
-  const idxTraco = semPrefixo.indexOf('-')
-  if (idxTraco === -1) return ''
-  return semPrefixo.slice(idxTraco + 1).trim()
+  // Formato restante: "NOME DA UNIDADE-LOCAL"
+  // O separador nome-local é um hífen SEM espaços ao redor (ao contrário dos
+  // hifens internos do nome da unidade que têm espaços: "IST - ALIMENTOS...")
+  const m = semPrefixo.match(/(?<!\s)-(?!\s)/)
+  if (m && m.index !== undefined) {
+    return semPrefixo.slice(m.index + 1).trim()
+  }
+  // Fallback: pega tudo depois do primeiro hífen
+  const idx = semPrefixo.indexOf('-')
+  return idx !== -1 ? semPrefixo.slice(idx + 1).trim() : ''
 }
 
 function localAceito(localCompleto) {
