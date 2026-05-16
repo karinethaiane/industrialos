@@ -129,6 +129,44 @@ function ProgBar({ pct, st }) {
     <div style={S.progBar}>
       <div style={{ height: '100%', borderRadius: 2, width: `${Math.min(100, pct)}%`, background: cor }} />
 
+      {/* ── MODAL MARCAR ITEM CALIBRADO ── */}
+      {modalItemCalib && (
+        <div style={{ ...S.modal, zIndex:120 }} onClick={e => e.target === e.currentTarget && setModalItemCalib(null)}>
+          <div style={{ ...S.modalBox, maxWidth:420 }}>
+            <div style={S.modalTitle}>Marcar como Calibrado</div>
+            <div style={S.modalSub}>
+              {modalItemCalib.pi.patrimonios?.codigo_interno || modalItemCalib.pi.patrimonios?.codigo_barra}
+              {' · '}{modalItemCalib.pi.patrimonios?.descricao?.split(' ').slice(0,5).join(' ')}
+            </div>
+            <div style={S.infoAmber}>
+              Isso vai atualizar as datas de calibração deste equipamento sem encerrar o pedido.
+              Os outros equipamentos do pedido permanecem inalterados.
+            </div>
+            <div style={S.field}>
+              <label style={S.label}>Data da calibração *</label>
+              <input type="date" style={S.input} value={dataItemCalib} onChange={e => setDataItemCalib(e.target.value)} />
+            </div>
+            {dataItemCalib && (() => {
+              const per     = modalItemCalib.pi.patrimonios?.periodicidade_calibracao || 12
+              const proxima = addMeses(dataItemCalib, per)
+              return (
+                <div style={{ background:'var(--green-dim)', border:'1px solid rgba(5,150,105,.2)', borderRadius:7, padding:'10px 14px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <span style={{ fontSize:12, color:'var(--green)', fontWeight:600 }}>Próxima calibração</span>
+                  <span style={{ fontFamily:"'JetBrains Mono', monospace", fontSize:13, color:'var(--green)', fontWeight:600 }}>{fmtData(proxima)}</span>
+                </div>
+              )
+            })()}
+            <div style={S.row}>
+              <button style={S.btnSm} onClick={() => setModalItemCalib(null)}>Cancelar</button>
+              <button style={{ ...S.btnGreen, padding:'7px 16px', fontSize:13 }} onClick={marcarItemCalibrado} disabled={!dataItemCalib || salvandoItemCalib}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                {salvandoItemCalib ? 'Salvando...' : 'Confirmar calibração'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── MODAL DIFF ── */}
       {modalDiff && diffResult && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setModalDiff(false)}>
@@ -319,6 +357,9 @@ export default function Patrimonio({ isAdmin = false }) {
   const [salvandoConcluir, setSalvandoConcluir] = useState(false)
 
   const [colaboradoresLista, setColaboradoresLista] = useState([])
+  const [modalItemCalib, setModalItemCalib] = useState(null)   // { pi, pedido }
+  const [dataItemCalib, setDataItemCalib]   = useState('')
+  const [salvandoItemCalib, setSalvandoItemCalib] = useState(false)
 
   useEffect(() => { carregar() }, [])
 
@@ -387,6 +428,7 @@ export default function Patrimonio({ isAdmin = false }) {
   const totalDisponivel = itens.filter(i => i.situacao === 'Disponível').length
   const totalManutencao = itens.filter(i => i.situacao === 'Em manutenção').length
   const ocorAbertas       = todasOcor.filter(o => o.status === 'Aberto')
+  const bensComOcorAberta = new Set(ocorAbertas.map(o => o.patrimonio_id))
   const bensComOcorAberta = new Set(ocorAbertas.map(o => o.patrimonio_id))
   const resumoOcor = {
     'Manutenção':             ocorAbertas.filter(o => o.tipo === 'Manutenção').length,
@@ -795,6 +837,26 @@ export default function Patrimonio({ isAdmin = false }) {
     carregar()
   }
 
+  async function marcarItemCalibrado() {
+    if (!modalItemCalib || !dataItemCalib) return
+    setSalvandoItemCalib(true)
+    const { pi, pedido } = modalItemCalib
+    const per = pi.patrimonios?.periodicidade_calibracao || 12
+    const proxima = addMeses(dataItemCalib, per)
+    // Atualiza item do pedido
+    await supabase.from('calibracao_pedido_itens')
+      .update({ data_calibracao: dataItemCalib })
+      .eq('id', pi.id)
+    // Atualiza datas do patrimônio
+    await supabase.from('patrimonios')
+      .update({ ultima_calibracao: dataItemCalib, proxima_calibracao: proxima })
+      .eq('id', pi.patrimonio_id)
+    setSalvandoItemCalib(false)
+    setModalItemCalib(null)
+    setDataItemCalib('')
+    carregar()
+  }
+
   const trHover = { onMouseEnter: e => e.currentTarget.style.background='var(--subtle)', onMouseLeave: e => e.currentTarget.style.background='transparent' }
 
   return (
@@ -1114,14 +1176,58 @@ export default function Patrimonio({ isAdmin = false }) {
                     <div style={{ fontFamily:"'JetBrains Mono', monospace", fontSize:18, fontWeight:500, color:'var(--green)' }}>{pedido.valor_global?Number(pedido.valor_global).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'—'}</div>
                   </div>
                 </div>
-                <div style={{ fontSize:11, color:'var(--muted)', fontWeight:600, textTransform:'uppercase', letterSpacing:'.07em', marginBottom:8 }}>Equipamentos neste pedido</div>
-                <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:14 }}>
-                  {itensP.map(pi=>(
-                    <div key={pi.id} style={{ display:'inline-flex', alignItems:'center', gap:5, background:'var(--surface2)', border:'1px solid var(--border2)', borderRadius:6, padding:'4px 10px', fontSize:12 }}>
-                      <span style={{ fontFamily:"'JetBrains Mono', monospace", color:'var(--purple)', fontSize:11, fontWeight:600 }}>{pi.patrimonios?.codigo_interno||pi.patrimonios?.codigo_barra}</span>
-                      <span style={{ color:'var(--text2)' }}>{pi.patrimonios?.descricao?.split(' ').slice(0,3).join(' ')}</span>
-                    </div>
-                  ))}
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+                  <span style={{ fontSize:11, color:'var(--muted)', fontWeight:600, textTransform:'uppercase', letterSpacing:'.07em' }}>Equipamentos neste pedido</span>
+                  {(() => {
+                    const total = itensP.length
+                    const done  = itensP.filter(pi => pi.data_calibracao).length
+                    if (total === 0) return null
+                    return (
+                      <span style={{ fontSize:11, fontWeight:600, color: done === total ? 'var(--green)' : done > 0 ? 'var(--amber)' : 'var(--muted)', background: done === total ? 'var(--green-dim)' : done > 0 ? 'var(--amber-dim)' : 'var(--subtle)', padding:'1px 8px', borderRadius:4 }}>
+                        {done}/{total} calibrados
+                      </span>
+                    )
+                  })()}
+                </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:14 }}>
+                  {itensP.map(pi => {
+                    const calibrado = !!pi.data_calibracao
+                    const equip     = itens.find(i => i.id === pi.patrimonio_id)
+                    return (
+                      <div key={pi.id} style={{ display:'flex', alignItems:'center', gap:10, background: calibrado ? 'rgba(5,150,105,.04)' : 'var(--surface2)', border: `1px solid ${calibrado ? 'rgba(5,150,105,.2)' : 'var(--border2)'}`, borderRadius:8, padding:'8px 12px' }}>
+                        {/* Ícone status */}
+                        <div style={{ width:22, height:22, borderRadius:'50%', background: calibrado ? 'var(--green-dim)' : 'var(--subtle)', border: `1px solid ${calibrado ? 'rgba(5,150,105,.3)' : 'var(--border2)'}`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:11, color: calibrado ? 'var(--green)' : 'var(--muted)' }}>
+                          {calibrado ? '✓' : '○'}
+                        </div>
+                        {/* Info do equipamento */}
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                            <span style={{ fontFamily:"'JetBrains Mono', monospace", color:'var(--purple)', fontSize:11, fontWeight:600 }}>{pi.patrimonios?.codigo_interno||pi.patrimonios?.codigo_barra}</span>
+                            <span style={{ fontSize:12, color:'var(--text2)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{pi.patrimonios?.descricao?.split(' ').slice(0,4).join(' ')}</span>
+                          </div>
+                          {calibrado && (
+                            <div style={{ fontSize:11, color:'var(--green)', marginTop:2 }}>
+                              Calibrado em {fmtData(pi.data_calibracao)}
+                              {equip?.proxima_calibracao && <> · Próxima: {fmtData(equip.proxima_calibracao)}</>}
+                            </div>
+                          )}
+                        </div>
+                        {/* Botão marcar */}
+                        {isAdmin && pedido.status === 'em_andamento' && !calibrado && (
+                          <button
+                            style={{ ...S.btnGreen, fontSize:11, padding:'3px 10px', flexShrink:0 }}
+                            onClick={() => { setModalItemCalib({ pi, pedido }); setDataItemCalib('') }}
+                          >
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            Marcar calibrado
+                          </button>
+                        )}
+                        {calibrado && (
+                          <span style={{ background:'var(--green-dim)', color:'var(--green)', padding:'2px 8px', borderRadius:4, fontSize:10, fontWeight:700, flexShrink:0 }}>Concluído</span>
+                        )}
+                      </div>
+                    )
+                  })}
                   {itensP.length===0&&<span style={{ color:'var(--muted)', fontSize:12 }}>Nenhum equipamento vinculado</span>}
                 </div>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', paddingTop:12, borderTop:'1px solid var(--border)' }}>
