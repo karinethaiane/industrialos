@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
+import { exportarTudo } from './exportacaoUnificada'
 import Epis from './epis'
 import Colaboradores from './colaboradores'
 import Veiculos from './veiculos'
@@ -59,6 +60,20 @@ function getDataExtenso() {
 
 // ── Tela Início ───────────────────────────────────────────────────────────
 function Inicio({ onNavegar, tema, nomeUsuario }) {
+  const [exportando, setExportando]         = useState(false)
+  const [progressoExport, setProgressoExport] = useState('')
+
+  async function handleExportar() {
+    setExportando(true)
+    try {
+      await exportarTudo(msg => setProgressoExport(msg))
+    } catch (err) {
+      alert('Erro ao exportar: ' + err.message)
+    }
+    setExportando(false)
+    setProgressoExport('')
+  }
+
   const modulos = [
     { id: 'consultoria',   nome: 'Consultoria',   desc: 'B+P, Sebraetec e Diretas' },
     { id: 'financeiro',    nome: 'Financeiro',    desc: 'NFs e solicitações de pagamento' },
@@ -129,6 +144,34 @@ function Inicio({ onNavegar, tema, nomeUsuario }) {
             </div>
           )
         })}
+      </div>
+
+      {/* Exportação unificada */}
+      <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid var(--border)' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 12 }}>
+          Exportação de Dados
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <button
+            onClick={handleExportar}
+            disabled={exportando}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--green-dim)', color: 'var(--green)', border: '1px solid rgba(16,185,129,.25)', borderRadius: 10, padding: '11px 20px', fontWeight: 600, fontSize: 13, cursor: exportando ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: exportando ? .7 : 1 }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            {exportando ? 'Exportando...' : 'Exportar tudo — Excel completo'}
+          </button>
+          {exportando && progressoExport && (
+            <span style={{ fontSize: 12, color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>
+              {progressoExport}
+            </span>
+          )}
+          {!exportando && (
+            <span style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
+              Patrimônio · Ocorrências · Calibrações · EPIs · NFs · Pagamentos · Diárias · Consultoria<br/>
+              + abas em branco para PCP, SGT, Tratativas e Atendimentos
+            </span>
+          )}
+        </div>
       </div>
     </div>
   )
