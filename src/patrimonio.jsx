@@ -261,7 +261,6 @@ export default function Patrimonio({ isAdmin = false }) {
   const totalManutencao = itens.filter(i => i.situacao === 'Em manutenção').length
   const ocorAbertas       = todasOcor.filter(o => o.status === 'Aberto')
   const bensComOcorAberta = new Set(ocorAbertas.map(o => o.patrimonio_id))
-  const bensComOcorAberta = new Set(ocorAbertas.map(o => o.patrimonio_id))
   const resumoOcor = {
     'Manutenção':             ocorAbertas.filter(o => o.tipo === 'Manutenção').length,
     'Reimpressão de plaqueta':ocorAbertas.filter(o => o.tipo === 'Reimpressão de plaqueta').length,
