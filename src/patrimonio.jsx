@@ -261,6 +261,7 @@ export default function Patrimonio({ isAdmin = false }) {
   const totalManutencao = itens.filter(i => i.situacao === 'Em manutenção').length
   const ocorAbertas       = todasOcor.filter(o => o.status === 'Aberto')
   const bensComOcorAberta = new Set(ocorAbertas.map(o => o.patrimonio_id))
+  const bensComOcorAberta = new Set(ocorAbertas.map(o => o.patrimonio_id))
   const resumoOcor = {
     'Manutenção':             ocorAbertas.filter(o => o.tipo === 'Manutenção').length,
     'Reimpressão de plaqueta':ocorAbertas.filter(o => o.tipo === 'Reimpressão de plaqueta').length,
@@ -426,13 +427,28 @@ export default function Patrimonio({ isAdmin = false }) {
       const { error } = await supabase.from('calibracao_pedidos').update(dados).eq('id', editandoPedido.id)
       if (error) { setErroPedido('Erro: ' + error.message); setSalvandoPedido(false); return }
       pedidoId = editandoPedido.id
-      await supabase.from('calibracao_pedido_itens').delete().eq('pedido_id', pedidoId)
+      // Itens existentes no pedido
+      const itensExistentes = pedidoItens.filter(pi => pi.pedido_id === pedidoId)
+      const idsExistentes   = itensExistentes.map(pi => pi.patrimonio_id)
+      // Remover apenas os que foram desmarcados (sem apagar data_calibracao dos que ficaram)
+      const idsRemover = idsExistentes.filter(id => !pedidoEquips.includes(id))
+      if (idsRemover.length > 0) {
+        for (const patrimonioId of idsRemover) {
+          const pi = itensExistentes.find(p => p.patrimonio_id === patrimonioId)
+          if (pi) await supabase.from('calibracao_pedido_itens').delete().eq('id', pi.id)
+        }
+      }
+      // Inserir apenas os novos (que não existiam antes)
+      const idsNovos = pedidoEquips.filter(id => !idsExistentes.includes(id))
+      if (idsNovos.length > 0) {
+        await supabase.from('calibracao_pedido_itens').insert(idsNovos.map(id => ({ pedido_id: pedidoId, patrimonio_id: id })))
+      }
     } else {
       const { data, error } = await supabase.from('calibracao_pedidos').insert(dados).select().single()
       if (error) { setErroPedido('Erro: ' + error.message); setSalvandoPedido(false); return }
       pedidoId = data.id
+      await supabase.from('calibracao_pedido_itens').insert(pedidoEquips.map(id => ({ pedido_id: pedidoId, patrimonio_id: id })))
     }
-    await supabase.from('calibracao_pedido_itens').insert(pedidoEquips.map(id => ({ pedido_id: pedidoId, patrimonio_id: id })))
     setSalvandoPedido(false); setModalPedido(false); carregar()
   }
   async function excluirPedido(id) {
