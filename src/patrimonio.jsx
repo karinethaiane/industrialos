@@ -128,174 +128,6 @@ function ProgBar({ pct, st }) {
   return (
     <div style={S.progBar}>
       <div style={{ height: '100%', borderRadius: 2, width: `${Math.min(100, pct)}%`, background: cor }} />
-
-      {/* ── MODAL MARCAR ITEM CALIBRADO ── */}
-      {modalItemCalib && (
-        <div style={{ ...S.modal, zIndex:120 }} onClick={e => e.target === e.currentTarget && setModalItemCalib(null)}>
-          <div style={{ ...S.modalBox, maxWidth:420 }}>
-            <div style={S.modalTitle}>Marcar como Calibrado</div>
-            <div style={S.modalSub}>
-              {modalItemCalib.pi.patrimonios?.codigo_interno || modalItemCalib.pi.patrimonios?.codigo_barra}
-              {' · '}{modalItemCalib.pi.patrimonios?.descricao?.split(' ').slice(0,5).join(' ')}
-            </div>
-            <div style={S.infoAmber}>
-              Isso vai atualizar as datas de calibração deste equipamento sem encerrar o pedido.
-              Os outros equipamentos do pedido permanecem inalterados.
-            </div>
-            <div style={S.field}>
-              <label style={S.label}>Data da calibração *</label>
-              <input type="date" style={S.input} value={dataItemCalib} onChange={e => setDataItemCalib(e.target.value)} />
-            </div>
-            {dataItemCalib && (() => {
-              const per     = modalItemCalib.pi.patrimonios?.periodicidade_calibracao || 12
-              const proxima = addMeses(dataItemCalib, per)
-              return (
-                <div style={{ background:'var(--green-dim)', border:'1px solid rgba(5,150,105,.2)', borderRadius:7, padding:'10px 14px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <span style={{ fontSize:12, color:'var(--green)', fontWeight:600 }}>Próxima calibração</span>
-                  <span style={{ fontFamily:"'JetBrains Mono', monospace", fontSize:13, color:'var(--green)', fontWeight:600 }}>{fmtData(proxima)}</span>
-                </div>
-              )
-            })()}
-            <div style={S.row}>
-              <button style={S.btnSm} onClick={() => setModalItemCalib(null)}>Cancelar</button>
-              <button style={{ ...S.btnGreen, padding:'7px 16px', fontSize:13 }} onClick={marcarItemCalibrado} disabled={!dataItemCalib || salvandoItemCalib}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                {salvandoItemCalib ? 'Salvando...' : 'Confirmar calibração'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── MODAL DIFF ── */}
-      {modalDiff && diffResult && (
-        <div style={S.modal} onClick={e => e.target === e.currentTarget && setModalDiff(false)}>
-          <div style={{ ...S.modalBox, maxWidth: 680 }}>
-            <div style={S.modalTitle}>Comparação de arquivos</div>
-            <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 18 }}>
-              Comparativo por código de barras — novos bens e removidos. Alterações de valor e saldo são ignoradas.
-            </div>
-
-            {/* Resumo */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 }}>
-              <div style={{ background: 'var(--green-dim)', border: '1px solid rgba(5,150,105,.2)', borderRadius: 8, padding: '12px 14px' }}>
-                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 24, fontWeight: 500, color: 'var(--green)', lineHeight: 1, marginBottom: 4 }}>{diffResult.novos.length}</div>
-                <div style={{ fontSize: 11, color: 'var(--green)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.07em' }}>Novos bens</div>
-              </div>
-              <div style={{ background: 'var(--amber-dim)', border: '1px solid rgba(217,119,6,.2)', borderRadius: 8, padding: '12px 14px' }}>
-                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 24, fontWeight: 500, color: 'var(--amber)', lineHeight: 1, marginBottom: 4 }}>{diffResult.alterados.length}</div>
-                <div style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.07em' }}>Com alterações</div>
-              </div>
-              <div style={{ background: 'var(--red-dim)', border: '1px solid rgba(220,38,38,.2)', borderRadius: 8, padding: '12px 14px' }}>
-                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 24, fontWeight: 500, color: 'var(--red)', lineHeight: 1, marginBottom: 4 }}>{diffResult.removidos.length}</div>
-                <div style={{ fontSize: 11, color: 'var(--red)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.07em' }}>Removidos</div>
-              </div>
-            </div>
-
-            {/* Bens novos */}
-            {diffResult.novos.length > 0 && (
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--green)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--green)', display: 'inline-block' }}></span>
-                  Novos bens ({diffResult.novos.length})
-                </div>
-                <div style={{ background: 'var(--surface2)', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)', maxHeight: 160, overflowY: 'auto' }}>
-                  {diffResult.novos.map((b, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
-                      <span style={{ color: 'var(--text)', fontWeight: 500 }}>{b.descricao}</span>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--green)', fontSize: 11 }}>{b.codigo_barra}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Bens alterados */}
-            {diffResult.alterados.length > 0 && (
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--amber)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--amber)', display: 'inline-block' }}></span>
-                  Alterados ({diffResult.alterados.length})
-                </div>
-                <div style={{ background: 'var(--surface2)', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)', maxHeight: 180, overflowY: 'auto' }}>
-                  {diffResult.alterados.map((b, i) => (
-                    <div key={i} style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)' }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 6, display: 'flex', justifyContent: 'space-between' }}>
-                        <span>{b.descricao}</span>
-                        <span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--muted)', fontSize: 11 }}>{b.codigo_barra}</span>
-                      </div>
-                      {b._diffs.map((d, j) => (
-                        <div key={j} style={{ display: 'flex', gap: 8, fontSize: 11, marginBottom: 3, alignItems: 'center' }}>
-                          <span style={{ color: 'var(--muted)', width: 100, flexShrink: 0, textTransform: 'capitalize' }}>{d.campo.replace(/_/g,' ')}</span>
-                          <span style={{ color: 'var(--red)', textDecoration: 'line-through', flex: 1 }}>{d.anterior}</span>
-                          <span style={{ color: 'var(--mu)', margin: '0 4px' }}>→</span>
-                          <span style={{ color: 'var(--green)', flex: 1, fontWeight: 600 }}>{d.novo}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Bens removidos */}
-            {diffResult.removidos.length > 0 && (
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--red)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--red)', display: 'inline-block' }}></span>
-                  Removidos do novo arquivo ({diffResult.removidos.length})
-                </div>
-                <div style={{ background: 'var(--surface2)', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)', maxHeight: 140, overflowY: 'auto' }}>
-                  {diffResult.removidos.map((b, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
-                      <span style={{ color: 'var(--text)', opacity: .6, textDecoration: 'line-through' }}>{b.descricao}</span>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--red)', fontSize: 11 }}>{b.codigo_barra}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {diffResult.novos.length === 0 && diffResult.alterados.length === 0 && diffResult.removidos.length === 0 && (
-              <div style={{ background: 'var(--green-dim)', border: '1px solid rgba(5,150,105,.2)', borderRadius: 8, padding: '14px 18px', marginBottom: 16, fontSize: 13, color: 'var(--green)', fontWeight: 600, textAlign: 'center' }}>
-                Nenhuma diferença encontrada — o arquivo está idêntico ao banco.
-              </div>
-            )}
-
-            <div style={{ ...S.row, gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              <button style={S.btnSm} onClick={() => setModalDiff(false)}>Cancelar</button>
-              {(diffResult.novos.length > 0 || diffResult.alterados.length > 0) && (
-                <button
-                  style={{ ...S.btn, background: 'var(--amber)', opacity: aplicando ? .6 : 1 }}
-                  disabled={aplicando}
-                  onClick={() => aplicarDiff({ novos: true, alterados: true, removidos: false })}
-                >
-                  {aplicando ? 'Aplicando...' : `Aplicar novos + alterados (${diffResult.novos.length + diffResult.alterados.length})`}
-                </button>
-              )}
-              {diffResult.removidos.length > 0 && (
-                <button
-                  style={{ ...S.btn, background: 'var(--red)', opacity: aplicando ? .6 : 1 }}
-                  disabled={aplicando}
-                  onClick={() => aplicarDiff({ novos: true, alterados: true, removidos: true })}
-                >
-                  {aplicando ? 'Aplicando...' : 'Aplicar tudo (incluir remoções)'}
-                </button>
-              )}
-              {(diffResult.novos.length > 0 || diffResult.alterados.length > 0 || diffResult.removidos.length > 0) && (
-                <button
-                  style={{ ...S.btn, background: 'var(--green)', opacity: aplicando ? .6 : 1 }}
-                  disabled={aplicando}
-                  onClick={() => aplicarDiff({ novos: true, alterados: true, removidos: false })}
-                >
-                  {aplicando ? 'Aplicando...' : 'Sincronizar'}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
     </div>
   )
 }
@@ -428,6 +260,7 @@ export default function Patrimonio({ isAdmin = false }) {
   const totalDisponivel = itens.filter(i => i.situacao === 'Disponível').length
   const totalManutencao = itens.filter(i => i.situacao === 'Em manutenção').length
   const ocorAbertas       = todasOcor.filter(o => o.status === 'Aberto')
+  const bensComOcorAberta = new Set(ocorAbertas.map(o => o.patrimonio_id))
   const bensComOcorAberta = new Set(ocorAbertas.map(o => o.patrimonio_id))
   const resumoOcor = {
     'Manutenção':             ocorAbertas.filter(o => o.tipo === 'Manutenção').length,
@@ -1475,6 +1308,44 @@ export default function Patrimonio({ isAdmin = false }) {
             <div style={S.row}>
               {isAdmin&&<button style={S.btnSm} onClick={()=>{setItemSel(itens.find(i=>i.id===ocorDetalhe.patrimonio_id)||{id:ocorDetalhe.patrimonio_id,descricao:ocorDetalhe.patrimonios?.descricao});abrirEditarOcor(ocorDetalhe);setOcorDetalhe(null)}}>Editar</button>}
               <button style={S.btnSm} onClick={()=>setOcorDetalhe(null)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL MARCAR ITEM CALIBRADO ── */}
+      {modalItemCalib && (
+        <div style={{ ...S.modal, zIndex:120 }} onClick={e => e.target === e.currentTarget && setModalItemCalib(null)}>
+          <div style={{ ...S.modalBox, maxWidth:420 }}>
+            <div style={S.modalTitle}>Marcar como Calibrado</div>
+            <div style={S.modalSub}>
+              {modalItemCalib.pi.patrimonios?.codigo_interno || modalItemCalib.pi.patrimonios?.codigo_barra}
+              {' · '}{modalItemCalib.pi.patrimonios?.descricao?.split(' ').slice(0,5).join(' ')}
+            </div>
+            <div style={S.infoAmber}>
+              Isso vai atualizar as datas de calibração deste equipamento sem encerrar o pedido.
+              Os outros equipamentos do pedido permanecem inalterados.
+            </div>
+            <div style={S.field}>
+              <label style={S.label}>Data da calibração *</label>
+              <input type="date" style={S.input} value={dataItemCalib} onChange={e => setDataItemCalib(e.target.value)} />
+            </div>
+            {dataItemCalib && (() => {
+              const per     = modalItemCalib.pi.patrimonios?.periodicidade_calibracao || 12
+              const proxima = addMeses(dataItemCalib, per)
+              return (
+                <div style={{ background:'var(--green-dim)', border:'1px solid rgba(5,150,105,.2)', borderRadius:7, padding:'10px 14px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <span style={{ fontSize:12, color:'var(--green)', fontWeight:600 }}>Próxima calibração</span>
+                  <span style={{ fontFamily:"'JetBrains Mono', monospace", fontSize:13, color:'var(--green)', fontWeight:600 }}>{fmtData(proxima)}</span>
+                </div>
+              )
+            })()}
+            <div style={S.row}>
+              <button style={S.btnSm} onClick={() => setModalItemCalib(null)}>Cancelar</button>
+              <button style={{ ...S.btnGreen, padding:'7px 16px', fontSize:13 }} onClick={marcarItemCalibrado} disabled={!dataItemCalib || salvandoItemCalib}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                {salvandoItemCalib ? 'Salvando...' : 'Confirmar calibração'}
+              </button>
             </div>
           </div>
         </div>
