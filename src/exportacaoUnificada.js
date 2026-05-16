@@ -267,10 +267,10 @@ export async function exportarTudo(onProgress) {
     { 'Empresa/Cliente': '', 'Tipo': '', 'Consultor': '', 'Status': '', 'Pendência': '', 'Prazo Conclusão': '', 'Próxima Ação': '', 'Observações': '' }
   ]
 
-  addSheet(wb, XLSX, templatePCP, 'PCP (preencher)')
-  addSheet(wb, XLSX, templateSGT, 'SGT (preencher)')
-  addSheet(wb, XLSX, templateTratativas, 'Tratativas Financeiro (preencher)')
-  addSheet(wb, XLSX, templateAtendimentos, 'Atendimentos (preencher)')
+  addSheet(wb, XLSX, templatePCP, 'PCP')
+  addSheet(wb, XLSX, templateSGT, 'SGT')
+  addSheet(wb, XLSX, templateTratativas, 'Tratativas Financeiro')
+  addSheet(wb, XLSX, templateAtendimentos, 'Atendimentos')
 
   // ── Gerar arquivo ─────────────────────────────────────────────────────────
   const data  = new Date()
