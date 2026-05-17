@@ -253,7 +253,92 @@ export async function exportarTudo(onProgress) {
 
   addSheet(wb, XLSX, [...rowsBP, ...rowsSEB, ...rowsDIR], 'Consultoria')
 
-  // ── 9. ABAS MANUAIS (templates em branco) ─────────────────────────────────
+  // ── 9. VEÍCULOS ──────────────────────────────────────────────────────────
+  onProgress?.('Veículos...')
+  const { data: veicsData } = await supabase.from('veiculos').select('*').order('placa')
+  const rowsVeics = (veicsData || []).map(v => ({
+    'Placa':                  v.placa || '',
+    'Marca':                  v.marca || '',
+    'Modelo':                 v.modelo || '',
+    'Ano':                    v.ano || '',
+    'Cor':                    v.cor || '',
+    'Modalidade':             v.modalidade || '',
+    'Região':                 v.regiao || '',
+    'Status':                 v.status === 'disponivel' ? 'Disponível' : v.status === 'em_uso' ? 'Em Uso' : v.status === 'manutencao' ? 'Manutenção' : v.status || '',
+    'KM Atual':               v.km_atual || 0,
+    'KM Próxima Revisão':     v.km_proxima_revisao || '',
+    'Data Próxima Revisão':   fmtData(v.data_proxima_revisao),
+    'Intervalo KM':           v.intervalo_revisao_km || '',
+    'Intervalo Meses':        v.intervalo_revisao_meses || '',
+    'Observações':            v.observacoes || '',
+  }))
+  addSheet(wb, XLSX, rowsVeics, 'Veículos')
+
+  // ── 10. SAÍDAS DE VEÍCULOS ────────────────────────────────────────────────
+  onProgress?.('Saídas de veículos...')
+  const { data: saidasData } = await supabase
+    .from('saidas_veiculos')
+    .select('*, veiculos(placa, modelo, marca), colaboradores(nome)')
+    .order('data_saida', { ascending: false })
+  const rowsSaidas = (saidasData || []).map(s => ({
+    'Placa':            s.veiculos?.placa || '',
+    'Modelo':           `${s.veiculos?.marca || ''} ${s.veiculos?.modelo || ''}`.trim(),
+    'Colaborador':      s.colaboradores?.nome || '',
+    'Empresa Destino':  s.empresa_destino || '',
+    'Local Destino':    s.local_destino || '',
+    'Período':          s.periodo || '',
+    'Data Saída':       fmtData(s.data_saida),
+    'Data Retorno':     fmtData(s.data_retorno),
+    'KM Retorno':       s.km_retorno || '',
+    'Status':           s.data_retorno ? 'Retornado' : 'Em uso',
+    'Observações':      s.observacoes || '',
+  }))
+  addSheet(wb, XLSX, rowsSaidas, 'Saídas Veículos')
+
+  // ── 11. REVISÕES ──────────────────────────────────────────────────────────
+  onProgress?.('Revisões de veículos...')
+  const { data: revisData } = await supabase
+    .from('revisoes_veiculos')
+    .select('*, veiculos(placa, modelo, marca), responsavel:responsavel_id(nome)')
+    .order('data_revisao', { ascending: false })
+  const rowsRevis = (revisData || []).map(r => ({
+    'Placa':               r.veiculos?.placa || '',
+    'Modelo':              `${r.veiculos?.marca || ''} ${r.veiculos?.modelo || ''}`.trim(),
+    'Tipo':                r.tipo || '',
+    'Data Revisão':        fmtData(r.data_revisao),
+    'KM Revisão':          r.km_revisao || '',
+    'Próxima KM':          r.km_proxima_revisao || '',
+    'Próxima Data':        fmtData(r.data_proxima_revisao),
+    'Oficina':             r.oficina || '',
+    'Nº Chamado':          r.numero_chamado || '',
+    'Responsável':         r.responsavel?.nome || '',
+    'Descrição':           r.descricao || '',
+  }))
+  addSheet(wb, XLSX, rowsRevis, 'Revisões Veículos')
+
+  // ── 12. OCORRÊNCIAS DE VEÍCULOS ───────────────────────────────────────────
+  onProgress?.('Ocorrências de veículos...')
+  const { data: ocVeicsData } = await supabase
+    .from('ocorrencias_veiculos')
+    .select('*, veiculos(placa, modelo, marca), colaboradores(nome), autor:autor_id(nome)')
+    .order('data_ocorrencia', { ascending: false })
+  const rowsOcVeics = (ocVeicsData || []).map(o => ({
+    'Placa':                 o.veiculos?.placa || '',
+    'Modelo':                `${o.veiculos?.marca || ''} ${o.veiculos?.modelo || ''}`.trim(),
+    'Tipo':                  o.tipo || '',
+    'Data Ocorrência':       fmtData(o.data_ocorrencia),
+    'Colaborador Envolvido': o.colaboradores?.nome || '',
+    'Autor Identificado':    o.autor?.nome || '',
+    'Status':                o.status === 'aberto' ? 'Aberto' : o.status === 'em andamento' ? 'Em andamento' : o.status === 'resolvido' ? 'Resolvido' : o.status || '',
+    'Valor (R$)':            o.valor ? fmtMoeda(o.valor) : '',
+    'Data Identificação':    fmtData(o.data_identificacao),
+    'Data Pagamento':        fmtData(o.data_pagamento),
+    'Descrição':             o.descricao || '',
+    'Obs. Resolução':        o.observacao_resolucao || '',
+  }))
+  addSheet(wb, XLSX, rowsOcVeics, 'Ocorrências Veículos')
+
+  // ── 13. ABAS MANUAIS (templates em branco) ────────────────────────────────
   const templatePCP = [
     { 'Processo/Item': '', 'Empresa/Contato': '', 'Status': '', 'Pendência': '', 'Prazo': '', 'Próxima Ação': '', 'Responsável (quem assume)': '', 'Observações': '' }
   ]
