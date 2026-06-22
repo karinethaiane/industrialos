@@ -7,6 +7,8 @@ import Veiculos from './veiculos'
 import Financeiro from './financeiro'
 import OneDock from './onedoc'
 import Patrimonio from './patrimonio'
+import Button from './components/Button'
+import Card from './components/Card'
 
 // ── Ícones ──────────────────────────────────────────────────────────────
 const IC = {
@@ -110,26 +112,7 @@ function Inicio({ onNavegar, tema, nomeUsuario }) {
         {modulos.map(m => {
           const cor = icCor(m.id) || { bg: 'var(--blue-dim)', color: 'var(--blue)' }
           return (
-            <div
-              key={m.id}
-              onClick={() => onNavegar(m.id)}
-              style={{
-                background: 'var(--surface)', border: '1px solid var(--border)',
-                borderRadius: 14, padding: '20px 18px', cursor: 'pointer',
-                transition: 'all .18s', display: 'flex', flexDirection: 'column', gap: 14,
-                boxShadow: '0 1px 4px var(--shadow)',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.transform = 'translateY(-3px)'
-                e.currentTarget.style.boxShadow = '0 10px 28px var(--shadow)'
-                e.currentTarget.style.borderColor = 'var(--border2)'
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.transform = ''
-                e.currentTarget.style.boxShadow = '0 1px 4px var(--shadow)'
-                e.currentTarget.style.borderColor = 'var(--border)'
-              }}
-            >
+            <Card key={m.id} onClick={() => onNavegar(m.id)} style={{ padding: '20px 18px', borderRadius: 14 }}>
               <div style={{ width: 44, height: 44, borderRadius: 12, background: cor.bg, color: cor.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 {IC[m.id]}
               </div>
@@ -137,7 +120,7 @@ function Inicio({ onNavegar, tema, nomeUsuario }) {
                 <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{m.nome}</div>
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3, lineHeight: 1.4 }}>{m.desc}</div>
               </div>
-            </div>
+            </Card>
           )
         })}
       </div>
@@ -148,14 +131,10 @@ function Inicio({ onNavegar, tema, nomeUsuario }) {
           Exportação de Dados
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <button
-            onClick={handleExportar}
-            disabled={exportando}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--green-dim)', color: 'var(--green)', border: '1px solid rgba(16,185,129,.25)', borderRadius: 10, padding: '11px 20px', fontWeight: 600, fontSize: 13, cursor: exportando ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: exportando ? .7 : 1 }}
-          >
+          <Button onClick={handleExportar} disabled={exportando} primary style={{ padding: '11px 20px', display: 'flex', alignItems: 'center', gap: 8 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             {exportando ? 'Exportando...' : 'Exportar tudo — Excel completo'}
-          </button>
+          </Button>
           {exportando && progressoExport && (
             <span style={{ fontSize: 12, color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>
               {progressoExport}
