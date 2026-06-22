@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
 
 const TIPOS = ['Memorando', 'TAA', 'Formulário', 'Parecer', 'TR']
-const COLABORADORES = ['Karine', 'João', 'Marina', 'Bruno', 'Luana', 'Ana', 'Carlos', 'Fernanda']
 const STATUS = ['pendente', 'assinado', 'cancelado']
 const STATUS_LABEL = { pendente: 'Pendente', assinado: 'Assinado', cancelado: 'Cancelado' }
 const STATUS_COR = { pendente: 'var(--amber)', assinado: 'var(--green)', cancelado: 'var(--muted)' }
@@ -58,14 +57,17 @@ const S = {
   input: { background: 'var(--surface2)', border: '1px solid var(--border2)', borderRadius: 7, padding: '9px 12px', color: 'var(--text)', fontSize: 13, outline: 'none', fontFamily: 'inherit', width: '100%' },
   fsel: { background: 'var(--surface2)', border: '1px solid var(--border2)', borderRadius: 7, padding: '9px 12px', color: 'var(--text)', fontSize: 13, outline: 'none', fontFamily: 'inherit', width: '100%', cursor: 'pointer' },
   textarea: { background: 'var(--surface2)', border: '1px solid var(--border2)', borderRadius: 7, padding: '9px 12px', color: 'var(--text)', fontSize: 13, outline: 'none', fontFamily: 'inherit', width: '100%', minHeight: 70, resize: 'vertical' },
+  sugestoes: { position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 18px rgba(0,0,0,.18)', zIndex: 2, maxHeight: 220, overflowY: 'auto' },
+  sugestaoItem: { width: '100%', textAlign: 'left', background: 'transparent', border: 'none', color: 'var(--text2)', padding: '9px 12px', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' },
   row: { display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 18 },
   erro: { background: 'var(--red-dim)', border: '1px solid rgba(239,68,68,.25)', borderRadius: 6, padding: '8px 12px', color: 'var(--red)', fontSize: 12, marginBottom: 10 },
 }
 
-const formVazio = { numero_1doc: '', tipo: 'Memorando', titulo_documento: '', solicitante: '', data_envio: '', prazo: '', status: 'pendente', observacoes: '' }
+const formVazio = { numero_1doc: '', tipo: 'Memorando', titulo_documento: '', solicitante: '', data_envio: '', status: 'pendente', observacoes: '' }
 
 export default function OneDock({ isAdmin = false }) {
   const [docs, setDocs] = useState([])
+  const [colaboradores, setColaboradores] = useState([])
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
   const [filtroStatus, setFiltroStatus] = useState('')
@@ -75,8 +77,12 @@ export default function OneDock({ isAdmin = false }) {
   const [form, setForm] = useState(formVazio)
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
+  const [mostrarSugestoes, setMostrarSugestoes] = useState(false)
 
-  useEffect(() => { carregar() }, [])
+  useEffect(() => {
+    carregar()
+    carregarColaboradores()
+  }, [])
 
   async function carregar() {
     setLoading(true)
@@ -85,13 +91,22 @@ export default function OneDock({ isAdmin = false }) {
     setLoading(false)
   }
 
-  function abrirNovo() { setEditando(null); setErro(''); setForm(formVazio); setModal(true) }
-  function abrirEditar(r) { setEditando(r); setErro(''); setForm({ numero_1doc: r.numero_1doc, tipo: r.tipo || 'Memorando', titulo_documento: r.empresa || '', solicitante: r.solicitante || '', data_envio: r.data_envio || '', prazo: r.prazo || '', status: r.status, observacoes: r.observacoes || '' }); setModal(true) }
+  async function carregarColaboradores() {
+    const { data } = await supabase
+      .from('colaboradores')
+      .select('id, nome')
+      .eq('ativo', true)
+      .order('nome')
+    setColaboradores(data || [])
+  }
+
+  function abrirNovo() { setEditando(null); setErro(''); setForm(formVazio); setMostrarSugestoes(false); setModal(true) }
+  function abrirEditar(r) { setEditando(r); setErro(''); setForm({ numero_1doc: r.numero_1doc, tipo: r.tipo || 'Memorando', titulo_documento: r.empresa || '', solicitante: r.solicitante || '', data_envio: r.data_envio || '', status: r.status, observacoes: r.observacoes || '' }); setMostrarSugestoes(false); setModal(true) }
 
   async function salvar() {
     if (!form.numero_1doc.trim()) { setErro('Número 1Doc é obrigatório.'); return }
     setSalvando(true); setErro('')
-    const dados = { numero_1doc: form.numero_1doc.trim(), tipo: form.tipo || 'Memorando', empresa: form.titulo_documento || null, solicitante: form.solicitante || null, data_envio: form.data_envio || null, prazo: form.prazo || null, status: form.status, observacoes: form.observacoes || null }
+    const dados = { numero_1doc: form.numero_1doc.trim(), tipo: form.tipo || 'Memorando', empresa: form.titulo_documento || null, solicitante: form.solicitante || null, data_envio: form.data_envio || null, status: form.status, observacoes: form.observacoes || null }
     let error
     if (editando) { ({ error } = await supabase.from('documentos_1doc').update(dados).eq('id', editando.id)) }
     else { ({ error } = await supabase.from('documentos_1doc').insert(dados)) }
@@ -107,6 +122,10 @@ export default function OneDock({ isAdmin = false }) {
     if (busca) { const b = busca.toLowerCase(); return r.numero_1doc?.toLowerCase().includes(b) || r.empresa?.toLowerCase().includes(b) || r.solicitante?.toLowerCase().includes(b) || r.tipo?.toLowerCase().includes(b) }
     return true
   })
+
+  const sugestoesSolicitante = (form.solicitante || '')
+    ? colaboradores.filter(c => c.nome.toLowerCase().includes(form.solicitante.toLowerCase())).slice(0, 6)
+    : colaboradores.slice(0, 6)
 
   const pendentes = docs.filter(d => d.status === 'pendente').length
   const assinados = docs.filter(d => d.status === 'assinado').length
@@ -222,14 +241,32 @@ export default function OneDock({ isAdmin = false }) {
             <div style={S.fieldRow}>
               <div style={S.field}>
                 <label style={S.label}>Solicitante</label>
-                <input style={S.input} value={form.solicitante} onChange={e => setForm({ ...form, solicitante: e.target.value })} placeholder="Digite o nome ou escolha uma sugestão" list="solicitantes" />
-                <datalist id="solicitantes">{COLABORADORES.map(n => <option key={n} value={n} />)}</datalist>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    style={S.input}
+                    value={form.solicitante}
+                    onChange={e => { setForm({ ...form, solicitante: e.target.value }); setMostrarSugestoes(true) }}
+                    onFocus={() => setMostrarSugestoes(true)}
+                    onBlur={() => setTimeout(() => setMostrarSugestoes(false), 120)}
+                    placeholder="Digite o nome ou escolha uma sugestão"
+                  />
+                  {mostrarSugestoes && sugestoesSolicitante.length > 0 && (
+                    <div style={S.sugestoes}>
+                      {sugestoesSolicitante.map(c => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          style={S.sugestaoItem}
+                          onMouseDown={() => { setForm({ ...form, solicitante: c.nome }); setMostrarSugestoes(false) }}
+                        >
+                          {c.nome}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               <div style={S.field}><label style={S.label}>Data de Envio</label><input type="date" style={S.input} value={form.data_envio} onChange={e => setForm({ ...form, data_envio: e.target.value })} /></div>
-            </div>
-            <div style={S.fieldRow}>
-              <div style={S.field}><label style={S.label}>Prazo</label><input type="date" style={S.input} value={form.prazo} onChange={e => setForm({ ...form, prazo: e.target.value })} /></div>
-              <div style={S.field} />
             </div>
             <div style={S.field}><label style={S.label}>Observações</label><textarea style={S.textarea} value={form.observacoes} onChange={e => setForm({ ...form, observacoes: e.target.value })} placeholder="Anotações relevantes..." /></div>
             <div style={S.row}><button style={S.btnSm} onClick={() => setModal(false)}>Cancelar</button><button style={S.btn} onClick={salvar} disabled={salvando}>{salvando ? 'Salvando...' : 'Salvar'}</button></div>
