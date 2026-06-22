@@ -6,13 +6,11 @@ import Colaboradores from './colaboradores'
 import Veiculos from './veiculos'
 import Financeiro from './financeiro'
 import OneDock from './onedoc'
-import Consultoria from './consultoria'
 import Patrimonio from './patrimonio'
 
 // ── Ícones ──────────────────────────────────────────────────────────────
 const IC = {
   inicio:        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>,
-  consultoria:   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>,
   financeiro:    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
   patrimonio:    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>,
   epis:          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
@@ -27,7 +25,6 @@ const IC = {
 
 // ── Paleta dos ícones dos módulos ────────────────────────────────────────
 const MOD_ICON_COR = {
-  consultoria:   { bg: 'rgba(99,102,241,.12)',  color: '#818cf8' },
   financeiro:    { bg: 'rgba(5,150,105,.12)',   color: '#34d399' },
   patrimonio:    { bg: 'rgba(217,119,6,.12)',   color: '#fbbf24' },
   colaboradores: { bg: 'rgba(124,58,237,.12)',  color: '#c4b5fd' },
@@ -37,7 +34,6 @@ const MOD_ICON_COR = {
 }
 // Light overrides
 const MOD_ICON_COR_LIGHT = {
-  consultoria:   { bg: '#eef2ff', color: '#6366f1' },
   financeiro:    { bg: '#ecfdf5', color: '#059669' },
   patrimonio:    { bg: '#fffbeb', color: '#d97706' },
   colaboradores: { bg: '#f5f3ff', color: '#7c3aed' },
