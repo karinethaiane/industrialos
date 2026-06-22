@@ -75,7 +75,7 @@ function Inicio({ onNavegar, tema, nomeUsuario }) {
   }
 
   const modulos = [
-    { id: 'consultoria',   nome: 'Consultoria',   desc: 'B+P, Sebraetec e Diretas' },
+   // { id: 'consultoria',   nome: 'Consultoria',   desc: 'B+P, Sebraetec e Diretas' },
     { id: 'financeiro',    nome: 'Financeiro',    desc: 'NFs e solicitações de pagamento' },
     { id: 'patrimonio',    nome: 'Patrimônio',    desc: 'Bens, ocorrências e calibrações' },
     { id: 'colaboradores', nome: 'Colaboradores', desc: 'Equipe, férias e controle' },
@@ -226,7 +226,7 @@ export default function App() {
 
   const navItems = [
     { id: 'inicio',       label: 'Início',       badge: null },
-    { id: 'consultoria',  label: 'Consultoria',  badge: null },
+   // { id: 'consultoria',  label: 'Consultoria',  badge: null },
     { id: 'financeiro',   label: 'Financeiro',   badge: null },
     { id: 'patrimonio',   label: 'Patrimônio',   badge: null },
     { id: 'epis',         label: 'EPIs',         badge: null },
@@ -353,7 +353,7 @@ export default function App() {
       {/* ── MAIN ──────────────────────────────────────────────────────── */}
       <main style={{ flex: 1, overflowY: 'auto', background: 'var(--bg)', minWidth: 0 }}>
         {pagina === 'inicio'        && <Inicio onNavegar={setPagina} tema={tema} nomeUsuario={nomeUsuario} />}
-        {pagina === 'consultoria'   && <Consultoria isAdmin={isAdmin} isEspecialista={isEspecialista} />}
+       // {pagina === 'consultoria'   && <Consultoria isAdmin={isAdmin} isEspecialista={isEspecialista} />}
         {pagina === 'financeiro'    && <Financeiro isAdmin={isAdmin} />}
         {pagina === 'patrimonio'    && <Patrimonio isAdmin={isAdmin} />}
         {pagina === 'epis'          && <Epis isAdmin={isAdmin} />}
