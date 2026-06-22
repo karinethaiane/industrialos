@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Protótipo Administrativo</title>
+  <style>
+    :root {
+      --bg: #f7f8fc;
+      --surface: #ffffff;
+      --surface-2: #f5f7fb;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --blue: #2563eb;
+      --blue-soft: #eff6ff;
+      --green: #16a34a;
+      --green-soft: #ecfdf3;
+      --amber: #d97706;
+      --amber-soft: #fffbeb;
+      --purple: #7c3aed;
+      --purple-soft: #f5f3ff;
+      --cyan: #0891b2;
+      --shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .app { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: 240px;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 18px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .logo { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; padding: 10px 14px; }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      color: #cbd5e1;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .nav-item.active { background: #1e293b; color: #fff; }
+    .content { flex: 1; padding: 28px; }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .title-wrap h1 { margin: 0; font-size: 24px; }
+    .title-wrap p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+    .btn-primary {
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 11px 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 16px; }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+    .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+    .stat-value { font-size: 28px; font-weight: 700; margin-top: 8px; }
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .search,
+    select,
+    input,
+    textarea {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+    }
+    .search { width: 340px; }
+    .pill {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .pill.active { background: var(--blue-soft); color: var(--blue); border-color: #bfdbfe; }
+    .tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .tab {
+      padding: 10px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--muted);
+    }
+    .tab.active {
+      background: var(--surface-2);
+      color: var(--text);
+      border-color: #cbd5e1;
+    }
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); font-size: 13px; }
+    th {
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .badge.blue { background: var(--blue-soft); color: var(--blue); }
+    .badge.green { background: var(--green-soft); color: var(--green); }
+    .badge.amber { background: var(--amber-soft); color: var(--amber); }
+    .badge.purple { background: var(--purple-soft); color: var(--purple); }
+    .badge.cyan { background: #ecfeff; color: var(--cyan); }
+    .actions { display: flex; gap: 6px; }
+    .btn-small {
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.65);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+    }
+    .modal.open { display: flex; }
+    .modal-card {
+      width: min(920px, 94vw);
+      background: #fff;
+      border-radius: 16px;
+      padding: 22px;
+      box-shadow: var(--shadow);
+      max-height: 92vh;
+      overflow-y: auto;
+    }
+    .modal h3 { margin: 0 0 16px; font-size: 18px; }
+    .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .field-row-3 { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 12px; }
+    textarea { min-height: 90px; resize: vertical; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
+    .chip-group { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip {
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .chip.selected {
+      background: var(--blue-soft);
+      color: var(--blue);
+      border-color: #bfdbfe;
+    }
+    .suggestion-box {
+      position: relative;
+    }
+    .suggestions {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      z-index: 5;
+      max-height: 180px;
+      overflow-y: auto;
+      display: none;
+    }
+    .suggestions div {
+      padding: 10px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--text);
+    }
+    .suggestions div:hover {
+      background: var(--surface-2);
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="logo">IndustrialOS</div>
+      <a class="nav-item" href="#">🏠 Início</a>
+      <a class="nav-item" href="#">💰 Financeiro</a>
+      <a class="nav-item" href="#">📦 Patrimônio</a>
+      <a class="nav-item active" href="#">🧾 Administrativo</a>
+      <a class="nav-item" href="#">👥 Colaboradores</a>
+    </aside>
+    <main class="content">
+      <div class="topbar">
+        <div class="title-wrap">
+          <h1>Administrativo</h1>
+          <p>Módulo de documentação e controle interno</p>
+        </div>
+        <button class="btn-primary" onclick="openModal()">+ Novo documento</button>
+      </div>
+
+      <section class="stats">
+        <div class="stat-card">
+          <div class="stat-label">Total</div>
+          <div class="stat-value">24</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">1Doc</div>
+          <div class="stat-value">10</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">TAA</div>
+          <div class="stat-value">5</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">TR</div>
+          <div class="stat-value">4</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Memorandos</div>
+          <div class="stat-value">5</div>
+        </div>
+      </section>
+
+      <div class="toolbar">
+        <input class="search" type="text" placeholder="Buscar por título, número, solicitante ou status..." />
+        <select>
+          <option>Todas as categorias</option>
+          <option>Memorando</option>
+          <option>TAA</option>
+          <option>TR</option>
+          <option>Formulário</option>
+          <option>Parecer</option>
+          <option>Outro</option>
+        </select>
+        <button class="pill active">Todos</button>
+        <button class="pill">Pendentes</button>
+        <button class="pill">Aprovados</button>
+        <button class="pill">Arquivados</button>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active">1Doc</button>
+      </div>
+
+      <section class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Número</th>
+              <th>Título do Documento</th>
+              <th>Solicitante</th>
+              <th>Data</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge blue">Memorando</span></td>
+              <td>MEM-2026/001</td>
+              <td>Ajuste de condições contratuais</td>
+              <td>Karine</td>
+              <td>22/06/2026</td>
+              <td><span class="badge amber">Pendente</span></td>
+              <td><div class="actions"><button class="btn-small">Abrir</button></div></td>
+            </tr>
+            <tr>
+              <td><span class="badge purple">TAA</span></td>
+              <td>TAA-2026/014</td>
+              <td>Referência para contratação</td>
+              <td>João</td>
+              <td>25/06/2026</td>
+              <td><span class="badge green">Aprovado</span></td>
+              <td><div class="actions"><button class="btn-small">Abrir</button></div></td>
+            </tr>
+            <tr>
+              <td><span class="badge cyan">TR</span></td>
+              <td>TR-2026/008</td>
+              <td>Orientação interna de apoio</td>
+              <td>Marina</td>
+              <td>28/06/2026</td>
+              <td><span class="badge blue">Arquivado</span></td>
+              <td><div class="actions"><button class="btn-small">Abrir</button></div></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+
+  <section class="modal" id="modal">
+    <div class="modal-card">
+      <h3>Novo documento</h3>
+      <div class="field-row-3">
+        <div class="field suggestion-box">
+          <label>Tipo de Documento</label>
+          <input id="tipoDocumentoInput" type="text" placeholder="Digite ou selecione o tipo" list="tiposBase" />
+          <datalist id="tiposBase">
+            <option>Memorando</option>
+            <option>TAA</option>
+            <option>Formulário</option>
+            <option>Parecer</option>
+            <option>TR</option>
+          </datalist>
+        </div>
+        <div class="field">
+          <label>Número</label>
+          <input type="text" placeholder="2026/00421" />
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <select>
+            <option>Pendente</option>
+            <option>Aprovado</option>
+            <option>Arquivado</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Título do Documento</label>
+        <input type="text" placeholder="Ex.: Ajuste de condições contratuais" />
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>Data de envio</label>
+          <input type="date" />
+        </div>
+        <div class="field">
+          <label>Prazo</label>
+          <input type="date" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Solicitante</label>
+        <div class="suggestion-box">
+          <input id="solicitanteInput" type="text" placeholder="Digite o nome ou escolha uma sugestão" />
+          <div class="suggestions" id="suggestions"></div>
+        </div>
+        <div class="chip-group" id="chipGroup">
+          <button class="chip selected" data-name="Karine">Karine</button>
+          <button class="chip" data-name="João">João</button>
+          <button class="chip" data-name="Marina">Marina</button>
+          <button class="chip" data-name="Bruno">Bruno</button>
+          <button class="chip" data-name="Luana">Luana</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Observações</label>
+        <textarea placeholder="Detalhes adicionais ou contexto do documento..."></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-small" onclick="closeModal()">Cancelar</button>
+        <button class="btn-primary">Salvar</button>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const colaboradores = ['Karine', 'João', 'Marina', 'Bruno', 'Luana', 'Ana', 'Carlos', 'Fernanda'];
+    const solicitanteInput = document.getElementById('solicitanteInput');
+    const suggestions = document.getElementById('suggestions');
+    const chipGroup = document.getElementById('chipGroup');
+
+    function openModal() {
+      document.getElementById('modal').classList.add('open');
+    }
+    function closeModal() {
+      document.getElementById('modal').classList.remove('open');
+    }
+
+    function atualizarSugestoes(valor) {
+      const termo = valor.toLowerCase();
+      const filtrados = colaboradores.filter(nome => nome.toLowerCase().includes(termo));
+      if (!termo || filtrados.length === 0) {
+        suggestions.style.display = 'none';
+        return;
+      }
+      suggestions.innerHTML = '';
+      filtrados.forEach(nome => {
+        const item = document.createElement('div');
+        item.textContent = nome;
+        item.addEventListener('click', () => {
+          solicitanteInput.value = nome;
+          suggestions.style.display = 'none';
+        });
+        suggestions.appendChild(item);
+      });
+      suggestions.style.display = 'block';
+    }
+
+    solicitanteInput.addEventListener('input', (e) => {
+      atualizarSugestoes(e.target.value);
+    });
+
+    solicitanteInput.addEventListener('focus', () => atualizarSugestoes(solicitanteInput.value));
+    solicitanteInput.addEventListener('blur', () => setTimeout(() => suggestions.style.display = 'none', 150));
+
+    chipGroup.querySelectorAll('.chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        chipGroup.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+        chip.classList.add('selected');
+        solicitanteInput.value = chip.dataset.name;
+      });
+    });
+  </script>
+</body>
+</html>

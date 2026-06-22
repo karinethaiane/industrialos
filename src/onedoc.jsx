@@ -1,11 +1,19 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
 
-const TIPOS = ['Relatório Final', 'FSF', 'Outro']
+const TIPOS = ['Memorando', 'TAA', 'Formulário', 'Parecer', 'TR']
+const COLABORADORES = ['Karine', 'João', 'Marina', 'Bruno', 'Luana', 'Ana', 'Carlos', 'Fernanda']
 const STATUS = ['pendente', 'assinado', 'cancelado']
 const STATUS_LABEL = { pendente: 'Pendente', assinado: 'Assinado', cancelado: 'Cancelado' }
 const STATUS_COR = { pendente: 'var(--amber)', assinado: 'var(--green)', cancelado: 'var(--muted)' }
-const TIPO_COR = { 'Relatório Final': 'var(--blue)', 'FSF': '#a78bfa', 'Outro': 'var(--cyan, #06b6d4)' }
+const TIPO_COR = {
+  Memorando: 'var(--blue)',
+  TAA: '#a78bfa',
+  Formulário: '#14b8a6',
+  Parecer: '#f59e0b',
+  TR: '#06b6d4',
+  Outro: 'var(--cyan, #06b6d4)'
+}
 
 function fmtData(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) }
 
@@ -54,7 +62,7 @@ const S = {
   erro: { background: 'var(--red-dim)', border: '1px solid rgba(239,68,68,.25)', borderRadius: 6, padding: '8px 12px', color: 'var(--red)', fontSize: 12, marginBottom: 10 },
 }
 
-const formVazio = { numero_1doc: '', tipo: 'Relatório Final', empresa: '', id_sgt: '', solicitante: '', data_envio: '', status: 'pendente', observacoes: '' }
+const formVazio = { numero_1doc: '', tipo: 'Memorando', titulo_documento: '', solicitante: '', data_envio: '', prazo: '', status: 'pendente', observacoes: '' }
 
 export default function OneDock({ isAdmin = false }) {
   const [docs, setDocs] = useState([])
@@ -78,12 +86,12 @@ export default function OneDock({ isAdmin = false }) {
   }
 
   function abrirNovo() { setEditando(null); setErro(''); setForm(formVazio); setModal(true) }
-  function abrirEditar(r) { setEditando(r); setErro(''); setForm({ numero_1doc: r.numero_1doc, tipo: r.tipo, empresa: r.empresa || '', id_sgt: r.id_sgt || '', solicitante: r.solicitante || '', data_envio: r.data_envio || '', status: r.status, observacoes: r.observacoes || '' }); setModal(true) }
+  function abrirEditar(r) { setEditando(r); setErro(''); setForm({ numero_1doc: r.numero_1doc, tipo: r.tipo || 'Memorando', titulo_documento: r.empresa || '', solicitante: r.solicitante || '', data_envio: r.data_envio || '', prazo: r.prazo || '', status: r.status, observacoes: r.observacoes || '' }); setModal(true) }
 
   async function salvar() {
     if (!form.numero_1doc.trim()) { setErro('Número 1Doc é obrigatório.'); return }
     setSalvando(true); setErro('')
-    const dados = { numero_1doc: form.numero_1doc.trim(), tipo: form.tipo, empresa: form.empresa || null, id_sgt: form.id_sgt || null, solicitante: form.solicitante || null, data_envio: form.data_envio || null, status: form.status, observacoes: form.observacoes || null }
+    const dados = { numero_1doc: form.numero_1doc.trim(), tipo: form.tipo || 'Memorando', empresa: form.titulo_documento || null, solicitante: form.solicitante || null, data_envio: form.data_envio || null, prazo: form.prazo || null, status: form.status, observacoes: form.observacoes || null }
     let error
     if (editando) { ({ error } = await supabase.from('documentos_1doc').update(dados).eq('id', editando.id)) }
     else { ({ error } = await supabase.from('documentos_1doc').insert(dados)) }
@@ -96,7 +104,7 @@ export default function OneDock({ isAdmin = false }) {
 
   const filtrados = docs.filter(r => {
     if (filtroStatus && r.status !== filtroStatus) return false
-    if (busca) { const b = busca.toLowerCase(); return r.numero_1doc?.toLowerCase().includes(b) || r.empresa?.toLowerCase().includes(b) || r.solicitante?.toLowerCase().includes(b) || r.id_sgt?.toLowerCase().includes(b) }
+    if (busca) { const b = busca.toLowerCase(); return r.numero_1doc?.toLowerCase().includes(b) || r.empresa?.toLowerCase().includes(b) || r.solicitante?.toLowerCase().includes(b) || r.tipo?.toLowerCase().includes(b) }
     return true
   })
 
@@ -110,8 +118,8 @@ export default function OneDock({ isAdmin = false }) {
     <div style={S.wrap}>
       <div style={S.header}>
         <div>
-          <div style={S.title}>1Doc</div>
-          <div style={S.sub}>Controle de documentos enviados para assinatura</div>
+          <div style={S.title}>Administrativo</div>
+          <div style={S.sub}>1Doc e documentos internos</div>
         </div>
         {isAdmin && (
           <button style={S.btn} onClick={abrirNovo}>
@@ -132,7 +140,7 @@ export default function OneDock({ isAdmin = false }) {
       </div>
 
       <div style={S.toolbar}>
-        <input style={S.search} placeholder="Buscar número 1Doc, empresa, solicitante..." value={busca} onChange={e => setBusca(e.target.value)} />
+        <input style={S.search} placeholder="Buscar número, título, solicitante ou tipo..." value={busca} onChange={e => setBusca(e.target.value)} />
         <button style={S.filtro(!filtroStatus)} onClick={() => setFiltroStatus('')}>Todos</button>
         {STATUS.map(s => <button key={s} style={S.filtro(filtroStatus === s)} onClick={() => setFiltroStatus(s)}>{STATUS_LABEL[s]}</button>)}
       </div>
@@ -140,11 +148,11 @@ export default function OneDock({ isAdmin = false }) {
       <div style={S.tableWrap}>
         <table style={S.table}>
           <thead><tr>
-            <th style={S.th}>Nº 1Doc</th>
+            <th style={S.th}>Nº</th>
             <th style={S.th}>Tipo</th>
-            <th style={S.th}>Empresa / ID SGT</th>
+            <th style={S.th}>Título do Documento</th>
             <th style={S.th}>Solicitante</th>
-            <th style={S.th}>Data Envio</th>
+            <th style={S.th}>Data</th>
             <th style={S.th}>Status</th>
             <th style={S.th}></th>
           </tr></thead>
@@ -153,10 +161,7 @@ export default function OneDock({ isAdmin = false }) {
               <tr key={r.id} {...trHover} style={{ borderBottom: i === filtrados.length - 1 ? 'none' : undefined }}>
                 <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', color: 'var(--blue)', fontWeight: 500 }}>{r.numero_1doc}</td>
                 <td style={S.td}>{tipoBadge(r.tipo)}</td>
-                <td style={S.td}>
-                  <span style={{ color: 'var(--text)', fontWeight: 500 }}>{r.empresa || '—'}</span>
-                  {r.id_sgt && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: 'var(--muted)', marginLeft: 6 }}>· {r.id_sgt}</span>}
-                </td>
+                <td style={S.td}>{r.empresa || '—'}</td>
                 <td style={S.td}>{r.solicitante || '—'}</td>
                 <td style={{ ...S.td, fontFamily: 'DM Mono, monospace', fontSize: 12 }}>{fmtData(r.data_envio)}</td>
                 <td style={S.td}>{statusBadge(r.status)}</td>
@@ -197,20 +202,34 @@ export default function OneDock({ isAdmin = false }) {
       {modal && (
         <div style={S.modal} onClick={e => e.target === e.currentTarget && setModal(false)}>
           <div style={S.modalBox}>
-            <div style={S.modalTitle}>{editando ? 'Editar Documento' : 'Novo Documento 1Doc'}</div>
+            <div style={S.modalTitle}>{editando ? 'Editar Documento' : 'Novo Documento'}</div>
             {erro && <div style={S.erro}>{erro}</div>}
             <div style={S.fieldRow}>
-              <div style={S.field}><label style={S.label}>Nº 1Doc *</label><input style={S.input} value={form.numero_1doc} onChange={e => setForm({ ...form, numero_1doc: e.target.value })} placeholder="2026/00421" /></div>
+              <div style={S.field}><label style={S.label}>Nº *</label><input style={S.input} value={form.numero_1doc} onChange={e => setForm({ ...form, numero_1doc: e.target.value })} placeholder="2026/00421" /></div>
               <div style={S.field}><label style={S.label}>Status</label><select style={S.fsel} value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>{STATUS.map(s => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}</select></div>
             </div>
-            <div style={S.field}><label style={S.label}>Tipo de Documento</label><select style={S.fsel} value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })}>{TIPOS.map(t => <option key={t}>{t}</option>)}</select></div>
             <div style={S.fieldRow}>
-              <div style={S.field}><label style={S.label}>Empresa</label><input style={S.input} value={form.empresa} onChange={e => setForm({ ...form, empresa: e.target.value })} placeholder="Nome da empresa" /></div>
-              <div style={S.field}><label style={S.label}>ID SGT</label><input style={S.input} value={form.id_sgt} onChange={e => setForm({ ...form, id_sgt: e.target.value })} placeholder="713154" /></div>
+              <div style={S.field}>
+                <label style={S.label}>Tipo de Documento</label>
+                <input style={S.input} value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })} placeholder="Digite ou escolha um tipo" list="tipos-documento" />
+                <datalist id="tipos-documento">{TIPOS.map(t => <option key={t} value={t} />)}</datalist>
+              </div>
+              <div style={S.field}>
+                <label style={S.label}>Título do Documento</label>
+                <input style={S.input} value={form.titulo_documento} onChange={e => setForm({ ...form, titulo_documento: e.target.value })} placeholder="Ex.: Ajuste de condições contratuais" />
+              </div>
             </div>
             <div style={S.fieldRow}>
-              <div style={S.field}><label style={S.label}>Solicitante</label><input style={S.input} value={form.solicitante} onChange={e => setForm({ ...form, solicitante: e.target.value })} placeholder="Quem solicitou" /></div>
+              <div style={S.field}>
+                <label style={S.label}>Solicitante</label>
+                <input style={S.input} value={form.solicitante} onChange={e => setForm({ ...form, solicitante: e.target.value })} placeholder="Digite o nome ou escolha uma sugestão" list="solicitantes" />
+                <datalist id="solicitantes">{COLABORADORES.map(n => <option key={n} value={n} />)}</datalist>
+              </div>
               <div style={S.field}><label style={S.label}>Data de Envio</label><input type="date" style={S.input} value={form.data_envio} onChange={e => setForm({ ...form, data_envio: e.target.value })} /></div>
+            </div>
+            <div style={S.fieldRow}>
+              <div style={S.field}><label style={S.label}>Prazo</label><input type="date" style={S.input} value={form.prazo} onChange={e => setForm({ ...form, prazo: e.target.value })} /></div>
+              <div style={S.field} />
             </div>
             <div style={S.field}><label style={S.label}>Observações</label><textarea style={S.textarea} value={form.observacoes} onChange={e => setForm({ ...form, observacoes: e.target.value })} placeholder="Anotações relevantes..." /></div>
             <div style={S.row}><button style={S.btnSm} onClick={() => setModal(false)}>Cancelar</button><button style={S.btn} onClick={salvar} disabled={salvando}>{salvando ? 'Salvando...' : 'Salvar'}</button></div>

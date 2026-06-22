@@ -77,7 +77,7 @@ function Inicio({ onNavegar, tema, nomeUsuario }) {
     { id: 'colaboradores', nome: 'Colaboradores', desc: 'Equipe, férias e controle' },
     { id: 'epis',          nome: 'EPIs',          desc: 'Equipamentos de proteção' },
     { id: 'veiculos',      nome: 'Veículos',      desc: 'Frota e controle de uso' },
-    { id: 'onedoc',        nome: '1Doc',          desc: 'Documentos e contratos' },
+    { id: 'onedoc',        nome: 'Administrativo', desc: '1Doc e documentação administrativa' },
   ]
 
   const isDark = tema === 'dark'
@@ -227,7 +227,7 @@ export default function App() {
     { id: 'patrimonio',   label: 'Patrimônio',   badge: null },
     { id: 'epis',         label: 'EPIs',         badge: null },
     { id: 'veiculos',     label: 'Veículos',     badge: null },
-    { id: 'onedoc',       label: '1Doc',         badge: null },
+    { id: 'onedoc',       label: 'Administrativo', badge: null },
     ...(isAdmin ? [{ id: 'colaboradores', label: 'Colaboradores', badge: null }] : []),
   ]
 
