@@ -66,7 +66,7 @@ const STATUS_PAG_COR = {
   concluido:                   'var(--green)',
   cancelado:                   'var(--muted)',
 }
-const STATUS_RESPONSAVEL = {
+const STATUS_GRUPO_AREA = {
   aguardando_abertura_chamado: 'Solicitante',
   em_andamento:                'Financeiro',
   ajustes:                     'Solicitante',
@@ -74,8 +74,8 @@ const STATUS_RESPONSAVEL = {
   concluido:                   'Financeiro',
   cancelado:                   'Financeiro',
 }
-const RESPONSAVEL_COR    = { Financeiro: 'var(--blue)', Solicitante: 'var(--amber)', 'Gerência': 'var(--red)' }
-const RESPONSAVEIS_LISTA = [...new Set(Object.values(STATUS_RESPONSAVEL))]
+const GRUPO_AREA_COR    = { Financeiro: 'var(--blue)', Solicitante: 'var(--amber)', 'Gerência': 'var(--red)' }
+const GRUPOS_AREAS_LISTA = [...new Set(Object.values(STATUS_GRUPO_AREA))]
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmtData(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) }
@@ -90,9 +90,12 @@ function statusPagBadge(s) {
   return <span style={{ background: `${cor}18`, color: cor, padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>● {STATUS_PAG_LABEL[s] || s}</span>
 }
 function responsavelBadge(s) {
-  const resp = STATUS_RESPONSAVEL[s] || '—'
-  const cor  = RESPONSAVEL_COR[resp]  || 'var(--muted)'
+  const resp = STATUS_GRUPO_AREA[s] || '—'
+  const cor  = GRUPO_AREA_COR[resp]  || 'var(--muted)'
   return <span style={{ background: `${cor}12`, color: cor, padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{resp}</span>
+}
+function grupoAreaBadge(s) {
+  return responsavelBadge(s)
 }
 function origemBadge(origem) {
   if (!origem) return null
@@ -107,7 +110,7 @@ function origemBadge(origem) {
 
 // ── Formulários vazios ─────────────────────────────────────────────────────────
 const NF_VAZIO     = { id_sgt: '', empresa: '', status_sgt: 'Em execução', data_conclusao_sgt: '', consultor: '', nf_boleto_enviado: false, data_solicitacao_envio: '', numero_nf: '', valor_parcela: '', numero_parcelas: 1, observacoes: '' }
-const PAG_VAZIO    = { numero_chamado: '', tipo_tarefa: 'Solicitação de Pagamento', solicitante: '', numero_nf_boleto_al: '', descricao: '', razao_social: '', status: 'aguardando_abertura_chamado', valor: '', previsao_pagamento: '', observacoes: '' }
+const PAG_VAZIO    = { numero_chamado: '', solicitante: '', responsavel: '', numero_nf_boleto_al: '', descricao: '', razao_social: '', status: 'aguardando_abertura_chamado', valor: '', previsao_pagamento: '', observacoes: '' }
 const DIARIA_VAZIO = { numero_chamado: '', op: '', solicitante: '', destino: '', data_inicio: '', data_fim: '', status: 'aguardando_abertura_chamado', valor: '', previsao_pagamento: '', descricao: '', observacoes: '', hospedagem: false, voucher_recebido: false, passagem_aerea: 'nao', chamado_hospedagem: '' }
 
 export default function Financeiro({ isAdmin = false }) {
@@ -117,6 +120,7 @@ export default function Financeiro({ isAdmin = false }) {
   const [diarias, setDiarias]       = useState([])
   const [loading, setLoading]       = useState(true)
   const [busca, setBusca]               = useState('')
+  const [buscaCampo, setBuscaCampo]     = useState('')
   const [filtroStatus, setFiltroStatus] = useState('')
   const [filtroResp, setFiltroResp]     = useState('')
 
@@ -192,12 +196,12 @@ export default function Financeiro({ isAdmin = false }) {
   function abrirNovoPag()    { setEditandoPag(null); setErro(''); setFormPag(PAG_VAZIO); setModalPag(true) }
   function abrirEditarPag(r) {
     setEditandoPag(r); setErro('')
-    setFormPag({ numero_chamado: r.numero_chamado || '', tipo_tarefa: r.tipo_tarefa || 'Solicitação de Pagamento', solicitante: r.solicitante || '', numero_nf_boleto_al: r.numero_nf_boleto_al || '', descricao: r.descricao || '', razao_social: r.razao_social || '', status: r.status || 'aguardando_abertura_chamado', valor: r.valor || '', previsao_pagamento: r.previsao_pagamento || '', observacoes: r.observacoes || '' })
+    setFormPag({ numero_chamado: r.numero_chamado || '', solicitante: r.solicitante || '', responsavel: r.responsavel || '', numero_nf_boleto_al: r.numero_nf_boleto_al || '', descricao: r.descricao || '', razao_social: r.razao_social || '', status: r.status || 'aguardando_abertura_chamado', valor: r.valor || '', previsao_pagamento: r.previsao_pagamento || '', observacoes: r.observacoes || '' })
     setModalPag(true)
   }
   async function salvarPag() {
     setSalvando(true); setErro('')
-    const dados = { numero_chamado: formPag.numero_chamado.trim() || null, tipo_tarefa: formPag.tipo_tarefa, solicitante: formPag.solicitante || null, numero_nf_boleto_al: formPag.numero_nf_boleto_al || null, descricao: formPag.descricao || null, razao_social: formPag.razao_social || null, status: formPag.status, valor: parseFloat(formPag.valor) || null, previsao_pagamento: formPag.previsao_pagamento || null, observacoes: formPag.observacoes || null }
+    const dados = { numero_chamado: formPag.numero_chamado.trim() || null, solicitante: formPag.solicitante || null, responsavel: formPag.responsavel || null, numero_nf_boleto_al: formPag.numero_nf_boleto_al || null, descricao: formPag.descricao || null, razao_social: formPag.razao_social || null, status: formPag.status, valor: parseFloat(formPag.valor) || null, previsao_pagamento: formPag.previsao_pagamento || null, observacoes: formPag.observacoes || null }
     let error
     if (editandoPag) { ({ error } = await supabase.from('solicitacoes_pagamento').update(dados).eq('id', editandoPag.id)) }
     else             { ({ error } = await supabase.from('solicitacoes_pagamento').insert(dados)) }
@@ -243,13 +247,25 @@ export default function Financeiro({ isAdmin = false }) {
   })
   const pagamentosFiltrados = pagamentos.filter(r => {
     if (filtroStatus && r.status !== filtroStatus) return false
-    if (filtroResp && (STATUS_RESPONSAVEL[r.status] || '') !== filtroResp) return false
-    if (busca) { const b = busca.toLowerCase(); return (r.numero_chamado || '').toLowerCase().includes(b) || (r.razao_social || '').toLowerCase().includes(b) || (r.solicitante || '').toLowerCase().includes(b) }
+    if (filtroResp && (STATUS_GRUPO_AREA[r.status] || '') !== filtroResp) return false
+    if (busca) {
+      const b = busca.toLowerCase()
+      const statusLabel = (STATUS_PAG_LABEL[r.status] || r.status || '').toLowerCase()
+      switch (buscaCampo) {
+        case 'numero_chamado': return (r.numero_chamado || '').toLowerCase().includes(b)
+        case 'numero_nf_boleto_al': return (r.numero_nf_boleto_al || '').toLowerCase().includes(b)
+        case 'razao_social': return (r.razao_social || '').toLowerCase().includes(b)
+        case 'status': return statusLabel.includes(b)
+        case 'responsavel': return (r.responsavel || '').toLowerCase().includes(b)
+        case 'solicitante': return (r.solicitante || '').toLowerCase().includes(b)
+        default: return (r.numero_chamado || '').toLowerCase().includes(b) || (r.numero_nf_boleto_al || '').toLowerCase().includes(b) || (r.razao_social || '').toLowerCase().includes(b) || (r.solicitante || '').toLowerCase().includes(b) || statusLabel.includes(b) || (r.responsavel || '').toLowerCase().includes(b)
+      }
+    }
     return true
   })
   const diariasFiltradas = diarias.filter(r => {
     if (filtroStatus && r.status !== filtroStatus) return false
-    if (filtroResp && (STATUS_RESPONSAVEL[r.status] || '') !== filtroResp) return false
+    if (filtroResp && (STATUS_GRUPO_AREA[r.status] || '') !== filtroResp) return false
     if (filtroSolicitante && r.solicitante !== filtroSolicitante) return false
     if (filtroHospedagem === 'sim' && !r.hospedagem) return false
     if (filtroHospedagem === 'nao' && r.hospedagem) return false
@@ -270,10 +286,10 @@ export default function Financeiro({ isAdmin = false }) {
 
   const filtroRespRow = (
     <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'center' }}>
-      <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>Responsável:</span>
+      <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>Grupo/Área:</span>
       <button style={S.filtro(!filtroResp)} onClick={() => setFiltroResp('')}>Todos</button>
-      {RESPONSAVEIS_LISTA.map(r => {
-        const cor = RESPONSAVEL_COR[r] || 'var(--muted)'
+      {GRUPOS_AREAS_LISTA.map(r => {
+        const cor = GRUPO_AREA_COR[r] || 'var(--muted)'
         const on  = filtroResp === r
         return <button key={r} onClick={() => setFiltroResp(r)} style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? `${cor}40` : 'var(--border2)'}`, background: on ? `${cor}18` : 'var(--subtle)', color: on ? cor : 'var(--text2)', fontFamily: 'inherit' }}>{r}</button>
       })}
@@ -384,16 +400,25 @@ export default function Financeiro({ isAdmin = false }) {
       {/* ══ ABA PAGAMENTOS ══ */}
       {aba === 'pag' && (<>
         <div style={S.toolbar}>
-          <input style={S.search} placeholder="Buscar chamado, razão social, solicitante..." value={busca} onChange={e => setBusca(e.target.value)} />
+              <select style={S.fselSm} value={buscaCampo} onChange={e => setBuscaCampo(e.target.value)}>
+            <option value="">Buscar em todos</option>
+            <option value="responsavel">Responsável</option>
+            <option value="numero_nf_boleto_al">NF / Boleto / AL</option>
+            <option value="numero_chamado">Chamado</option>
+            <option value="status">Status</option>
+            <option value="razao_social">Razão Social</option>
+            <option value="solicitante">Unidade</option>
+          </select>
+          <input style={S.search} placeholder="Buscar por chamado, razão social, unidade, responsável..." value={busca} onChange={e => setBusca(e.target.value)} />
           <button style={S.filtro(!filtroStatus)} onClick={() => setFiltroStatus('')}>Todos</button>
           {STATUS_PAG.map(s => <button key={s} style={S.filtro(filtroStatus === s)} onClick={() => setFiltroStatus(s)}>{STATUS_PAG_LABEL[s]}</button>)}
         </div>
         {filtroRespRow}
         <div style={S.tableWrap}><table style={S.table}>
           <thead><tr>
-            <th style={S.th}>Chamado</th><th style={S.th}>Tipo de Tarefa</th><th style={S.th}>Solicitante</th>
+            <th style={S.th}>Chamado</th><th style={S.th}>Unidade</th>
             <th style={S.th}>Nº NF / Boleto / AL</th><th style={S.th}>Razão Social</th>
-            <th style={S.th}>Status</th><th style={S.th}>Responsável</th><th style={S.th}>Valor / Previsão</th>
+            <th style={S.th}>Status</th><th style={S.th}>Grupo/Área</th><th style={S.th}>Responsável</th><th style={S.th}>Valor / Previsão</th>
             {isAdmin && <th style={S.th}></th>}
           </tr></thead>
           <tbody>
@@ -402,12 +427,12 @@ export default function Financeiro({ isAdmin = false }) {
                 <td style={{ ...S.td, fontFamily: "'JetBrains Mono', monospace", color: 'var(--blue)', fontWeight: 500 }}>
                   {r.numero_chamado ? r.numero_chamado : <span style={{ color: 'var(--muted)', fontStyle: 'italic', fontSize: 11 }}>A abrir</span>}
                 </td>
-                <td style={S.td}>{r.tipo_tarefa}</td>
                 <td style={S.td}>{r.solicitante || '—'}</td>
                 <td style={{ ...S.td, fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: 'var(--purple)' }}>{r.numero_nf_boleto_al || '—'}</td>
                 <td style={{ ...S.td, color: 'var(--text)', fontWeight: 500, maxWidth: 180 }}><div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>{r.razao_social || '—'}{origemBadge(r.origem)}</div></td>
                 <td style={S.td}>{statusPagBadge(r.status)}</td>
-                <td style={S.td}>{responsavelBadge(r.status)}</td>
+                <td style={S.td}>{grupoAreaBadge(r.status)}</td>
+                <td style={S.td}>{r.responsavel || '—'}</td>
                 <td style={S.td}>
                   {r.valor ? (<div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12.5, color: 'var(--green)', fontWeight: 500 }}>{fmtVal(r.valor)}</span>
@@ -733,10 +758,10 @@ export default function Financeiro({ isAdmin = false }) {
               </div>
             </div>
             <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 7, padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 12, color: 'var(--muted)' }}>Responsável atual</span>{responsavelBadge(formPag.status)}
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>Grupo/Área atual</span>{grupoAreaBadge(formPag.status)}
             </div>
-            <div style={S.field}><label style={S.label}>Tipo de Tarefa</label><input style={S.input} value={formPag.tipo_tarefa} onChange={e => setFormPag({ ...formPag, tipo_tarefa: e.target.value })} /></div>
-            <div style={S.field}><label style={S.label}>Solicitante</label><input style={S.input} value={formPag.solicitante} onChange={e => setFormPag({ ...formPag, solicitante: e.target.value })} placeholder="Ex: IST - MPP - Energia" /></div>
+            <div style={S.field}><label style={S.label}>Unidade</label><input style={S.input} value={formPag.solicitante} onChange={e => setFormPag({ ...formPag, solicitante: e.target.value })} placeholder="Ex: IST - MPP - Energia" /></div>
+            <div style={S.field}><label style={S.label}>Responsável</label><input style={S.input} value={formPag.responsavel} onChange={e => setFormPag({ ...formPag, responsavel: e.target.value })} placeholder="Pessoa responsável pela abertura" /></div>
             <div style={S.fieldRow}>
               <div style={S.field}><label style={S.label}>Nº NF / Boleto / AL</label><input style={S.input} value={formPag.numero_nf_boleto_al} onChange={e => setFormPag({ ...formPag, numero_nf_boleto_al: e.target.value })} /></div>
               <div style={S.field}><label style={S.label}>Razão Social</label><input style={S.input} value={formPag.razao_social} onChange={e => setFormPag({ ...formPag, razao_social: e.target.value })} /></div>
@@ -838,7 +863,7 @@ export default function Financeiro({ isAdmin = false }) {
               <div style={S.field}><label style={S.label}>Valor (R$)</label><input type="number" step="0.01" style={S.input} value={formDiaria.valor} onChange={e => setFormDiaria({ ...formDiaria, valor: e.target.value })} placeholder="0,00" /></div>
             </div>
             <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 7, padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 12, color: 'var(--muted)' }}>Responsável atual</span>{responsavelBadge(formDiaria.status)}
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>Grupo/Área atual</span>{responsavelBadge(formDiaria.status)}
             </div>
             <div style={S.field}><label style={S.label}>Previsão de pagamento</label><input type="date" style={S.input} value={formDiaria.previsao_pagamento} onChange={e => setFormDiaria({ ...formDiaria, previsao_pagamento: e.target.value })} /></div>
             <div style={S.field}><label style={S.label}>Observações</label><textarea style={S.textarea} value={formDiaria.observacoes} onChange={e => setFormDiaria({ ...formDiaria, observacoes: e.target.value })} placeholder="Informações adicionais sobre a viagem..." /></div>
