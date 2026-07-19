@@ -196,12 +196,12 @@ export default function Financeiro({ isAdmin = false }) {
   function abrirNovoPag()    { setEditandoPag(null); setErro(''); setFormPag(PAG_VAZIO); setModalPag(true) }
   function abrirEditarPag(r) {
     setEditandoPag(r); setErro('')
-    setFormPag({ numero_chamado: r.numero_chamado || '', solicitante: r.solicitante || '', responsavel: r.responsavel || '', numero_nf_boleto_al: r.numero_nf_boleto_al || '', descricao: r.descricao || '', razao_social: r.razao_social || '', status: r.status || 'aguardando_abertura_chamado', valor: r.valor || '', previsao_pagamento: r.previsao_pagamento || '', observacoes: r.observacoes || '' })
+    setFormPag({ numero_chamado: r.numero_chamado || '', solicitante: r.solicitante || '', responsavel: r.responsavel || (r.tipo_tarefa && r.tipo_tarefa !== 'Solicitação de Pagamento' ? r.tipo_tarefa : ''), numero_nf_boleto_al: r.numero_nf_boleto_al || '', descricao: r.descricao || '', razao_social: r.razao_social || '', status: r.status || 'aguardando_abertura_chamado', valor: r.valor || '', previsao_pagamento: r.previsao_pagamento || '', observacoes: r.observacoes || '' })
     setModalPag(true)
   }
   async function salvarPag() {
     setSalvando(true); setErro('')
-    const dados = { numero_chamado: formPag.numero_chamado.trim() || null, solicitante: formPag.solicitante || null, responsavel: formPag.responsavel || null, numero_nf_boleto_al: formPag.numero_nf_boleto_al || null, descricao: formPag.descricao || null, razao_social: formPag.razao_social || null, status: formPag.status, valor: parseFloat(formPag.valor) || null, previsao_pagamento: formPag.previsao_pagamento || null, observacoes: formPag.observacoes || null }
+    const dados = { numero_chamado: formPag.numero_chamado.trim() || null, solicitante: formPag.solicitante || null, responsavel: formPag.responsavel || null, tipo_tarefa: 'Solicitação de Pagamento', numero_nf_boleto_al: formPag.numero_nf_boleto_al || null, descricao: formPag.descricao || null, razao_social: formPag.razao_social || null, status: formPag.status, valor: parseFloat(formPag.valor) || null, previsao_pagamento: formPag.previsao_pagamento || null, observacoes: formPag.observacoes || null }
     let error
     if (editandoPag) { ({ error } = await supabase.from('solicitacoes_pagamento').update(dados).eq('id', editandoPag.id)) }
     else             { ({ error } = await supabase.from('solicitacoes_pagamento').insert(dados)) }
@@ -251,14 +251,15 @@ export default function Financeiro({ isAdmin = false }) {
     if (busca) {
       const b = busca.toLowerCase()
       const statusLabel = (STATUS_PAG_LABEL[r.status] || r.status || '').toLowerCase()
+      const responsavelText = ((r.responsavel || '') || (r.tipo_tarefa && r.tipo_tarefa !== 'Solicitação de Pagamento' ? r.tipo_tarefa : '')).toLowerCase()
       switch (buscaCampo) {
         case 'numero_chamado': return (r.numero_chamado || '').toLowerCase().includes(b)
         case 'numero_nf_boleto_al': return (r.numero_nf_boleto_al || '').toLowerCase().includes(b)
         case 'razao_social': return (r.razao_social || '').toLowerCase().includes(b)
         case 'status': return statusLabel.includes(b)
-        case 'responsavel': return (r.responsavel || '').toLowerCase().includes(b)
+        case 'responsavel': return responsavelText.includes(b)
         case 'solicitante': return (r.solicitante || '').toLowerCase().includes(b)
-        default: return (r.numero_chamado || '').toLowerCase().includes(b) || (r.numero_nf_boleto_al || '').toLowerCase().includes(b) || (r.razao_social || '').toLowerCase().includes(b) || (r.solicitante || '').toLowerCase().includes(b) || statusLabel.includes(b) || (r.responsavel || '').toLowerCase().includes(b)
+        default: return (r.numero_chamado || '').toLowerCase().includes(b) || (r.numero_nf_boleto_al || '').toLowerCase().includes(b) || (r.razao_social || '').toLowerCase().includes(b) || (r.solicitante || '').toLowerCase().includes(b) || statusLabel.includes(b) || responsavelText.includes(b)
       }
     }
     return true
@@ -432,7 +433,7 @@ export default function Financeiro({ isAdmin = false }) {
                 <td style={{ ...S.td, color: 'var(--text)', fontWeight: 500, maxWidth: 180 }}><div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>{r.razao_social || '—'}{origemBadge(r.origem)}</div></td>
                 <td style={S.td}>{statusPagBadge(r.status)}</td>
                 <td style={S.td}>{grupoAreaBadge(r.status)}</td>
-                <td style={S.td}>{r.responsavel || '—'}</td>
+                <td style={S.td}>{r.responsavel || (r.tipo_tarefa && r.tipo_tarefa !== 'Solicitação de Pagamento' ? r.tipo_tarefa : '—')}</td>
                 <td style={S.td}>
                   {r.valor ? (<div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12.5, color: 'var(--green)', fontWeight: 500 }}>{fmtVal(r.valor)}</span>
