@@ -203,7 +203,9 @@ export default function Epis({ isAdmin = false }) {
     setHistorico(data || [])
   }
 
-  const ultimas = ultimasEntregas(epis)
+  const colaboradorIdsAtivos = new Set(colaboradores.map(c => c.id))
+  const episAtivos = epis.filter(e => colaboradorIdsAtivos.has(e.colaborador_id))
+  const ultimas = ultimasEntregas(episAtivos)
 
   const porColab = colaboradores.map(c => {
     const itens = ultimas.filter(e => e.colaborador_id === c.id)
