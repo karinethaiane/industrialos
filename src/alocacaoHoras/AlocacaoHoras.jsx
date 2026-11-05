@@ -462,10 +462,19 @@ export default function AlocacaoHoras({ isAdmin = false }) {
                   const cor = ST_COR[l.status], pctN = l.pct == null ? null : Math.round(l.pct)
                   const stTxt = l.status === 'afast' ? (l.nota.tag || 'Afastado') : ST_CURTO[l.status]
                   const gerCor = l.gerencia === GERENCIA_ALVO ? 'var(--teal)' : (l.gerencia.startsWith('TICs') ? 'var(--muted)' : 'var(--amber)')
+                  const origemBadge = l.fora ? 'Fora do PCP' : (l.gerencia === 'Não identificada' ? 'Não identificada' : null)
+                  const gerLabel = l.fora ? 'Sistema sem PCP' : l.gerencia
                   return (
-                    <tr key={l.id}>
-                      <td><span className="ger" style={{ color: gerCor }}>{l.gerencia}</span></td>
-                      <td className="nome">{l.nome}{l.mat ? <span className="mat">{l.mat}</span> : null}</td>
+                    <tr key={l.id} style={l.fora ? { background: 'rgba(245, 158, 11, 0.04)' } : undefined}>
+                      <td><span className="ger" style={{ color: l.fora ? 'var(--amber)' : gerCor }}>{gerLabel}</span></td>
+                      <td className="nome">
+                        {origemBadge && (
+                          <span className="badge" style={{ display: 'inline-block', marginBottom: 6, background: l.fora ? 'rgba(245,158,11,.12)' : 'rgba(239,68,68,.12)', color: l.fora ? 'var(--amber)' : 'var(--red)' }}>
+                            {origemBadge}
+                          </span>
+                        )}
+                        <div>{l.nome}{l.mat ? <span className="mat">{l.mat}</span> : null}</div>
+                      </td>
                       <td className="func">{l.funcao || '—'}</td>
                       <td className="num">{fmtH(l.planejado)}</td>
                       <td className="num" style={{ color: 'var(--text)', fontWeight: 500 }}>{fmtH(l.alocado)}</td>
@@ -554,7 +563,7 @@ export default function AlocacaoHoras({ isAdmin = false }) {
                 ['var(--teal)', `${Math.round(A.cov)}%`, 'Cobertura atual', A.covPrev == null ? '' : `${sinal(A.cov - A.covPrev)} pp`],
                 ['var(--blue)', A.n > 1 ? `${A.horasAdd >= 0 ? '+' : ''}${fmtH(A.horasAdd)}` : '—', 'Horas na última semana', ''],
                 ['var(--teal)', A.n > 1 ? A.comecaram : '—', 'Começaram a alocar', ''],
-                ['var(--amber)', A.c('stall'), 'Parados abaixo do plan.', ''],
+                ['var(--amber)', A.dist.abaixo, 'Abaixo do planejado', ''],
                 ['var(--red)', A.c('zero') + A.c('down'), 'Sem movimento / regrediram', ''],
                 ['var(--green)', A.c('ok'), 'Em dia', A.pes.length ? `${Math.round(A.c('ok') / A.pes.length * 100)}%` : ''],
               ]} />
