@@ -219,6 +219,17 @@ export default function AlocacaoHoras({ isAdmin = false }) {
     return () => document.removeEventListener('keydown', f)
   }, [])
 
+  async function registrarPosicaoAtual(dataOverride = null) {
+    if (!pcp || !rel || !ymAtivo) return
+    const data = dataOverride || dataRel || hojeISO()
+    const notasDoMes = evYmAtivo === ymAtivo ? notas : await arm.carregarNotas(ymAtivo)
+    const rows = capturar({ pcp, rel, ym: ymAtivo, tol, notas: notasDoMes })
+    await arm.salvarSnap(ymAtivo, data, rows)
+    setSnaps(await arm.carregarSnaps(ymAtivo))
+    setDataSnap(data)
+    setModoLocal(arm.estaEmModoLocal())
+  }
+
   // ── importação ────────────────────────────────────────────────────────────
   async function importar(tipo, file) {
     setResImp(r => ({ ...r, [tipo]: { ok: null, msg: 'Processando…' } }))
@@ -232,12 +243,14 @@ export default function AlocacaoHoras({ isAdmin = false }) {
         setPcp(p); setFonte(f => ({ ...f, pcp: file.name }))
         const n = p.rows.filter(r => r.gerencia === GERENCIA_ALVO).length
         setResImp(r => ({ ...r, pcp: { ok: true, msg: `✓ ${file.name} · ${p.rows.length} colaboradores (${n} em ${GERENCIA_ALVO}) · ${Object.keys(p.labels).length} meses` } }))
+        if (rel && ymAtivo) await registrarPosicaoAtual(dataRel || hojeISO())
       } else {
         const m = interpretarRelatorio(linhas)
         const d = dataDoArquivo(file)
         MEMORIA.rel = m; MEMORIA.fonte = { ...MEMORIA.fonte, rel: file.name }; MEMORIA.dataRel = d
         setRel(m); setFonte(f => ({ ...f, rel: file.name })); setDataRel(d); setDataSnap('')
         setResImp(r => ({ ...r, rel: { ok: true, msg: `✓ ${file.name} · ${m.total.toLocaleString('pt-BR')} lançamentos · ${m.users.size} colaboradores · ${m.meses.size} meses (${((performance.now() - t0) / 1000).toFixed(1)}s)` } }))
+        if (pcp && ymAtivo) await registrarPosicaoAtual(d)
       }
     } catch (err) {
       console.error(err)
