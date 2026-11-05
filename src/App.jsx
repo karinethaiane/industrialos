@@ -5,14 +5,19 @@ import Epis from './epis'
 import Colaboradores from './colaboradores'
 import Veiculos from './veiculos'
 import Financeiro from './financeiro'
-import OneDock from './onedoc'
+import Administrativo from './alocacao'
 import Patrimonio from './patrimonio'
+import Consultoria from './consultoria'
 import Button from './components/Button'
 import Card from './components/Card'
+
+// Módulo Consultoria: só aparece rodando em localhost (mesma regra usada em consultoria.jsx p/ a API de cronograma)
+const IS_LOCAL = window.location.hostname === 'localhost'
 
 // ── Ícones ──────────────────────────────────────────────────────────────
 const IC = {
   inicio:        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>,
+  consultoria:   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
   financeiro:    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
   patrimonio:    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>,
   epis:          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
@@ -27,6 +32,7 @@ const IC = {
 
 // ── Paleta dos ícones dos módulos ────────────────────────────────────────
 const MOD_ICON_COR = {
+  consultoria:   { bg: 'rgba(8,145,178,.12)',   color: '#67e8f9' },
   financeiro:    { bg: 'rgba(5,150,105,.12)',   color: '#34d399' },
   patrimonio:    { bg: 'rgba(217,119,6,.12)',   color: '#fbbf24' },
   colaboradores: { bg: 'rgba(124,58,237,.12)',  color: '#c4b5fd' },
@@ -36,6 +42,7 @@ const MOD_ICON_COR = {
 }
 // Light overrides
 const MOD_ICON_COR_LIGHT = {
+  consultoria:   { bg: '#ecfeff', color: '#0891b2' },
   financeiro:    { bg: '#ecfdf5', color: '#059669' },
   patrimonio:    { bg: '#fffbeb', color: '#d97706' },
   colaboradores: { bg: '#f5f3ff', color: '#7c3aed' },
@@ -73,7 +80,7 @@ function Inicio({ onNavegar, tema, nomeUsuario }) {
   }
 
   const modulos = [
-   // { id: 'consultoria',   nome: 'Consultoria',   desc: 'B+P, Sebraetec e Diretas' },
+    ...(IS_LOCAL ? [{ id: 'consultoria', nome: 'Consultoria', desc: 'B+P, Sebraetec e Diretas' }] : []),
     { id: 'financeiro',    nome: 'Financeiro',    desc: 'NFs e solicitações de pagamento' },
     { id: 'patrimonio',    nome: 'Patrimônio',    desc: 'Bens, ocorrências e calibrações' },
     { id: 'colaboradores', nome: 'Colaboradores', desc: 'Equipe, férias e controle' },
@@ -201,7 +208,7 @@ export default function App() {
 
   const navItems = [
     { id: 'inicio',       label: 'Início',       badge: null },
-   // { id: 'consultoria',  label: 'Consultoria',  badge: null },
+    ...(IS_LOCAL ? [{ id: 'consultoria', label: 'Consultoria', badge: null }] : []),
     { id: 'financeiro',   label: 'Financeiro',   badge: null },
     { id: 'patrimonio',   label: 'Patrimônio',   badge: null },
     { id: 'epis',         label: 'EPIs',         badge: null },
@@ -328,12 +335,12 @@ export default function App() {
       {/* ── MAIN ──────────────────────────────────────────────────────── */}
       <main style={{ flex: 1, overflowY: 'auto', background: 'var(--bg)', minWidth: 0 }}>
         {pagina === 'inicio'        && <Inicio onNavegar={setPagina} tema={tema} nomeUsuario={nomeUsuario} />}
-       // {pagina === 'consultoria'   && <Consultoria isAdmin={isAdmin} isEspecialista={isEspecialista} />}
+        {IS_LOCAL && pagina === 'consultoria' && <Consultoria isAdmin={isAdmin} isEspecialista={isEspecialista} />}
         {pagina === 'financeiro'    && <Financeiro isAdmin={isAdmin} />}
         {pagina === 'patrimonio'    && <Patrimonio isAdmin={isAdmin} />}
         {pagina === 'epis'          && <Epis isAdmin={isAdmin} />}
         {pagina === 'veiculos'      && <Veiculos isAdmin={isAdmin} />}
-        {pagina === 'onedoc'        && <OneDock isAdmin={isAdmin} />}
+        {pagina === 'onedoc'        && <Administrativo isAdmin={isAdmin} />}
         {pagina === 'colaboradores' && isAdmin && <Colaboradores />}
       </main>
 
