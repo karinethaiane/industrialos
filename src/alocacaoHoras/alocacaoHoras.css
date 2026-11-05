@@ -1,0 +1,137 @@
+/* Estilos da aba "Alocação de Horas" (Administrativo).
+   Tudo fica dentro de .aloc, então não mexe no visual das outras telas. */
+.aloc { font-family: inherit; color: var(--text); }
+.aloc * { box-sizing: border-box; }
+.aloc button { font-family: inherit; }
+.aloc .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+.aloc [hidden] { display: none !important; }
+.aloc .btn { background: var(--blue); color: #fff; border: none; border-radius: 8px; padding: 9px 18px; font-weight: 600; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+[data-tema="dark"] .aloc .btn { color: #14122e; }
+.aloc .btn:hover { filter: brightness(1.06); }
+.aloc .btn-sm { background: var(--subtle); color: var(--text2); border: 1px solid var(--border2); border-radius: 6px; padding: 4px 9px; font-size: 11px; font-weight: 500; cursor: pointer; }
+.aloc .btn-sm:hover { background: var(--surface2); }
+.aloc .btn-ghost { background: var(--subtle); color: var(--text2); border: 1px solid var(--border2); border-radius: 8px; padding: 9px 16px; font-weight: 600; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.aloc .btn-ghost:hover { background: var(--surface2); }
+.aloc .btn-det { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(99,102,241,.2); border-radius: 6px; padding: 4px 9px; font-size: 11px; font-weight: 500; cursor: pointer; }
+.aloc .btn-det:hover { filter: brightness(1.1); }
+.aloc .ctx { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+.aloc .ctx label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; }
+.aloc .sel { background: var(--surface2); border: 1px solid var(--border2); border-radius: 7px; padding: 7px 10px; color: var(--text); font-size: 13px; outline: none; font-family: inherit; cursor: pointer; }
+.aloc .pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 6px; font-size: 11px; color: var(--text2); background: var(--subtle); border: 1px solid var(--border2); }
+.aloc .pill b { color: var(--text); font-weight: 600; }
+.aloc .pill.teal { background: var(--teal-dim); border-color: rgba(13,148,136,.25); color: var(--teal); }
+.aloc .pill.teal b { color: var(--teal); }
+.aloc .stats { display: grid; grid-template-columns: repeat(auto-fit,minmax(138px,1fr)); gap: 10px; margin-bottom: 8px; }
+.aloc .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; position: relative; overflow: hidden; box-shadow: 0 1px 4px var(--shadow); }
+.aloc .stat .v { font-family: 'JetBrains Mono', monospace; font-size: 26px; font-weight: 500; line-height: 1; margin-bottom: 5px; white-space: nowrap; }
+.aloc .stat .v small { font-size: 11px; color: var(--muted); font-weight: 400; margin-left: 3px; }
+.aloc .stat .l { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-weight: 500; }
+.aloc .stat .bar { position: absolute; bottom: 0; left: 0; right: 0; height: 2px; opacity: .5; }
+.aloc .statnote { font-size: 11.5px; color: var(--muted); margin-bottom: 18px; }
+.aloc .toolbar { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
+.aloc .search { background: var(--surface2); border: 1px solid var(--border2); border-radius: 7px; padding: 8px 12px; color: var(--text); font-size: 13px; outline: none; font-family: inherit; width: 260px; }
+.aloc .chip { padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid var(--border2); background: var(--subtle); color: var(--text2); display: inline-flex; gap: 6px; align-items: center; }
+.aloc .chip .n { font-family: 'JetBrains Mono', monospace; font-weight: 500; opacity: .8; }
+.aloc .chip.on { background: var(--blue-dim); color: var(--blue); border-color: rgba(99,102,241,.3); }
+.aloc .chip.on.c-sem { background: var(--red-dim); color: var(--red); border-color: rgba(220,38,38,.3); }
+.aloc .chip.on.c-abaixo { background: var(--amber-dim); color: var(--amber); border-color: rgba(217,119,6,.3); }
+.aloc .chip.on.c-ok { background: var(--green-dim); color: var(--green); border-color: rgba(5,150,105,.3); }
+.aloc .chip.on.c-acima { background: var(--purple-dim); color: var(--purple); border-color: rgba(124,58,237,.3); }
+.aloc .opts { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin: 2px 0 12px; font-size: 12px; color: var(--text2); }
+.aloc .opts label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.aloc .opts input { accent-color: var(--blue); }
+.aloc .opts .info { color: var(--muted); }
+.aloc table { width: 100%; border-collapse: collapse; }
+.aloc th { text-align: left; padding: 10px 12px; font-size: 10.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; border-bottom: 1px solid var(--border); background: var(--surface2); white-space: nowrap; user-select: none; }
+.aloc th.sortable { cursor: pointer; }
+.aloc th.sortable:hover { color: var(--text); }
+.aloc th.num,
+.aloc td.num { text-align: right; }
+.aloc td { padding: 10px 12px; font-size: 13px; color: var(--text2); border-bottom: 1px solid var(--border); vertical-align: middle; }
+.aloc tbody tr:hover td { background: var(--subtle); }
+.aloc tbody tr:last-child td { border-bottom: none; }
+.aloc td.nome { color: var(--text); font-weight: 500; white-space: nowrap; }
+.aloc td.func { max-width: 175px; min-width: 130px; font-size: 12px; }
+.aloc td.nome .mat { display: block; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--muted); font-weight: 400; margin-top: 1px; }
+.aloc td.num { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; }
+.aloc .wk { color: var(--muted); font-size: 12px; }
+.aloc .dim { color: var(--border2); }
+.aloc .pct { display: flex; align-items: center; gap: 8px; min-width: 110px; }
+.aloc .pct .track { flex: 1; height: 6px; border-radius: 4px; background: var(--surface2); border: 1px solid var(--border); overflow: hidden; min-width: 50px; }
+.aloc .pct .fill { height: 100%; border-radius: 4px; }
+.aloc .pct .val { font-family: 'JetBrains Mono', monospace; font-size: 12px; width: 42px; text-align: right; }
+.aloc .badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; white-space: nowrap; display: inline-block; }
+.aloc .ger { font-size: 12px; font-weight: 600; }
+.aloc .alert { display: inline-block; font-size: 10.5px; font-weight: 600; padding: 1px 7px; border-radius: 4px; margin: 0 4px 3px 0; white-space: normal; line-height: 1.35; }
+.aloc .a-warn { background: var(--amber-dim); color: var(--amber); }
+.aloc .a-err { background: var(--red-dim); color: var(--red); }
+.aloc .a-info { background: var(--blue-dim); color: var(--blue); }
+.aloc .a-mute { background: var(--subtle); color: var(--muted); border: 1px solid var(--border); }
+.aloc .nota { font-size: 12px; color: var(--text2); font-style: italic; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.aloc .notacell { min-width: 230px; max-width: 260px; cursor: pointer; }
+.aloc .notacell .add { font-size: 11px; color: var(--muted); border: 1px dashed var(--border2); border-radius: 5px; padding: 1px 8px; display: inline-block; }
+.aloc .notacell:hover .add { color: var(--blue); border-color: var(--blue); }
+.aloc .empty { text-align: center; padding: 40px; color: var(--muted); }
+.aloc details.regras { margin-top: 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; font-size: 12.5px; color: var(--text2); }
+.aloc details.regras summary { cursor: pointer; font-weight: 600; color: var(--text); }
+.aloc details.regras ol { margin: 10px 0 2px 18px; line-height: 1.7; }
+.aloc details.regras code { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; background: var(--subtle); border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; }
+/* ── Modais ─────────────────────────────────────────────────────────────── */
+.aloc .modal { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(4px); }
+.aloc .modal.open { display: flex; }
+.aloc .mbox { background: var(--surface); border: 1px solid var(--border2); border-radius: 14px; padding: 28px; width: 92%; max-width: 560px; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 40px var(--shadow); }
+.aloc .mhead { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; gap: 12px; }
+.aloc .mtitle { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.aloc .mx { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 22px; line-height: 1; }
+.aloc .grid3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 16px; }
+.aloc .mini { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.aloc .mini .l { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; font-weight: 600; margin-bottom: 4px; }
+.aloc .mini .v { font-family: 'JetBrains Mono', monospace; font-size: 17px; color: var(--text); }
+.aloc .sec { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin: 16px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.aloc .wkrow { display: grid; grid-template-columns: 112px 1fr 56px; gap: 10px; align-items: center; margin-bottom: 7px; font-size: 12px; }
+.aloc .wkrow .t { height: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; overflow: hidden; }
+.aloc .wkrow .t i { display: block; height: 100%; background: var(--teal); border-radius: 5px; }
+.aloc .wkrow .h { text-align: right; font-family: 'JetBrains Mono', monospace; color: var(--text); }
+.aloc .kv { display: flex; justify-content: space-between; font-size: 12.5px; padding: 5px 0; border-bottom: 1px dashed var(--border); }
+.aloc .kv span:last-child { font-family: 'JetBrains Mono', monospace; color: var(--text); }
+.aloc .tags { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+.aloc textarea { background: var(--surface2); border: 1px solid var(--border2); border-radius: 7px; padding: 9px 12px; color: var(--text); font-size: 13px; outline: none; font-family: inherit; width: 100%; min-height: 78px; resize: vertical; }
+.aloc .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+.aloc .drop { display: block; border: 1.5px dashed var(--border2); border-radius: 10px; padding: 16px; margin-bottom: 12px; cursor: pointer; background: var(--surface2); }
+.aloc .drop:hover { border-color: var(--teal); }
+.aloc .drop b { font-size: 13px; color: var(--text); display: block; margin-bottom: 3px; }
+.aloc .drop span { font-size: 12px; color: var(--muted); display: block; line-height: 1.5; }
+.aloc .drop .res { margin-top: 8px; font-size: 12px; color: var(--green); font-weight: 600; }
+.aloc .drop .res.err { color: var(--red); }
+.aloc .drop input { display: none; }
+.aloc .toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface); border: 1px solid var(--border2); border-left: 3px solid var(--green); border-radius: 8px; padding: 10px 14px; font-size: 12.5px; box-shadow: 0 8px 24px var(--shadow); z-index: 200; display: none; }
+.aloc .placeholder { background: var(--surface); border: 1px dashed var(--border2); border-radius: 10px; padding: 60px 20px; text-align: center; color: var(--muted); font-size: 13px; }
+.aloc .subnav { display: inline-flex; gap: 4px; padding: 3px; background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; margin-bottom: 16px; }
+.aloc .subnav button { border: none; background: none; padding: 6px 14px; border-radius: 7px; font-size: 12.5px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.aloc .subnav button.on { background: var(--surface); color: var(--teal); box-shadow: 0 1px 4px var(--shadow); }
+.aloc .banner { border-radius: 8px; padding: 9px 14px; font-size: 12.5px; margin-bottom: 14px; display: flex; gap: 8px; align-items: center; }
+.aloc .banner.sim { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(217,119,6,.25); }
+.aloc .banner.info { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(99,102,241,.25); }
+.aloc .snapbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.aloc .snapbar .lbl { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; }
+.aloc .snap { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; background: var(--teal-dim); color: var(--teal); border: 1px solid rgba(13,148,136,.25); font-family: 'JetBrains Mono', monospace; }
+.aloc .snap.sim { background: var(--amber-dim); color: var(--amber); border-color: rgba(217,119,6,.25); }
+.aloc .snap button { background: none; border: none; color: inherit; cursor: pointer; font-size: 14px; line-height: 1; opacity: .7; }
+.aloc .snap i { font-style: normal; font-size: 9px; letter-spacing: .06em; text-transform: uppercase; opacity: .8; font-family: 'Plus Jakarta Sans', sans-serif; }
+.aloc .evo-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; margin-bottom: 14px; }
+.aloc .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; box-shadow: 0 1px 4px var(--shadow); }
+.aloc .card h4 { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.aloc .card .hint { font-size: 11.5px; color: var(--muted); margin-bottom: 8px; }
+.aloc .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11.5px; color: var(--text2); margin-top: 6px; }
+.aloc .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.aloc .card svg text { font-family: 'JetBrains Mono', monospace; font-size: 10px; fill: var(--muted); }
+.aloc .resumo pre { white-space: pre-wrap; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12.5px; line-height: 1.65; color: var(--text2); background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin-top: 10px; }
+.aloc .hc { display: inline-block; min-width: 54px; text-align: right; padding: 3px 8px; border-radius: 5px; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+.aloc .dlt { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; }
+.aloc input[type=date].sel { padding: 5px 8px; }
+@media (max-width: 1100px) {
+.aloc .evo-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) {
+.aloc .search { width: 100%; }
+}

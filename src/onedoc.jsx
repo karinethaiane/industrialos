@@ -65,7 +65,7 @@ const S = {
 
 const formVazio = { numero_1doc: '', tipo: 'Memorando', titulo_documento: '', solicitante: '', data_envio: '', status: 'pendente', observacoes: '' }
 
-export default function OneDock({ isAdmin = false }) {
+export default function OneDock({ isAdmin = false, embutido = false }) {
   const [docs, setDocs] = useState([])
   const [colaboradores, setColaboradores] = useState([])
   const [loading, setLoading] = useState(true)
@@ -134,12 +134,14 @@ export default function OneDock({ isAdmin = false }) {
   const trHover = { onMouseEnter: e => e.currentTarget.style.background = 'var(--subtle)', onMouseLeave: e => e.currentTarget.style.background = 'transparent' }
 
   return (
-    <div style={S.wrap}>
+    <div style={embutido ? { ...S.wrap, padding: 0, minHeight: 'auto' } : S.wrap}>
       <div style={S.header}>
-        <div>
-          <div style={S.title}>Administrativo</div>
-          <div style={S.sub}>1Doc e documentos internos</div>
-        </div>
+        {embutido ? <div /> : (
+          <div>
+            <div style={S.title}>Administrativo</div>
+            <div style={S.sub}>1Doc e documentos internos</div>
+          </div>
+        )}
         {isAdmin && (
           <button style={S.btn} onClick={abrirNovo}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
