@@ -417,6 +417,7 @@ export default function AlocacaoHoras({ isAdmin = false }) {
             ['var(--green)', cnt('ok'), 'Dentro do planejado', ''],
             ['var(--purple)', cnt('acima'), 'Acima do planejado', ''],
           ]} />
+          <div className="statnote">Base de monitoria: o esperado cresce com os dias úteis do mês; a comparação usa o acumulado até hoje, não o total do mês em semana 1.</div>
           <div className="statnote">{extra.length ? `Fora dos indicadores: ${extra.join(' · ')}.` : ''}</div>
 
           <div className="toolbar">
@@ -510,7 +511,8 @@ export default function AlocacaoHoras({ isAdmin = false }) {
               <li><b>Planejado:</b> no PCP, a coluna <code>Planejado</code> do bloco do mês escolhido é localizada pelo cabeçalho (ex.: <code>NOV/26</code> → coluna <code>X</code>). Muda sozinha ao trocar o mês.</li>
               <li><b>Alocado:</b> 1ª aba do relatório do sistema (<code>Alocacoes</code>), somando <code>Horas</code> das linhas cujo <code>Ano/Mês</code> = mês de referência. Colaboradores de outras áreas são ignorados.</li>
               <li><b>Vínculo entre as planilhas:</b> pelo nome (sem acento/caixa). Se o nome estiver abreviado ou com pequena divergência de grafia no sistema, vincula por aproximação (somente quando houver um único candidato) e registra um alerta.</li>
-              <li><b>Situação:</b> <i>Sem alocação</i> (0 h com planejamento) · <i>Abaixo</i> (&lt; 100% − tolerância) · <i>Dentro</i> · <i>Acima</i> (&gt; 100% + tolerância) · <i>Sem planejamento</i> (PCP vazio/0 no mês).</li>
+              <li><b>Esperado até a data:</b> a comparação não usa o total do mês como critério imediato. O esperado do período é <code>planejado × dias úteis até hoje ÷ dias úteis do mês</code>. Ou seja, o indicador cresce com o passar dos dias úteis; nos primeiros 3 dias úteis, ninguém é cobrado e aparece como <i>No prazo</i>.</li>
+              <li><b>Situação:</b> <i>Sem alocação</i> (0 h com planejamento) · <i>Abaixo</i> (&lt; esperado × (1 − tolerância)) · <i>Dentro</i> · <i>Acima</i> (&gt; planejado do mês + tolerância) · <i>Sem planejamento</i> (PCP vazio/0 no mês).</li>
               <li><b>Fora dos indicadores:</b> desligados (status do PCP) e afastados/férias/licença (marcados manualmente na nota) — continuam listados, mas não entram nos totais.</li>
               <li><b>Alertas automáticos:</b> desligado, divergência PCP × sistema, não localizado no relatório, sem planejamento, alocação sem planejamento, nome por aproximação.</li>
             </ol>
