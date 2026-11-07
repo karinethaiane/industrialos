@@ -27,7 +27,7 @@
 .aloc .stat .v small { font-size: 11px; color: var(--muted); font-weight: 400; margin-left: 3px; }
 .aloc .stat .l { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-weight: 500; }
 .aloc .stat .bar { position: absolute; bottom: 0; left: 0; right: 0; height: 2px; opacity: .5; }
-.aloc .statnote { font-size: 11.5px; color: var(--muted); margin-bottom: 18px; }
+.aloc .statnote { font-size: 11.5px; color: var(--muted); margin-bottom: 18px; padding: 8px 10px; border-radius: 8px; background: var(--surface2); border: 1px solid var(--border); }
 .aloc .toolbar { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
 .aloc .search { background: var(--surface2); border: 1px solid var(--border2); border-radius: 7px; padding: 8px 12px; color: var(--text); font-size: 13px; outline: none; font-family: inherit; width: 260px; }
 .aloc .chip { padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid var(--border2); background: var(--subtle); color: var(--text2); display: inline-flex; gap: 6px; align-items: center; }
