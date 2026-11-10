@@ -73,6 +73,7 @@ function GraficoLinha({ snaps, ym, modo }) {
   const meta = []
   for (let d = ini; d <= fim; d += 864e5) meta.push(`${X(d).toFixed(1)},${Y(metaPct(new Date(d).toISOString().slice(0, 10), ym, modo) * 100).toFixed(1)}`)
   const pts = snaps.map((s, i) => `${X(ts[i]).toFixed(1)},${Y(covs[i]).toFixed(1)}`)
+  let lastShownX = -Infinity
   return (
     <>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Evolução da cobertura">
@@ -86,15 +87,20 @@ function GraficoLinha({ snaps, ym, modo }) {
         <text x={X(ini) + 4} y={T + 11} style={{ fill: 'var(--teal)' }}>{ymLabel(ym)}</text>
         <polyline points={meta.join(' ')} fill="none" style={{ stroke: 'var(--muted)' }} strokeWidth="1.4" strokeDasharray="5 4" />
         {snaps.length > 1 && <polyline points={pts.join(' ')} fill="none" style={{ stroke: 'var(--teal)' }} strokeWidth="2.4" strokeLinejoin="round" />}
-        {snaps.map((s, i) => (
-          <g key={s.data}>
-            <circle cx={X(ts[i])} cy={Y(covs[i])} r="4.5" style={{ fill: 'var(--surface)', stroke: 'var(--teal)' }} strokeWidth="2.2">
-              <title>{dmyFull(s.data)} · {covs[i].toFixed(1)}% do planejado</title>
-            </circle>
-            <text x={X(ts[i])} y={Y(covs[i]) - 10} textAnchor="middle" style={{ fill: 'var(--text)', fontWeight: 500 }}>{Math.round(covs[i])}%</text>
-            <text x={X(ts[i])} y={H - 14} textAnchor="middle">{dmy(s.data)}</text>
-          </g>
-        ))}
+        {snaps.map((s, i) => {
+          const x = X(ts[i])
+          const mostrarData = i === 0 || i === snaps.length - 1 || x - lastShownX >= 42
+          if (mostrarData) lastShownX = x
+          return (
+            <g key={s.data}>
+              <circle cx={x} cy={Y(covs[i])} r="4.5" style={{ fill: 'var(--surface)', stroke: 'var(--teal)' }} strokeWidth="2.2">
+                <title>{dmyFull(s.data)} · {covs[i].toFixed(1)}% do planejado</title>
+              </circle>
+              <text x={x} y={Y(covs[i]) - 10} textAnchor="middle" style={{ fill: 'var(--text)', fontWeight: 500 }}>{Math.round(covs[i])}%</text>
+              {mostrarData && <text x={x} y={H - 14} textAnchor="middle">{dmy(s.data)}</text>}
+            </g>
+          )
+        })}
       </svg>
       <div className="legend">
         <span><i style={{ background: 'var(--teal)' }} />Cobertura real</span>
@@ -105,15 +111,19 @@ function GraficoLinha({ snaps, ym, modo }) {
 }
 
 function GraficoBarras({ snaps, tol }) {
-  const W = 420, H = 250, L = 8, R = 8, T = 22, B = 34, n = snaps.length
-  const slot = (W - L - R) / n, bw = Math.min(46, slot * 0.62)
+  const W = 420, H = 250, L = 8, R = 8, T = 22, B = 34
+  const n = snaps.length
+  const slot = (W - L - R) / Math.max(1, n), bw = Math.min(46, slot * 0.62)
   const dists = snaps.map(s => distSnap(s, tol))
   const tot = Math.max(1, ...dists.map(d => d.sem + d.abaixo + d.ok + d.acima))
   const faixas = [['sem', 'var(--red)'], ['abaixo', 'var(--amber)'], ['ok', 'var(--green)'], ['acima', 'var(--purple)']]
+  let lastShownX = -Infinity
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Distribuição por situação">
       {snaps.map((s, i) => {
         const d = dists[i], cx = L + slot * i + slot / 2
+        const mostrarData = i === 0 || i === snaps.length - 1 || cx - lastShownX >= 52
+        if (mostrarData) lastShownX = cx
         let yb = H - B
         return (
           <g key={s.data}>
@@ -129,7 +139,7 @@ function GraficoBarras({ snaps, tol }) {
                 </g>
               )
             })}
-            <text x={cx} y={H - 14} textAnchor="middle">{dmy(s.data)}</text>
+            {mostrarData && <text x={cx} y={H - 14} textAnchor="middle">{dmy(s.data)}</text>}
           </g>
         )
       })}
