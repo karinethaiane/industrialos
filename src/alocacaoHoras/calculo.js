@@ -325,8 +325,12 @@ export function metaPct(dataStr, ym, modo) {
 }
 
 export const TD = {
-  zero: ['Sem movimento', 'var(--red)', 0], down: ['Regrediu', 'var(--red)', 1], stall: ['Parado', 'var(--amber)', 2],
-  up: ['Evoluindo', 'var(--teal)', 3], ok: ['Em dia', 'var(--green)', 4], na: ['—', 'var(--muted)', 5],
+  zero: ['Sem alocação', 'var(--red)', 0],
+  down: ['Sem alocação', 'var(--red)', 1],
+  stall: ['Evoluindo', 'var(--amber)', 2],
+  up: ['Evoluindo', 'var(--teal)', 3],
+  ok: ['Em dia', 'var(--green)', 4],
+  na: ['—', 'var(--muted)', 5],
 }
 function tendencia(serie, plano, tol) {
   const a = serie[serie.length - 1] ?? 0, b = serie.length > 1 ? (serie[serie.length - 2] ?? 0) : null
@@ -369,10 +373,10 @@ export function montarResumo(ym, A) {
   return [
     `Alocação de horas · TICs · ${ymLabel(ym)} (posição de ${dmyFull(ult.data)})`,
     `• Equipe em ${Math.round(cov)}% do planejado${covPrev != null ? ` (${sinal(cov - covPrev)} pp desde ${dmyFull(pen.data)})` : ''}; ${pes.length} colaboradores monitorados.`,
-    `• ${dist.ok + dist.acima} em dia ou acima · ${dist.abaixo} abaixo do planejado · ${dist.sem} sem alocação.`,
+    `• ${dist.ok + dist.acima} em dia · ${c('up') + c('stall')} evoluindo · ${dist.sem} sem alocação.`,
     ...(pen ? [`• Na semana: ${horasAdd >= 0 ? '+' : ''}${fmtH(horasAdd)} h alocadas; ${comecaram} colaborador(es) começaram a alocar.`] : []),
-    ...(c('stall') ? [`• Parados abaixo do planejado (${c('stall')}): ${nomes(pes.filter(p => p.t === 'stall'))}.`] : []),
-    ...(c('down') ? [`• Reduziram horas (${c('down')}): ${nomes(pes.filter(p => p.t === 'down'))}.`] : []),
-    ...(c('zero') ? [`• Sem nenhuma alocação desde o início (${c('zero')}): ${nomes(pes.filter(p => p.t === 'zero'))}.`] : []),
+    ...(c('up') ? [`• Evoluindo na semana (${c('up')}): ${nomes(pes.filter(p => p.t === 'up'))}.`] : []),
+    ...(c('stall') ? [`• Evoluindo com estabilidade (${c('stall')}): ${nomes(pes.filter(p => p.t === 'stall'))}.`] : []),
+    ...(c('zero') ? [`• Sem alocação (${c('zero')}): ${nomes(pes.filter(p => p.t === 'zero'))}.`] : []),
   ].join('\n')
 }
