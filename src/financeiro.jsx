@@ -17,15 +17,15 @@ const S = {
   tabCountTeal: (on) => ({ padding: '1px 7px', borderRadius: 10, fontSize: 10, fontWeight: 700, background: on ? 'rgba(13,148,136,.15)' : 'var(--subtle)', color: on ? '#0d9488' : 'var(--text2)' }),
   toolbar:      { display: 'flex', gap: 8, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' },
   search:       { background: 'var(--surface2)', border: '1px solid var(--border2)', borderRadius: 7, padding: '8px 12px', color: 'var(--text)', fontSize: 13, outline: 'none', fontFamily: 'inherit', width: 260 },
-  filtro:       (on) => ({ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? 'rgba(99,102,241,.25)' : 'var(--border2)'}`, background: on ? 'var(--blue-dim)' : 'var(--subtle)', color: on ? 'var(--blue)' : 'var(--text2)', fontFamily: 'inherit' }),
-  filtroConsultoria: (on) => ({ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? 'rgba(167,139,250,.3)' : 'var(--border2)'}`, background: on ? 'rgba(167,139,250,.1)' : 'var(--subtle)', color: on ? '#a78bfa' : 'var(--text2)', fontFamily: 'inherit' }),
+  filtro:       (on) => ({ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? 'rgba(148,163,184,.25)' : 'var(--border2)'}`, background: on ? 'var(--blue-dim)' : 'var(--subtle)', color: on ? 'var(--blue)' : 'var(--text2)', fontFamily: 'inherit' }),
+  filtroConsultoria: (on) => ({ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? 'rgba(148,163,184,.25)' : 'var(--border2)'}`, background: on ? 'rgba(148,163,184,.1)' : 'var(--subtle)', color: on ? 'var(--blue)' : 'var(--text2)', fontFamily: 'inherit' }),
   fselSm:       { background: 'var(--surface2)', border: '1px solid var(--border2)', borderRadius: 6, padding: '5px 10px', color: 'var(--text2)', fontSize: 12, outline: 'none', fontFamily: 'inherit', cursor: 'pointer', height: 30 },
   btn:          { background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' },
   btnTeal:      { background: 'rgba(13,148,136,.1)', color: '#0d9488', border: '1px solid rgba(13,148,136,.25)', borderRadius: 8, padding: '9px 18px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' },
   btnSm:        { background: 'var(--subtle)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 6, padding: '4px 9px', fontSize: 11, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' },
   btnDanger:    { background: 'var(--red-dim)', color: 'var(--red)', border: '1px solid transparent', borderRadius: 6, padding: '4px 8px', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' },
-  btnObs:       { background: 'rgba(167,139,250,.1)', color: '#a78bfa', border: '1px solid rgba(167,139,250,.2)', borderRadius: 6, padding: '4px 9px', fontSize: 11, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' },
-  btnDet:       { background: 'var(--blue-dim)', color: 'var(--blue)', border: '1px solid rgba(99,102,241,.2)', borderRadius: 6, padding: '4px 9px', fontSize: 11, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' },
+  btnObs:       { background: 'rgba(148,163,184,.1)', color: 'var(--blue)', border: '1px solid rgba(148,163,184,.2)', borderRadius: 6, padding: '4px 9px', fontSize: 11, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' },
+  btnDet:       { background: 'var(--blue-dim)', color: 'var(--blue)', border: '1px solid rgba(148,163,184,.2)', borderRadius: 6, padding: '4px 9px', fontSize: 11, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' },
   btnDetTeal:   { background: 'rgba(13,148,136,.08)', color: '#0d9488', border: '1px solid rgba(13,148,136,.2)', borderRadius: 6, padding: '4px 9px', fontSize: 11, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' },
   tableWrap:    { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 6px var(--shadow)' },
   table:        { width: '100%', borderCollapse: 'collapse' },
@@ -44,7 +44,7 @@ const S = {
   textarea:     { background: 'var(--surface2)', border: '1px solid var(--border2)', borderRadius: 7, padding: '9px 12px', color: 'var(--text)', fontSize: 13, outline: 'none', fontFamily: 'inherit', width: '100%', minHeight: 70, resize: 'vertical' },
   row:          { display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 18 },
   erro:         { background: 'var(--red-dim)', border: '1px solid rgba(239,68,68,.25)', borderRadius: 6, padding: '8px 12px', color: 'var(--red)', fontSize: 12, marginBottom: 10 },
-  totalBox:     { background: 'var(--blue-dim)', border: '1px solid rgba(99,102,241,.2)', borderRadius: 7, padding: '10px 14px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  totalBox:     { background: 'var(--blue-dim)', border: '1px solid rgba(148,163,184,.2)', borderRadius: 7, padding: '10px 14px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   sectionLbl:   { fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 10, marginTop: 4, paddingBottom: 6, borderBottom: '1px solid var(--border)' },
 }
 
@@ -551,7 +551,7 @@ export default function Financeiro({ isAdmin = false }) {
                       {r.voucher_recebido
                         ? <span style={{ background: 'var(--green-dim)', color: 'var(--green)', padding: '2px 7px', borderRadius: 4, fontSize: 10, fontWeight: 600, width: 'fit-content' }}>Voucher OK</span>
                         : <span style={{ background: 'var(--amber-dim)', color: 'var(--amber)', padding: '2px 7px', borderRadius: 4, fontSize: 10, fontWeight: 600, width: 'fit-content' }}>Voucher pend.</span>}
-                      {r.passagem_aerea && r.passagem_aerea !== 'nao' && <span style={{ background: 'rgba(99,102,241,.1)', color: 'var(--blue)', padding: '2px 7px', borderRadius: 4, fontSize: 10, fontWeight: 600, width: 'fit-content' }}>{r.passagem_aerea === 'pendente' ? 'Passagem pend.' : 'Passagem OK'}</span>}
+                      {r.passagem_aerea && r.passagem_aerea !== 'nao' && <span style={{ background: 'rgba(148,163,184,.1)', color: 'var(--blue)', padding: '2px 7px', borderRadius: 4, fontSize: 10, fontWeight: 600, width: 'fit-content' }}>{r.passagem_aerea === 'pendente' ? 'Passagem pend.' : 'Passagem OK'}</span>}
                     </div>
                   ) : (
                     <span style={{ fontSize: 11, color: 'var(--muted)' }}>—</span>
@@ -598,7 +598,7 @@ export default function Financeiro({ isAdmin = false }) {
             </div>
             <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 8 }}>Descrição</div>
             <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px', fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 16 }}>{modalDet.descricao || '—'}</div>
-            <div style={{ background: 'var(--blue-dim)', border: '1px solid rgba(99,102,241,.2)', borderRadius: 10, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ background: 'var(--blue-dim)', border: '1px solid rgba(148,163,184,.2)', borderRadius: 10, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 600, marginBottom: 6 }}>Valor</div>
                 <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 22, fontWeight: 500, color: 'var(--blue)' }}>{fmtVal(modalDet.valor)}</div>

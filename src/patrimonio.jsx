@@ -727,7 +727,7 @@ export default function Patrimonio({ isAdmin = false }) {
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
               {limpando ? 'Limpando...' : 'Limpar tudo'}
             </button>
-            <label style={{ ...S.btn, background:'rgba(99,102,241,.1)', color:'var(--blue)', border:'1px solid rgba(99,102,241,.2)', cursor:'pointer' }}>
+        
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
               {importando ? 'Comparando...' : 'Comparar PDF'}
               <input type="file" accept=".pdf" style={{ display:'none' }} onChange={compararPdf} disabled={importando} />
