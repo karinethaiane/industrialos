@@ -408,31 +408,6 @@ export default function AlocacaoHoras({ isAdmin = false }) {
     }
     XLSX.utils.book_append_sheet(wb, ws, 'Detalhamento')
 
-    const evolRows = [
-      ['Data', 'Cobertura (%)', 'Meta (%)', 'Observação'],
-      ...snaps.map(s => {
-        const cov = Math.round(cobertura(s) * 100)
-        const meta = Math.round(metaPct(s.data, ymAtivo, 'linear') * 100)
-        const obs = cov >= meta ? 'Atingiu a meta' : 'Ainda abaixo da meta'
-        return [dmyFull(s.data), cov, meta, obs]
-      })
-    ]
-    const wsEvo = XLSX.utils.aoa_to_sheet(evolRows)
-    wsEvo['!cols'] = [{ wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 30 }]
-    for (let c = 0; c <= 3; c++) {
-      const ref = XLSX.utils.encode_cell({ r: 0, c })
-      if (wsEvo[ref]) wsEvo[ref].s = headerStyle
-    }
-    for (let r = 1; r < evolRows.length; r++) {
-      for (let c = 0; c <= 3; c++) {
-        const ref = XLSX.utils.encode_cell({ r, c })
-        if (wsEvo[ref]) {
-          wsEvo[ref].s = { ...border, alignment: { vertical: 'center', horizontal: c === 3 ? 'left' : 'center' } }
-        }
-      }
-    }
-    XLSX.utils.book_append_sheet(wb, wsEvo, 'Evolução')
-
     XLSX.writeFile(wb, `alocacao-horas-${GERENCIA_ALVO}-${ymAtivo}.xlsx`)
     toast('Relatório exportado.')
   }
