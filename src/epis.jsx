@@ -43,9 +43,32 @@ const S = {
   checkIcon: (ok) => ({ width: 20, height: 20, borderRadius: '50%', background: ok ? 'var(--green-dim)' : 'var(--red-dim)', color: ok ? 'var(--green)' : 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, flexShrink: 0 }),
 }
 
-function calcStatus(dataProx) {
-  if (!dataProx) return 'VENCIDO'
-  const dias = Math.floor((new Date(dataProx) - new Date()) / 86400000)
+function parseLocalDate(dateStr) {
+  if (!dateStr) return null
+  const dt = new Date(`${dateStr}T00:00:00`)
+  return Number.isNaN(dt.getTime()) ? null : dt
+}
+
+function somarDias(dataIso, dias) {
+  const dt = parseLocalDate(dataIso)
+  if (!dt) return ''
+  dt.setDate(dt.getDate() + dias)
+  return dt.toISOString().split('T')[0]
+}
+
+function dataProximaSegura(dataEntrega, dataProx) {
+  const entrega = parseLocalDate(dataEntrega)
+  const prox = dataProx ? parseLocalDate(dataProx) : null
+
+  if (!dataEntrega) return dataProx || null
+  if (!prox || prox <= entrega) return somarDias(dataEntrega, 365)
+  return dataProx
+}
+
+function calcStatus(dataProx, dataEntrega = null) {
+  const dataBase = dataProximaSegura(dataEntrega, dataProx)
+  if (!dataBase) return 'VIGENTE'
+  const dias = Math.floor((parseLocalDate(dataBase) - new Date()) / 86400000)
   if (dias < 0) return 'VENCIDO'
   if (dias <= 30) return 'VENCENDO'
   return 'VIGENTE'
@@ -149,7 +172,7 @@ export default function Epis({ isAdmin = false }) {
   const [busca, setBusca] = useState('')
   const [filtroStatus, setFiltroStatus] = useState('')
   const [buscaCheck, setBuscaCheck] = useState('')
-  const [expandido, setExpandido] = useState(null)
+  const [expandido, setExpandido] = useState('all')
   const [expandidosOk, setExpandidosOk] = useState({})
   const [almoExpanded, setAlmoExpanded] = useState(true)
   const [form, setForm] = useState({ colaborador_id: '', catalogo_id: '', data_entrega: '', quantidade: 1, motivo: '', ca: '' })
@@ -235,6 +258,7 @@ export default function Epis({ isAdmin = false }) {
         const cargo = normalizarCargoEpi(String(valorLinha(linha, ['cargo', 'funcao', 'função', 'cargo_funcao']) || '').trim())
         const tipo = String(valorLinha(linha, ['tipo', 'epi', 'nome_epi', 'produto', 'item', 'nomeitem']) || '').trim()
         const dataEntrega = parseDateValue(valorLinha(linha, ['data_entrega', 'data_de_entrega', 'entrega', 'dataentrega']))
+        const dataProximaImport = parseDateValue(valorLinha(linha, ['data_prox_entrega', 'proxima_entrega', 'data_vencimento', 'vencimento']))
 
         if (!nomeColab && !matricula) continue
         if (!tipo || !dataEntrega) continue
@@ -281,7 +305,7 @@ export default function Epis({ isAdmin = false }) {
         const quantidade = Number(String(valorLinha(linha, ['quantidade', 'qtd']) || '1').replace(',', '.')) || 1
         const motivo = String(valorLinha(linha, ['motivo', 'justificativa']) || '').trim()
         const ca = String(valorLinha(linha, ['ca', 'numero_ca', 'n_ca']) || '').trim()
-        const proxEntrega = parseDateValue(valorLinha(linha, ['data_prox_entrega', 'proxima_entrega', 'data_vencimento', 'vencimento'])) || dataEntrega
+        const proxEntrega = dataProximaSegura(dataEntrega, dataProximaImport)
 
         const { data: existente } = await supabase
           .from('epis')
@@ -389,13 +413,14 @@ export default function Epis({ isAdmin = false }) {
   async function salvarEdicao() {
     if (!editando) return
     setSalvando(true)
+    const prox = dataProximaSegura(editForm.data_entrega, editForm.data_prox_entrega)
     await supabase.from('epis').update({
       data_entrega: editForm.data_entrega,
       quantidade: parseInt(editForm.quantidade) || 1,
       ca: editForm.ca || null,
       motivo: editForm.motivo,
-      data_prox_entrega: editForm.data_prox_entrega,
-      data_vencimento: editForm.data_prox_entrega
+      data_prox_entrega: prox,
+      data_vencimento: prox
     }).eq('id', editando.id)
     setEditando(null); setSalvando(false); init()
   }
@@ -423,8 +448,8 @@ export default function Epis({ isAdmin = false }) {
     const itens = ultimas.filter(e => e.colaborador_id === c.id)
     if (!busca && itens.length === 0) return null
     if (busca && !normalizar(c.nome).includes(normalizar(busca)) && !itens.some(e => normalizar(e.tipo).includes(normalizar(busca)))) return null
-    const comProblema = itens.filter(e => calcStatus(e.data_prox_entrega) !== 'VIGENTE')
-    const vigentes    = itens.filter(e => calcStatus(e.data_prox_entrega) === 'VIGENTE')
+    const comProblema = itens.filter(e => calcStatus(e.data_prox_entrega, e.data_entrega) !== 'VIGENTE')
+    const vigentes    = itens.filter(e => calcStatus(e.data_prox_entrega, e.data_entrega) === 'VIGENTE')
     if (filtroStatus === 'PROBLEMAS' && comProblema.length === 0) return null
     if (filtroStatus === 'VIGENTE'   && comProblema.length > 0)  return null
     return { colab: c, itens, comProblema, vigentes }
@@ -433,7 +458,7 @@ export default function Epis({ isAdmin = false }) {
   const necessidades = (() => {
     const vencidos = {}, vencendo = {}
     ultimas.forEach(e => {
-      const s = calcStatus(e.data_prox_entrega)
+      const s = calcStatus(e.data_prox_entrega, e.data_entrega)
       const colab = colaboradores.find(c => c.id === e.colaborador_id)
       if (!colab) return
       if (s === 'VENCIDO')  { if (!vencidos[e.tipo])  vencidos[e.tipo]  = []; vencidos[e.tipo].push({ colab: colab.nome, data: e.data_prox_entrega }) }
@@ -445,9 +470,9 @@ export default function Epis({ isAdmin = false }) {
   const totalNecessidades = Object.keys(necessidades.vencidos).length + Object.keys(necessidades.vencendo).length
 
   const stats = {
-    vigente:  ultimas.filter(e => calcStatus(e.data_prox_entrega) === 'VIGENTE').length,
-    vencendo: ultimas.filter(e => calcStatus(e.data_prox_entrega) === 'VENCENDO').length,
-    vencido:  ultimas.filter(e => calcStatus(e.data_prox_entrega) === 'VENCIDO').length,
+    vigente:  ultimas.filter(e => calcStatus(e.data_prox_entrega, e.data_entrega) === 'VIGENTE').length,
+    vencendo: ultimas.filter(e => calcStatus(e.data_prox_entrega, e.data_entrega) === 'VENCENDO').length,
+    vencido:  ultimas.filter(e => calcStatus(e.data_prox_entrega, e.data_entrega) === 'VENCIDO').length,
   }
 
   // ── Checklist com equivalência por grupo ──────────────────────────────────
@@ -461,7 +486,7 @@ export default function Epis({ isAdmin = false }) {
       const itens = itensDoKit.map(kitItem => {
         // Procura entrega que bata pelo nome OU pelo grupo de equivalência
         const entrega = episDoColab.find(e => epiMatchComGrupo(e.tipo, kitItem.epi_nome, catalogo))
-        const status  = entrega ? calcStatus(entrega.data_prox_entrega) : null
+        const status  = entrega ? calcStatus(entrega.data_prox_entrega, entrega.data_entrega) : null
         // "entregue e vigente" = realmente ok no checklist
         const ok = !!entrega && status === 'VIGENTE'
         return {
@@ -492,8 +517,8 @@ export default function Epis({ isAdmin = false }) {
     return 'linear-gradient(135deg,#3b82f6,#06b6d4)'
   }
   function cardStatus(comProblema) {
-    if (comProblema.some(e => calcStatus(e.data_prox_entrega) === 'VENCIDO'))  return 'bad'
-    if (comProblema.some(e => calcStatus(e.data_prox_entrega) === 'VENCENDO')) return 'warn'
+    if (comProblema.some(e => calcStatus(e.data_prox_entrega, e.data_entrega) === 'VENCIDO'))  return 'bad'
+    if (comProblema.some(e => calcStatus(e.data_prox_entrega, e.data_entrega) === 'VENCENDO')) return 'warn'
     return 'ok'
   }
   const cardBorder = { bad: 'rgba(239,68,68,.5)', warn: 'rgba(245,158,11,.4)', ok: 'rgba(16,185,129,.4)' }
@@ -648,12 +673,12 @@ export default function Epis({ isAdmin = false }) {
                       <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: '1px solid var(--border)' }}
                         onMouseEnter={ev => ev.currentTarget.style.background = 'var(--subtle)'}
                         onMouseLeave={ev => ev.currentTarget.style.background = 'transparent'}>
-                        <div style={{ width: 7, height: 7, borderRadius: '50%', background: calcStatus(e.data_prox_entrega) === 'VENCIDO' ? 'var(--red)' : 'var(--amber)', flexShrink: 0 }} />
+                        <div style={{ width: 7, height: 7, borderRadius: '50%', background: calcStatus(e.data_prox_entrega, e.data_entrega) === 'VENCIDO' ? 'var(--red)' : 'var(--amber)', flexShrink: 0 }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 13, color: 'var(--text2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.tipo}</div>
-                          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: calcStatus(e.data_prox_entrega) === 'VENCIDO' ? 'var(--red)' : 'var(--amber)', fontWeight: 600, marginTop: 2 }}>{fmtData(e.data_prox_entrega)}</div>
+                          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: calcStatus(e.data_prox_entrega, e.data_entrega) === 'VENCIDO' ? 'var(--red)' : 'var(--amber)', fontWeight: 600, marginTop: 2 }}>{fmtData(dataProximaSegura(e.data_entrega, e.data_prox_entrega))}</div>
                         </div>
-                        <Badge status={calcStatus(e.data_prox_entrega)} />
+                        <Badge status={calcStatus(e.data_prox_entrega, e.data_entrega)} />
                         {isAdmin && <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                           <button style={S.btnSm} onClick={() => { setEditando(e); setEditForm({ data_entrega: e.data_entrega || '', quantidade: e.quantidade || 1, ca: e.ca || '', motivo: e.motivo || '', data_prox_entrega: e.data_prox_entrega || '' }) }}>Editar</button>
                           <button style={S.btnDanger} onClick={() => excluir(e.id)}>✕</button>
@@ -715,19 +740,21 @@ export default function Epis({ isAdmin = false }) {
               <input style={S.sinp} placeholder="Buscar colaborador..." value={buscaCheck} onChange={e => setBuscaCheck(e.target.value)} />
             </div>
           </div>
-          {checklist.map(c => (
+          {checklist.map(c => {
+            const isExpanded = expanded === 'all' || expanded === c.id
+            return (
             <div key={c.id} style={S.colabCard}>
-              <div style={S.colabCardHeader} onClick={() => setExpandido(expandido === c.id ? null : c.id)}>
+              <div style={S.colabCardHeader} onClick={() => setExpandido(prev => prev === c.id ? null : c.id)}>
                 <div><div style={S.colabCardName}>{c.nome}</div><div style={S.colabCardMat}>{c.matricula} · {c.epi_kits?.nome}</div></div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   {c.pendentes > 0 && <span style={{ background: 'var(--red-dim)', color: 'var(--red)', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{c.pendentes} pendente{c.pendentes > 1 ? 's' : ''}</span>}
                   {c.vencidos  > 0 && <span style={{ background: 'var(--red-dim)', color: 'var(--red)', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{c.vencidos} vencido{c.vencidos > 1 ? 's' : ''}</span>}
                   {c.vencendo  > 0 && <span style={{ background: 'var(--amber-dim)', color: 'var(--amber)', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{c.vencendo} vencendo</span>}
                   {c.pendentes === 0 && c.vencidos === 0 && c.vencendo === 0 && <span style={{ background: 'var(--green-dim)', color: 'var(--green)', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>✓ Tudo ok</span>}
-                  <span style={{ color: 'var(--muted)', fontSize: 14 }}>{expandido === c.id ? '▲' : '▼'}</span>
+                  <span style={{ color: 'var(--muted)', fontSize: 14 }}>{isExpanded ? '▲' : '▼'}</span>
                 </div>
               </div>
-              {expandido === c.id && c.itens.map((item, i) => (
+              {isExpanded && c.itens.map((item, i) => (
                 <div key={i} style={S.checkItem(item.ok)}>
                   {/* Ícone reflete status real, não só "entregue" */}
                   <div style={{
@@ -749,7 +776,8 @@ export default function Epis({ isAdmin = false }) {
                 </div>
               ))}
             </div>
-          ))}
+            )
+          })}
           {checklist.length === 0 && <div style={{ color: 'var(--muted)', textAlign: 'center', padding: 40 }}>Nenhum colaborador com kit atribuído.</div>}
         </>
       )}
@@ -886,7 +914,7 @@ export default function Epis({ isAdmin = false }) {
                           </div>
                           <div>
                             <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }}>Status</div>
-                            <Badge status={calcStatus(h.data_prox_entrega)} />
+                            <Badge status={calcStatus(h.data_prox_entrega, h.data_entrega)} />
                           </div>
                           <div>
                             <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }}>Nº CA</div>

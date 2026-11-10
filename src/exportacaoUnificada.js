@@ -120,8 +120,17 @@ export async function exportarTudo(onProgress) {
     'Data Entrega':      fmtData(e.data_entrega),
     'Próxima Entrega':   fmtData(e.data_prox_entrega),
     'Status': (() => {
-      if (!e.data_prox_entrega) return 'Vencido'
-      const dias = Math.floor((new Date(e.data_prox_entrega) - new Date()) / 86400000)
+      const dataEntrega = e.data_entrega || null
+      const dataProx = e.data_prox_entrega || null
+      const dataBase = (() => {
+        if (!dataEntrega) return dataProx || null
+        const entrega = new Date(`${dataEntrega}T00:00:00`)
+        const prox = dataProx ? new Date(`${dataProx}T00:00:00`) : null
+        if (!prox || prox <= entrega) return new Date(new Date(`${dataEntrega}T00:00:00`).getTime() + 365 * 86400000).toISOString().slice(0, 10)
+        return dataProx
+      })()
+      if (!dataBase) return 'Vigente'
+      const dias = Math.floor((new Date(`${dataBase}T00:00:00`) - new Date()) / 86400000)
       if (dias < 0) return 'Vencido'
       if (dias <= 30) return 'Vencendo em 30d'
       return 'Vigente'

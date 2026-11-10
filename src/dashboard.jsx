@@ -2,9 +2,32 @@ import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
-function calcStatusEpi(dataProx) {
-  if (!dataProx) return 'VENCIDO'
-  const dias = Math.floor((new Date(dataProx) - new Date()) / 86400000)
+function parseLocalDate(dateStr) {
+  if (!dateStr) return null
+  const dt = new Date(`${dateStr}T00:00:00`)
+  return Number.isNaN(dt.getTime()) ? null : dt
+}
+
+function somarDias(dataIso, dias) {
+  const dt = parseLocalDate(dataIso)
+  if (!dt) return ''
+  dt.setDate(dt.getDate() + dias)
+  return dt.toISOString().split('T')[0]
+}
+
+function dataProximaSegura(dataEntrega, dataProx) {
+  const entrega = parseLocalDate(dataEntrega)
+  const prox = dataProx ? parseLocalDate(dataProx) : null
+
+  if (!dataEntrega) return dataProx || null
+  if (!prox || prox <= entrega) return somarDias(dataEntrega, 365)
+  return dataProx
+}
+
+function calcStatusEpi(dataProx, dataEntrega = null) {
+  const dataBase = dataProximaSegura(dataEntrega, dataProx)
+  if (!dataBase) return 'VIGENTE'
+  const dias = Math.floor((parseLocalDate(dataBase) - new Date()) / 86400000)
   if (dias < 0)  return 'VENCIDO'
   if (dias <= 30) return 'VENCENDO'
   return 'VIGENTE'
@@ -133,9 +156,9 @@ export default function Dashboard({ onNavegar }) {
 
     // EPIs
     const ultimas      = ultimasEntregas(episRaw)
-    const episVigentes = ultimas.filter(e => calcStatusEpi(e.data_prox_entrega) === 'VIGENTE').length
-    const episVencidos = ultimas.filter(e => calcStatusEpi(e.data_prox_entrega) === 'VENCIDO')
-    const episAVencer  = ultimas.filter(e => calcStatusEpi(e.data_prox_entrega) === 'VENCENDO')
+    const episVigentes = ultimas.filter(e => calcStatusEpi(e.data_prox_entrega, e.data_entrega) === 'VIGENTE').length
+    const episVencidos = ultimas.filter(e => calcStatusEpi(e.data_prox_entrega, e.data_entrega) === 'VENCIDO')
+    const episAVencer  = ultimas.filter(e => calcStatusEpi(e.data_prox_entrega, e.data_entrega) === 'VENCENDO')
 
     // Veículos
     const veicRevVencida = veics.filter(v => {
