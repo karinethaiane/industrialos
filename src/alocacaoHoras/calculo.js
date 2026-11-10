@@ -53,7 +53,10 @@ export function interpretarPcp(linhas) {
     const nome = lbl(L[cNome]); if (!nome || nome.toUpperCase() === 'TBD') continue
     if (lbl(L[cSt]).toUpperCase() === 'A CONTRATAR') continue
     const plan = {}
-    for (const [lb, c] of Object.entries(labels)) plan[lb] = typeof L[c] === 'number' ? L[c] : null
+    for (const [lb, c] of Object.entries(labels)) {
+      const n = parseNumero(L[c])
+      plan[lb] = n
+    }
     rows.push({ linha: r, mat: lbl(L[cMat]), status: lbl(L[cSt]).toUpperCase(), nome, funcao: lbl(L[cFun]), gerencia: lbl(L[cGer]), plan })
   }
   return { labels, rows }
@@ -64,6 +67,23 @@ export function interpretarPcp(linhas) {
 // ═══════════════════════════════════════════════════════════════════════════
 const normTokens = s => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9 ]+/g, ' ').split(/\s+/).filter(Boolean)
 const chaveNome = s => normTokens(s).join(' ')
+function parseNumero(v) {
+  if (v == null || v === '') return null
+  if (typeof v === 'number' && Number.isFinite(v)) return v
+  let s = String(v).trim().replace(/\s+/g, '').replace(/R\$\s*/g, '')
+  if (!s || s === '-' || s === '—' || s === '–') return null
+  s = s.replace(/[^0-9,.-]/g, '')
+  if (!s || s === '-' || s === '.' || s === ',') return null
+  if (s.includes(',') && s.includes('.')) {
+    const iC = s.lastIndexOf(',')
+    const iP = s.lastIndexOf('.')
+    s = iC > iP ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '')
+  } else if (s.includes(',')) {
+    s = s.replace(',', '.')
+  }
+  const n = Number(s)
+  return Number.isFinite(n) ? n : null
+}
 
 function segundaDe(y, m, d) {
   const t = Date.UTC(y, m - 1, d), wd = new Date(t).getUTCDay()
@@ -107,7 +127,7 @@ export function interpretarRelatorio(linhas) {
     addLinhaRel(M, {
       usuario: String(g(L, 'Usuario')), email: String(g(L, 'Email')), cargo: String(g(L, 'Cargo')),
       vertical: String(g(L, 'Vertical')), situacao: String(g(L, 'Situacao')), detalhe: String(g(L, 'Detalhe Situacao')),
-      ano, mes, dia, horas: +g(L, 'Horas') || 0,
+      ano, mes, dia, horas: parseNumero(g(L, 'Horas')) ?? 0,
       projeto: String(g(L, 'Label Tipo') || g(L, 'Projeto') || '—'), tipo: String(g(L, 'Tipo Timesheet') || '—'),
     })
   }
