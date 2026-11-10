@@ -60,6 +60,50 @@ function normalizar(str) {
   return (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
 }
 
+const CARGOS_PERMITIDOS_EPI = [
+  'DESIGNER',
+  'DESENVOLVEDOR',
+  'PESQUISADOR INDUSTRIAL',
+  'COORDENADOR DE INOVAÇÃO E TECNOLOGIA',
+  'GERENTE DE INOVAÇÃO E TECNOLOGIA',
+  'BOLSISTA',
+]
+
+function normalizarCargoEpi(cargo) {
+  const texto = String(cargo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+  if (texto.includes('designer')) return 'DESIGNER'
+  if (texto.includes('desenvolvedor')) return 'DESENVOLVEDOR'
+  if (texto.includes('pesquisador')) return 'PESQUISADOR INDUSTRIAL'
+  if (texto.includes('coordenador') && texto.includes('inovacao') && texto.includes('tecnologia')) return 'COORDENADOR DE INOVAÇÃO E TECNOLOGIA'
+  if (texto.includes('gerente') && texto.includes('inovacao') && texto.includes('tecnologia')) return 'GERENTE DE INOVAÇÃO E TECNOLOGIA'
+  if (texto.includes('bolsista')) return 'BOLSISTA'
+  return String(cargo || '').trim()
+}
+
+function resolverKitPorCargoEpi(cargo, kits) {
+  const cargoNormalizado = normalizarCargoEpi(cargo)
+  const permitidos = CARGOS_PERMITIDOS_EPI.map(c => c.toLowerCase())
+
+  if (!permitidos.includes(cargoNormalizado.toLowerCase())) return null
+
+  const kitPesquisador = kits.find(k =>
+    String(k.nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim() === 'pesquisador industrial'
+  )
+
+  if (['DESENVOLVEDOR', 'PESQUISADOR INDUSTRIAL', 'COORDENADOR DE INOVAÇÃO E TECNOLOGIA', 'GERENTE DE INOVAÇÃO E TECNOLOGIA', 'BOLSISTA'].includes(cargoNormalizado)) {
+    return kitPesquisador?.id || null
+  }
+
+  if (cargoNormalizado === 'DESIGNER') {
+    const kitDesigner = kits.find(k =>
+      String(k.nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim() === 'designer'
+    )
+    return kitDesigner?.id || null
+  }
+
+  return null
+}
+
 // ── Compara EPI entregue com item do kit considerando grupo de equivalência ──
 function epiMatchComGrupo(epiTipo, kitItemNome, catalogoList) {
   // match direto por nome
@@ -116,13 +160,22 @@ export default function Epis({ isAdmin = false }) {
   const [erroImport, setErroImport] = useState('')
 
   function normalizarTexto(valor) {
-    return String(valor ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+    return String(valor ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '')
+      .trim()
   }
 
   function valorLinha(row, aliases) {
     const chaves = Object.keys(row || {})
     for (const alias of aliases) {
-      const chave = chaves.find(k => normalizarTexto(k) === normalizarTexto(alias))
+      const aliasNormalizado = normalizarTexto(alias)
+      const chave = chaves.find(k => {
+        const chaveNormalizada = normalizarTexto(k)
+        return chaveNormalizada === aliasNormalizado || chaveNormalizada.includes(aliasNormalizado) || aliasNormalizado.includes(chaveNormalizada)
+      })
       if (chave && row[chave] !== null && row[chave] !== undefined && String(row[chave]).trim() !== '') return row[chave]
     }
     return ''
@@ -149,21 +202,39 @@ export default function Epis({ isAdmin = false }) {
 
     try {
       const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' })
-      const sheetName = workbook.SheetNames.find((nome) => {
+      const folhaComDados = workbook.SheetNames.find((nome) => {
         const texto = normalizarTexto(nome)
-        return texto.includes('entrega') || texto.includes('epi') || texto.includes('itens')
+        return texto.includes('entrega') || texto.includes('epi') || texto.includes('itens') || texto.includes('dados')
+      })
+
+      const sheetName = folhaComDados || workbook.SheetNames.find((nome) => {
+        const linhas = XLSX.utils.sheet_to_json(workbook.Sheets[nome], { defval: '' })
+        return linhas.some((linha) => {
+          const chaves = Object.keys(linha || {})
+          return chaves.some((chave) => {
+            const chaveNormalizada = normalizarTexto(chave)
+            return ['colaborador', 'funcionario', 'matricula', 'epi', 'tipo', 'entrega', 'item', 'nome'].some((alias) =>
+              chaveNormalizada.includes(alias) || alias.includes(chaveNormalizada)
+            )
+          })
+        })
       })
 
       if (!sheetName) throw new Error('Nenhuma aba de entregas de EPIs foi encontrada na planilha.')
+
+      const { data: kitsAtivos, error: erroKits } = await supabase.from('epi_kits').select('*').eq('ativo', true)
+      if (erroKits) throw new Error(erroKits.message)
 
       const linhas = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' })
       let total = 0
 
       for (const linha of linhas) {
-        const nomeColab = String(valorLinha(linha, ['nome', 'nome_completo', 'colaborador', 'funcionario']) || '').trim()
-        const matricula = String(valorLinha(linha, ['matricula', 'matrícula']) || '').trim()
-        const tipo = String(valorLinha(linha, ['tipo', 'epi', 'nome_epi', 'produto', 'item']) || '').trim()
-        const dataEntrega = parseDateValue(valorLinha(linha, ['data_entrega', 'data_de_entrega', 'entrega']))
+        const nomeColab = String(valorLinha(linha, ['nome', 'nome_completo', 'colaborador', 'funcionario', 'nomecolaborador']) || '').trim()
+        const matricula = String(valorLinha(linha, ['matricula', 'matrícula', 'matricula_colaborador']) || '').trim()
+        const setor = String(valorLinha(linha, ['setor', 'area', 'departamento']) || '').trim()
+        const cargo = normalizarCargoEpi(String(valorLinha(linha, ['cargo', 'funcao', 'função', 'cargo_funcao']) || '').trim())
+        const tipo = String(valorLinha(linha, ['tipo', 'epi', 'nome_epi', 'produto', 'item', 'nomeitem']) || '').trim()
+        const dataEntrega = parseDateValue(valorLinha(linha, ['data_entrega', 'data_de_entrega', 'entrega', 'dataentrega']))
 
         if (!nomeColab && !matricula) continue
         if (!tipo || !dataEntrega) continue
@@ -179,15 +250,32 @@ export default function Epis({ isAdmin = false }) {
           colaborador = data?.[0] || null
         }
 
+        let kitId = null
+        if (cargo) {
+          kitId = resolverKitPorCargoEpi(cargo, kitsAtivos || [])
+        }
+
         if (!colaborador) {
           const payload = {
             nome: nomeColab.toUpperCase().trim(),
             matricula: matricula || `MAT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            setor: setor || null,
+            cargo: cargo || null,
+            kit_id: kitId || null,
             ativo: true,
           }
           const { data: dataColab, error: erroColab } = await supabase.from('colaboradores').insert(payload).select('*').single()
           if (erroColab) throw new Error(erroColab.message)
           colaborador = dataColab
+        } else {
+          const camposParaAtualizar = {}
+          if (setor && !colaborador.setor) camposParaAtualizar.setor = setor
+          if (cargo && !colaborador.cargo) camposParaAtualizar.cargo = cargo
+          if (kitId && !colaborador.kit_id) camposParaAtualizar.kit_id = kitId
+          if (Object.keys(camposParaAtualizar).length > 0) {
+            const { error: erroAtualizaColab } = await supabase.from('colaboradores').update(camposParaAtualizar).eq('id', colaborador.id)
+            if (erroAtualizaColab) throw new Error(erroAtualizaColab.message)
+          }
         }
 
         const quantidade = Number(String(valorLinha(linha, ['quantidade', 'qtd']) || '1').replace(',', '.')) || 1

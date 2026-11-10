@@ -56,22 +56,48 @@ function badgeKit(nome) {
   return <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 8px', borderRadius: 5, fontSize: 11, fontWeight: 600, background: 'var(--blue-dim)', color: 'var(--blue)' }}>{nome}</span>
 }
 
-function resolverKitPorCargo(cargo, kits) {
-  const cargoNormalizado = String(cargo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
-  const nomesPermitidos = [
-    'pesquisador industrial',
-    'desenvolvedor de inovação e tecnologia',
-    'coordenador de inovação e tecnologia',
-    'designer',
-  ]
+const CARGOS_PERMITIDOS = [
+  'DESIGNER',
+  'DESENVOLVEDOR',
+  'PESQUISADOR INDUSTRIAL',
+  'COORDENADOR DE INOVAÇÃO E TECNOLOGIA',
+  'GERENTE DE INOVAÇÃO E TECNOLOGIA',
+  'BOLSISTA',
+]
 
-  if (!nomesPermitidos.includes(cargoNormalizado)) return null
+function normalizarCargo(cargo) {
+  const texto = String(cargo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+  if (texto.includes('designer')) return 'DESIGNER'
+  if (texto.includes('desenvolvedor')) return 'DESENVOLVEDOR'
+  if (texto.includes('pesquisador')) return 'PESQUISADOR INDUSTRIAL'
+  if (texto.includes('coordenador') && texto.includes('inovacao') && texto.includes('tecnologia')) return 'COORDENADOR DE INOVAÇÃO E TECNOLOGIA'
+  if (texto.includes('gerente') && texto.includes('inovacao') && texto.includes('tecnologia')) return 'GERENTE DE INOVAÇÃO E TECNOLOGIA'
+  if (texto.includes('bolsista')) return 'BOLSISTA'
+  return String(cargo || '').trim()
+}
+
+function resolverKitPorCargo(cargo, kits) {
+  const cargoNormalizado = normalizarCargo(cargo)
+  const permitidos = CARGOS_PERMITIDOS.map(c => c.toLowerCase())
+
+  if (!permitidos.includes(cargoNormalizado.toLowerCase())) return null
 
   const kitPesquisador = kits.find(k =>
     String(k.nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim() === 'pesquisador industrial'
   )
 
-  return kitPesquisador?.id || null
+  if (['DESENVOLVEDOR', 'PESQUISADOR INDUSTRIAL', 'COORDENADOR DE INOVAÇÃO E TECNOLOGIA', 'GERENTE DE INOVAÇÃO E TECNOLOGIA', 'BOLSISTA'].includes(cargoNormalizado)) {
+    return kitPesquisador?.id || null
+  }
+
+  if (cargoNormalizado === 'DESIGNER') {
+    const kitDesigner = kits.find(k =>
+      String(k.nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim() === 'designer'
+    )
+    return kitDesigner?.id || null
+  }
+
+  return null
 }
 
 export default function Colaboradores() {
@@ -150,7 +176,7 @@ export default function Colaboradores() {
 
         const matricula = String(valorLinha(linha, ['matricula', 'matrícula']) || '').trim()
         const setor = String(valorLinha(linha, ['setor', 'area', 'departamento']) || '').trim()
-        const cargo = String(valorLinha(linha, ['cargo', 'funcao', 'função']) || '').trim()
+        const cargo = normalizarCargo(String(valorLinha(linha, ['cargo', 'funcao', 'função']) || '').trim())
         const kitNome = String(valorLinha(linha, ['kit', 'kit_epi', 'epi_kit']) || '').trim()
         const ativo = parseBoolean(valorLinha(linha, ['ativo', 'status', 'situacao']))
 
@@ -220,7 +246,7 @@ export default function Colaboradores() {
   function gerarMatricula() { return 'MAT-' + String(Math.floor(Math.random() * 9000) + 1000) }
 
   function abrirNovo()    { setEditando(null); setForm({ nome: '', setor: '', cargo: '', kit_id: '' }); setModal(true) }
-  function abrirEditar(c) { setEditando(c); setForm({ nome: c.nome, setor: c.setor || '', cargo: c.cargo || '', kit_id: c.kit_id || '' }); setModal(true) }
+  function abrirEditar(c) { setEditando(c); setForm({ nome: c.nome, setor: c.setor || '', cargo: normalizarCargo(c.cargo || ''), kit_id: c.kit_id || '' }); setModal(true) }
 
   async function abrirFerias(c) {
     setColabFerias(c)
@@ -263,12 +289,13 @@ export default function Colaboradores() {
   async function salvar() {
     if (!form.nome.trim()) return
     setSalvando(true)
-    const kitIdFinal = resolverKitPorCargo(form.cargo, kits) || form.kit_id || null
+    const cargoFinal = normalizarCargo(form.cargo)
+    const kitIdFinal = resolverKitPorCargo(cargoFinal, kits) || form.kit_id || null
 
     if (editando) {
-      await supabase.from('colaboradores').update({ nome: form.nome.toUpperCase().trim(), setor: form.setor.trim(), cargo: form.cargo.trim(), kit_id: kitIdFinal }).eq('id', editando.id)
+      await supabase.from('colaboradores').update({ nome: form.nome.toUpperCase().trim(), setor: form.setor.trim(), cargo: cargoFinal, kit_id: kitIdFinal }).eq('id', editando.id)
     } else {
-      await supabase.from('colaboradores').insert({ nome: form.nome.toUpperCase().trim(), matricula: gerarMatricula(), setor: form.setor.trim(), cargo: form.cargo.trim(), kit_id: kitIdFinal, ativo: true })
+      await supabase.from('colaboradores').insert({ nome: form.nome.toUpperCase().trim(), matricula: gerarMatricula(), setor: form.setor.trim(), cargo: cargoFinal, kit_id: kitIdFinal, ativo: true })
     }
     setForm({ nome: '', setor: '', cargo: '', kit_id: '' })
     setModal(false); setEditando(null); setSalvando(false); carregar()
@@ -454,14 +481,16 @@ export default function Colaboradores() {
           <div style={S.modalBox}>
             <div style={S.modalTitle}>{editando ? 'Editar Colaborador' : 'Novo Colaborador'}</div>
             <div style={S.field}><label style={S.label}>Nome completo *</label><input style={S.input} value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} placeholder="Ex: JOÃO DA SILVA" /></div>
-            <div style={S.field}><label style={S.label}>Função / Kit de EPIs</label>
-              <select style={S.fsel} value={form.kit_id} onChange={e => setForm({ ...form, kit_id: e.target.value })}>
-                <option value="">Selecione a função...</option>
-                {kits.map(k => <option key={k.id} value={k.id}>{k.nome}</option>)}
+            <div style={S.field}><label style={S.label}>Cargo</label>
+              <select style={S.fsel} value={form.cargo || ''} onChange={e => {
+                const cargo = normalizarCargo(e.target.value)
+                setForm({ ...form, cargo, kit_id: resolverKitPorCargo(cargo, kits) || '' })
+              }}>
+                <option value="">Selecione o cargo...</option>
+                {CARGOS_PERMITIDOS.map(cargo => <option key={cargo} value={cargo}>{cargo}</option>)}
               </select>
             </div>
             <div style={S.field}><label style={S.label}>Setor</label><input style={S.input} value={form.setor} onChange={e => setForm({ ...form, setor: e.target.value })} placeholder="Ex: Energia" /></div>
-            <div style={S.field}><label style={S.label}>Cargo</label><input style={S.input} value={form.cargo} onChange={e => setForm({ ...form, cargo: e.target.value })} placeholder="Ex: Técnico de Campo" /></div>
             <div style={S.row}>
               <button style={S.btnSm} onClick={() => setModal(false)}>Cancelar</button>
               <button style={S.btn} onClick={salvar} disabled={salvando}>{salvando ? 'Salvando...' : 'Salvar'}</button>
