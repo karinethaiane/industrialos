@@ -312,12 +312,14 @@ export default function AlocacaoHoras({ isAdmin = false }) {
 
     const palette = {
       navy: '#0F172A',
+      navy2: '#1F2937',
       slate: '#334155',
       muted: '#64748B',
       border: '#D9E2EC',
-      bg: '#F8FAFC',
-      white: '#FFFFFF',
-      green: '#D1FAE5',
+      rowAlt: '#F3F4F6',
+      rowEven: '#FFFFFF',
+      gray: '#E2E8F0',
+      green: '#DCFCE7',
       greenText: '#166534',
       amber: '#FEF3C7',
       amberText: '#92400E',
@@ -325,16 +327,15 @@ export default function AlocacaoHoras({ isAdmin = false }) {
       redText: '#991B1B',
       blue: '#DBEAFE',
       blueText: '#1D4ED8',
-      gray: '#E2E8F0',
+      white: '#FFFFFF',
     }
 
     const border = { top: { style: 'thin', color: { rgb: 'FFD9E2EC' } }, bottom: { style: 'thin', color: { rgb: 'FFD9E2EC' } }, left: { style: 'thin', color: { rgb: 'FFD9E2EC' } }, right: { style: 'thin', color: { rgb: 'FFD9E2EC' } } }
-    const headerStyle = { font: { bold: true, color: { rgb: 'FFFFFFFF' } }, fill: { fgColor: { rgb: palette.navy } }, border, alignment: { vertical: 'center', horizontal: 'center' }, }
-    const titleStyle = { font: { bold: true, color: { rgb: 'FFFFFFFF' }, sz: 16 }, fill: { fgColor: { rgb: palette.navy } }, border, alignment: { vertical: 'center', horizontal: 'center' } }
-    const subtitleStyle = { font: { bold: true, color: { rgb: palette.slate } }, fill: { fgColor: { rgb: palette.bg } }, border, alignment: { vertical: 'center', horizontal: 'left' } }
-    const metricLabelStyle = { font: { bold: true, color: { rgb: palette.slate } }, fill: { fgColor: { rgb: palette.gray } }, border, alignment: { vertical: 'center', horizontal: 'left' } }
-    const metricValueStyle = { font: { bold: true, color: { rgb: palette.navy }, sz: 12 }, fill: { fgColor: { rgb: palette.white } }, border, alignment: { vertical: 'center', horizontal: 'center' } }
-    const mutedStyle = { font: { color: { rgb: palette.muted } }, fill: { fgColor: { rgb: palette.white } }, border, alignment: { vertical: 'center', horizontal: 'left' } }
+    const headerStyle = { font: { bold: true, color: { rgb: 'FFFFFFFF' }, sz: 11 }, fill: { fgColor: { rgb: palette.navy } }, border, alignment: { vertical: 'center', horizontal: 'center' } }
+    const titleStyle = { font: { bold: true, color: { rgb: 'FFFFFFFF' }, sz: 14 }, fill: { fgColor: { rgb: palette.navy2 } }, border, alignment: { vertical: 'center', horizontal: 'center' } }
+    const summaryLabelStyle = { font: { bold: true, color: { rgb: palette.slate } }, fill: { fgColor: { rgb: palette.gray } }, border, alignment: { vertical: 'center', horizontal: 'left' } }
+    const summaryValueStyle = { font: { bold: true, color: { rgb: palette.navy } }, fill: { fgColor: { rgb: palette.white } }, border, alignment: { vertical: 'center', horizontal: 'center' } }
+    const dataStyle = { font: { color: { rgb: palette.slate }, sz: 10 }, border, alignment: { vertical: 'center', horizontal: 'center' } }
 
     const wb = XLSX.utils.book_new()
 
@@ -359,10 +360,14 @@ export default function AlocacaoHoras({ isAdmin = false }) {
 
     const setCellStyle = (ref, style) => { if (wsResumo[ref]) wsResumo[ref].s = style }
     setCellStyle('A1', titleStyle)
-    setCellStyle('A2', subtitleStyle)
-    setCellStyle('C2', subtitleStyle)
-    setCellStyle('A3', subtitleStyle)
-    setCellStyle('C3', subtitleStyle)
+    setCellStyle('A2', summaryLabelStyle)
+    setCellStyle('B2', summaryValueStyle)
+    setCellStyle('C2', summaryLabelStyle)
+    setCellStyle('D2', summaryValueStyle)
+    setCellStyle('A3', summaryLabelStyle)
+    setCellStyle('B3', summaryValueStyle)
+    setCellStyle('C3', summaryLabelStyle)
+    setCellStyle('D3', summaryValueStyle)
     setCellStyle('A5', headerStyle)
     setCellStyle('B5', headerStyle)
     setCellStyle('C5', headerStyle)
@@ -370,9 +375,9 @@ export default function AlocacaoHoras({ isAdmin = false }) {
       const aRef = XLSX.utils.encode_cell({ r, c: 0 })
       const bRef = XLSX.utils.encode_cell({ r, c: 1 })
       const cRef = XLSX.utils.encode_cell({ r, c: 2 })
-      if (wsResumo[aRef]) wsResumo[aRef] = { ...wsResumo[aRef], s: metricLabelStyle }
-      if (wsResumo[bRef]) wsResumo[bRef] = { ...wsResumo[bRef], s: metricValueStyle }
-      if (wsResumo[cRef]) wsResumo[cRef] = { ...wsResumo[cRef], s: mutedStyle }
+      if (wsResumo[aRef]) wsResumo[aRef] = { ...wsResumo[aRef], s: summaryLabelStyle }
+      if (wsResumo[bRef]) wsResumo[bRef] = { ...wsResumo[bRef], s: summaryValueStyle }
+      if (wsResumo[cRef]) wsResumo[cRef] = { ...wsResumo[cRef], s: { ...summaryLabelStyle, alignment: { vertical: 'center', horizontal: 'left' } } }
     }
     XLSX.utils.book_append_sheet(wb, wsResumo, 'Resumo')
 
@@ -391,7 +396,12 @@ export default function AlocacaoHoras({ isAdmin = false }) {
       for (let c = 0; c <= cab.length - 1; c++) {
         const ref = XLSX.utils.encode_cell({ r, c })
         if (ws[ref]) {
-          ws[ref].s = { ...border, alignment: { vertical: 'center', horizontal: c === 1 || c === 2 || c === 11 || c === 12 ? 'left' : 'center' } }
+          ws[ref].s = {
+            ...border,
+            fill: { fgColor: { rgb: r % 2 === 0 ? palette.rowAlt : palette.rowEven } },
+            font: { color: { rgb: palette.slate }, sz: 10 },
+            alignment: { vertical: 'center', horizontal: c === 1 || c === 2 || c === 11 || c === 12 ? 'left' : 'center' }
+          }
         }
       }
 
@@ -399,13 +409,15 @@ export default function AlocacaoHoras({ isAdmin = false }) {
       if (ws[pctRef] && typeof ws[pctRef].v === 'number') ws[pctRef].z = '0%'
 
       const statusRef = XLSX.utils.encode_cell({ r, c: 8 })
-      const status = ws[statusRef]?.v || ''
+      const status = (ws[statusRef] && ws[statusRef].v) || ''
       let fill = { fgColor: { rgb: palette.white } }
-      if (status === 'Em dia') fill = { fgColor: { rgb: palette.green } }
-      else if (status === 'Evoluindo' || status === 'Dentro' || status === 'Acima') fill = { fgColor: { rgb: palette.blue } }
-      else if (status === 'Sem alocação' || status === 'Abaixo' || status === 'Regrediu') fill = { fgColor: { rgb: palette.red } }
-      if (ws[statusRef]) ws[statusRef].s = { ...ws[statusRef].s, fill, font: { bold: true, color: { rgb: status === 'Em dia' ? palette.greenText : status === 'Sem alocação' ? palette.redText : status === 'Evoluindo' ? palette.blueText : palette.slate } } }
+      let textColor = palette.slate
+      if (status.includes('Sem alocação') || status.includes('Abaixo') || status.includes('Regred')) fill = { fgColor: { rgb: palette.red } }, textColor = palette.redText
+      else if (status.includes('Evoluindo') || status.includes('Dentro') || status.includes('Acima')) fill = { fgColor: { rgb: palette.blue } }, textColor = palette.blueText
+      else if (status.includes('Em dia')) fill = { fgColor: { rgb: palette.green } }, textColor = palette.greenText
+      if (ws[statusRef]) ws[statusRef].s = { ...ws[statusRef].s, fill, font: { bold: true, color: { rgb: textColor }, sz: 10 } }
     }
+
     XLSX.utils.book_append_sheet(wb, ws, 'Detalhamento')
 
     XLSX.writeFile(wb, `alocacao-horas-${GERENCIA_ALVO}-${ymAtivo}.xlsx`)
