@@ -69,6 +69,7 @@ export default function Colaboradores() {
   const [formFerias, setFormFerias] = useState({ data_inicio: '', data_fim: '', observacoes: '' })
   const [salvando, setSalvando]   = useState(false)
   const [salvandoFerias, setSalvandoFerias] = useState(false)
+  const [limpandoBase, setLimpandoBase] = useState(false)
   const [erroFerias, setErroFerias] = useState('')
 
   useEffect(() => { carregar() }, [])
@@ -148,7 +149,74 @@ export default function Colaboradores() {
 
   async function excluir(id) {
     if (!confirm('Excluir este colaborador?')) return
-    await supabase.from('colaboradores').delete().eq('id', id)
+
+    const deletes = [
+      supabase.from('colaborador_ferias').delete().eq('colaborador_id', id),
+      supabase.from('alocacao_notas').delete().eq('colaborador_id', id),
+      supabase.from('epis').delete().eq('colaborador_id', id),
+      supabase.from('saidas_veiculos').delete().eq('colaborador_id', id),
+    ]
+
+    const resultados = await Promise.allSettled(deletes)
+    const erroDelete = resultados.find(r => r.status === 'rejected' || (r.status === 'fulfilled' && r.value?.error))
+    if (erroDelete?.status === 'fulfilled' && erroDelete.value?.error) {
+      console.error('Erro ao limpar dependências do colaborador:', erroDelete.value.error)
+    }
+    if (erroDelete?.status === 'rejected') {
+      console.error('Erro ao limpar dependências do colaborador:', erroDelete.reason)
+    }
+
+    const { error } = await supabase.from('colaboradores').delete().eq('id', id)
+    if (error) {
+      alert('Não foi possível excluir o colaborador: ' + error.message)
+      return
+    }
+
+    carregar()
+  }
+
+  async function limparBase() {
+    if (!confirm('Tem certeza que deseja remover todos os colaboradores e os registros relacionados? Esta ação limpa a base.')) return
+
+    setLimpandoBase(true)
+
+    const { data: todos, error: selError } = await supabase.from('colaboradores').select('id')
+    if (selError) {
+      alert('Não foi possível carregar os colaboradores para limpar a base: ' + selError.message)
+      setLimpandoBase(false)
+      return
+    }
+
+    const ids = (todos || []).map(c => c.id)
+    if (ids.length === 0) {
+      setLimpandoBase(false)
+      return
+    }
+
+    const deletes = [
+      supabase.from('colaborador_ferias').delete().in('colaborador_id', ids),
+      supabase.from('alocacao_notas').delete().in('colaborador_id', ids),
+      supabase.from('epis').delete().in('colaborador_id', ids),
+      supabase.from('saidas_veiculos').delete().in('colaborador_id', ids),
+    ]
+
+    const resultados = await Promise.allSettled(deletes)
+    const erroDelete = resultados.find(r => r.status === 'rejected' || (r.status === 'fulfilled' && r.value?.error))
+    if (erroDelete?.status === 'fulfilled' && erroDelete.value?.error) {
+      console.error('Erro ao limpar registros dependentes da base:', erroDelete.value.error)
+    }
+    if (erroDelete?.status === 'rejected') {
+      console.error('Erro ao limpar registros dependentes da base:', erroDelete.reason)
+    }
+
+    const { error: delError } = await supabase.from('colaboradores').delete().in('id', ids)
+    if (delError) {
+      alert('Não foi possível limpar a base: ' + delError.message)
+      setLimpandoBase(false)
+      return
+    }
+
+    setLimpandoBase(false)
     carregar()
   }
 
@@ -161,10 +229,15 @@ export default function Colaboradores() {
           <div style={S.title}>Colaboradores</div>
           <div style={S.sub}>Cadastro e gestão de equipe</div>
         </div>
-        <button style={S.btn} onClick={abrirNovo}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Novo Colaborador
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button style={{ ...S.btnSm, background: 'var(--red-dim)', color: 'var(--red)', borderColor: 'rgba(239,68,68,.2)' }} onClick={limparBase} disabled={limpandoBase}>
+            {limpandoBase ? 'Limpando...' : 'Limpar base'}
+          </button>
+          <button style={S.btn} onClick={abrirNovo}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Novo Colaborador
+          </button>
+        </div>
       </div>
 
       {loading ? (
