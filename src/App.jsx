@@ -32,23 +32,23 @@ const IC = {
 
 // ── Paleta dos ícones dos módulos ────────────────────────────────────────
 const MOD_ICON_COR = {
-  consultoria:   { bg: 'rgba(8,145,178,.12)',   color: '#67e8f9' },
-  financeiro:    { bg: 'rgba(5,150,105,.12)',   color: '#34d399' },
-  patrimonio:    { bg: 'rgba(217,119,6,.12)',   color: '#fbbf24' },
-  colaboradores: { bg: 'rgba(124,58,237,.12)',  color: '#c4b5fd' },
-  epis:          { bg: 'rgba(225,29,72,.12)',   color: '#fb7185' },
-  veiculos:      { bg: 'rgba(13,148,136,.12)',  color: '#5eead4' },
-  onedoc:        { bg: 'rgba(37,99,235,.12)',   color: '#93c5fd' },
+  consultoria:   { bg: 'rgba(100,116,139,.12)', color: '#cbd5e1' },
+  financeiro:    { bg: 'rgba(47,125,102,.12)',  color: '#a7d3c4' },
+  patrimonio:    { bg: 'rgba(170,122,42,.12)',  color: '#d7b574' },
+  colaboradores: { bg: 'rgba(107,114,128,.12)', color: '#dfe7f1' },
+  epis:          { bg: 'rgba(182,83,83,.12)',   color: '#d68585' },
+  veiculos:      { bg: 'rgba(93,114,128,.12)',  color: '#b9c8d4' },
+  onedoc:        { bg: 'rgba(148,163,184,.12)', color: '#e5e7eb' },
 }
 // Light overrides
 const MOD_ICON_COR_LIGHT = {
-  consultoria:   { bg: '#ecfeff', color: '#0891b2' },
-  financeiro:    { bg: '#ecfdf5', color: '#059669' },
-  patrimonio:    { bg: '#fffbeb', color: '#d97706' },
-  colaboradores: { bg: '#f5f3ff', color: '#7c3aed' },
-  epis:          { bg: '#fff1f2', color: '#e11d48' },
-  veiculos:      { bg: '#f0fdfa', color: '#0d9488' },
-  onedoc:        { bg: '#eff6ff', color: '#2563eb' },
+  consultoria:   { bg: '#f3f6f9', color: '#475569' },
+  financeiro:    { bg: '#eff7f3', color: '#2f7d66' },
+  patrimonio:    { bg: '#faf5ee', color: '#aa7a2a' },
+  colaboradores: { bg: '#f5f7fa', color: '#475569' },
+  epis:          { bg: '#fdf1f1', color: '#b65353' },
+  veiculos:      { bg: '#f3f7f9', color: '#5d7280' },
+  onedoc:        { bg: '#f8fafc', color: '#475569' },
 }
 
 // ── Saudação ─────────────────────────────────────────────────────────────
@@ -246,7 +246,7 @@ export default function App() {
 
           {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '18px 15px 16px', borderBottom: '1px solid var(--sb-border)', flexShrink: 0 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#6366f1,#818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 0 14px rgba(99,102,241,.4)' }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#64748b,#94a3b8)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 0 12px rgba(100,116,139,.25)' }}>
               {IC.bolt}
             </div>
             <div style={{ opacity: sbOpen ? 1 : 0, transition: 'opacity .15s .06s' }}>
@@ -307,7 +307,7 @@ export default function App() {
             </button>
             {/* Avatar */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 6px' }}>
-              <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#6366f1,#818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+              <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#64748b,#cbd5e1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#111827', flexShrink: 0 }}>
                 {initials}
               </div>
               <div style={{ opacity: sbOpen ? 1 : 0, transition: 'opacity .12s .06s', minWidth: 0 }}>
@@ -377,8 +377,8 @@ function Login({ tema, toggleTema }) {
 
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '40px 36px', width: '100%', maxWidth: 380, boxShadow: '0 4px 24px var(--shadow)' }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{ width: 48, height: 48, background: 'linear-gradient(135deg,#6366f1,#818cf8)', borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', boxShadow: '0 0 28px rgba(99,102,241,.3)' }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <div style={{ width: 48, height: 48, background: 'linear-gradient(135deg,#64748b,#cbd5e1)', borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', boxShadow: '0 0 22px rgba(100,116,139,.18)' }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth="2.2" strokeLinecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           </div>
           <div style={{ fontSize: 19, fontWeight: 700, color: 'var(--text)', letterSpacing: '-.02em' }}>Gestão de Processos</div>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '.08em' }}>Energia · Plataforma Industrial</div>
@@ -394,7 +394,7 @@ function Login({ tema, toggleTema }) {
             <input style={inp} type="password" value={senha} onChange={e => setSenha(e.target.value)} placeholder="••••••••" required />
           </div>
           {erro && <div style={{ background: 'var(--red-dim)', border: '1px solid rgba(239,68,68,.25)', borderRadius: 7, padding: '8px 12px', color: 'var(--red)', fontSize: 12 }}>{erro}</div>}
-          <button type="submit" disabled={carregando} style={{ background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 8, padding: 11, fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 16px rgba(99,102,241,.3)', marginTop: 4, transition: 'opacity .15s' }}>
+          <button type="submit" disabled={carregando} style={{ background: 'linear-gradient(135deg,#64748b,#475569)', color: '#fff', border: 'none', borderRadius: 8, padding: 11, fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 12px rgba(71,85,105,.18)', marginTop: 4, transition: 'opacity .15s' }}>
             {carregando ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
