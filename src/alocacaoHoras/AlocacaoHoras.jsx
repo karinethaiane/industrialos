@@ -309,12 +309,101 @@ export default function AlocacaoHoras({ isAdmin = false }) {
       l.alertas.map(a => a[1]).join(' | '),
       (l.nota.tag ? `[${l.nota.tag}] ` : '') + l.nota.texto,
     ])
+
+    const border = { top: { style: 'thin', color: { rgb: 'FFCBD5E1' } }, bottom: { style: 'thin', color: { rgb: 'FFCBD5E1' } }, left: { style: 'thin', color: { rgb: 'FFCBD5E1' } }, right: { style: 'thin', color: { rgb: 'FFCBD5E1' } } }
+    const headerStyle = { font: { bold: true, color: { rgb: 'FF0F172A' } }, fill: { fgColor: { rgb: 'FFE2E8F0' } }, border, alignment: { vertical: 'center', horizontal: 'center' } }
+    const titleStyle = { font: { bold: true, color: { rgb: 'FFFFFFFF' }, sz: 16 }, fill: { fgColor: { rgb: 'FF0F172A' } }, border, alignment: { vertical: 'center', horizontal: 'left' } }
+    const subTitleStyle = { font: { bold: true, color: { rgb: 'FF334155' } }, fill: { fgColor: { rgb: 'FFF8FAFC' } }, border, alignment: { vertical: 'center', horizontal: 'left' } }
+    const metricStyle = { font: { bold: true, color: { rgb: 'FF0F172A' } }, fill: { fgColor: { rgb: 'FFF8FAFC' } }, border, alignment: { vertical: 'center', horizontal: 'center' } }
+    const valueStyle = { font: { bold: true, color: { rgb: 'FF0F172A' }, sz: 12 }, fill: { fgColor: { rgb: 'FFFFFFFF' } }, border, alignment: { vertical: 'center', horizontal: 'center' } }
+
+    const wb = XLSX.utils.book_new()
+
+    const resumoRows = [
+      ['Relatório de Alocação de Horas'],
+      [`Gerência: ${GERENCIA_ALVO}`, '', `Período: ${ymLabel(ymAtivo)}`],
+      [`Data da extração: ${A ? dmyFull(A.ult.data) : '—'}`, '', `Comparação: ${A && A.pen ? `${dmyFull(A.pen.data)} x ${dmyFull(A.ult.data)}` : '—'}`],
+      [],
+      ['Indicador', 'Valor', 'Observação'],
+      ['Colaboradores monitorados', String(A ? A.pes.length : visiveis.length), 'Equipe em acompanhamento'],
+      ['Em dia', String(A ? A.c('ok') : 0), 'Concluíram a alocação esperada'],
+      ['Evoluindo', String(A ? A.c('up') + A.c('stall') : 0), 'Crescimento ou estabilidade positiva'],
+      ['Sem alocação', String(A ? A.c('zero') + A.c('down') : 0), 'Sem alocação ou sem evolução'],
+      ['Cobertura atual', `${Math.round(A ? A.cov : 0)}%`, 'Percentual do planejado alocado'],
+      ['Horas na última semana', `${A && A.n > 1 ? `${A.horasAdd >= 0 ? '+' : ''}${fmtH(A.horasAdd)} h` : '—'}`, 'Variação de alocação na última comparação']
+    ]
+
+    const wsResumo = XLSX.utils.aoa_to_sheet(resumoRows)
+    wsResumo['A1'].s = titleStyle
+    wsResumo['A2'].s = subTitleStyle
+    wsResumo['C2'].s = subTitleStyle
+    wsResumo['A3'].s = subTitleStyle
+    wsResumo['C3'].s = subTitleStyle
+    wsResumo['A5'].s = headerStyle
+    wsResumo['B5'].s = headerStyle
+    wsResumo['C5'].s = headerStyle
+    for (let r = 6; r <= 11; r++) {
+      const aRef = XLSX.utils.encode_cell({ r, c: 0 })
+      const bRef = XLSX.utils.encode_cell({ r, c: 1 })
+      const cRef = XLSX.utils.encode_cell({ r, c: 2 })
+      wsResumo[aRef] = { v: wsResumo[aRef].v, s: metricStyle }
+      wsResumo[bRef] = { v: wsResumo[bRef].v, s: valueStyle }
+      wsResumo[cRef] = { v: wsResumo[cRef].v, s: { ...subTitleStyle, alignment: { vertical: 'center', horizontal: 'left' } } }
+    }
+    wsResumo['!cols'] = [{ wch: 32 }, { wch: 18 }, { wch: 40 }]
+    wsResumo['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }, { s: { r: 4, c: 0 }, e: { r: 4, c: 2 } }]
+    wsResumo['!freeze'] = { xSplit: 0, ySplit: 4 }
+    XLSX.utils.book_append_sheet(wb, wsResumo, 'Resumo')
+
     const ws = XLSX.utils.aoa_to_sheet([cab, ...dados])
-    dados.forEach((_, i) => { const c = ws[XLSX.utils.encode_cell({ r: i + 1, c: 7 })]; if (c && typeof c.v === 'number') c.z = '0%' })
     ws['!cols'] = [14, 40, 38, 12, 14, 14, 14, 12, 22, ...wks.map(() => 16), 60, 60].map(wch => ({ wch }))
     ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: dados.length, c: cab.length - 1 } }) }
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, `Alocação ${ymToPcp(ymAtivo).replace('/', '-')}`)
+    ws['!freeze'] = { xSplit: 0, ySplit: 1 }
+
+    const headerRange = XLSX.utils.decode_range(ws['!ref'])
+    for (let c = 0; c <= headerRange.e.c; c++) {
+      const ref = XLSX.utils.encode_cell({ r: 0, c })
+      ws[ref] = { v: ws[ref].v, s: headerStyle }
+    }
+    for (let r = 1; r <= dados.length; r++) {
+      for (let c = 0; c <= cab.length - 1; c++) {
+        const ref = XLSX.utils.encode_cell({ r, c })
+        if (ws[ref]) {
+          ws[ref].s = { ...border, alignment: { vertical: 'center', horizontal: c === 1 || c === 2 ? 'left' : 'center' } }
+        }
+      }
+      const pctRef = XLSX.utils.encode_cell({ r, c: 7 })
+      if (ws[pctRef] && typeof ws[pctRef].v === 'number') {
+        ws[pctRef].z = '0%'
+      }
+    }
+    XLSX.utils.book_append_sheet(wb, ws, 'Detalhamento')
+
+    const evolRows = [
+      ['Data', 'Cobertura (%)', 'Meta (%)', 'Observação'],
+      ...snaps.map(s => {
+        const cov = Math.round(cobertura(s) * 100)
+        const meta = Math.round(metaPct(s.data, ymAtivo, 'linear') * 100)
+        const obs = cov >= meta ? 'Atingiu a meta' : 'Ainda abaixo da meta'
+        return [dmyFull(s.data), cov, meta, obs]
+      })
+    ]
+    const wsEvo = XLSX.utils.aoa_to_sheet(evolRows)
+    wsEvo['!cols'] = [{ wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 26 }]
+    for (let c = 0; c <= 3; c++) {
+      const ref = XLSX.utils.encode_cell({ r: 0, c })
+      wsEvo[ref] = { v: wsEvo[ref].v, s: headerStyle }
+    }
+    for (let r = 1; r < evolRows.length; r++) {
+      for (let c = 0; c <= 3; c++) {
+        const ref = XLSX.utils.encode_cell({ r, c })
+        if (wsEvo[ref]) {
+          wsEvo[ref].s = { ...border, alignment: { vertical: 'center', horizontal: c === 3 ? 'left' : 'center' } }
+        }
+      }
+    }
+    XLSX.utils.book_append_sheet(wb, wsEvo, 'Evolução')
+
     XLSX.writeFile(wb, `alocacao-horas-${GERENCIA_ALVO}-${ymAtivo}.xlsx`)
     toast('Relatório exportado.')
   }
