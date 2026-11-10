@@ -334,21 +334,24 @@ export default function AlocacaoHoras({ isAdmin = false }) {
     ]
 
     const wsResumo = XLSX.utils.aoa_to_sheet(resumoRows)
-    wsResumo['A1'].s = titleStyle
-    wsResumo['A2'].s = subTitleStyle
-    wsResumo['C2'].s = subTitleStyle
-    wsResumo['A3'].s = subTitleStyle
-    wsResumo['C3'].s = subTitleStyle
-    wsResumo['A5'].s = headerStyle
-    wsResumo['B5'].s = headerStyle
-    wsResumo['C5'].s = headerStyle
+    const setCellStyle = (ws, ref, style) => {
+      if (ws[ref]) ws[ref].s = style
+    }
+    setCellStyle(wsResumo, 'A1', titleStyle)
+    setCellStyle(wsResumo, 'A2', subTitleStyle)
+    setCellStyle(wsResumo, 'C2', subTitleStyle)
+    setCellStyle(wsResumo, 'A3', subTitleStyle)
+    setCellStyle(wsResumo, 'C3', subTitleStyle)
+    setCellStyle(wsResumo, 'A5', headerStyle)
+    setCellStyle(wsResumo, 'B5', headerStyle)
+    setCellStyle(wsResumo, 'C5', headerStyle)
     for (let r = 6; r <= 11; r++) {
       const aRef = XLSX.utils.encode_cell({ r, c: 0 })
       const bRef = XLSX.utils.encode_cell({ r, c: 1 })
       const cRef = XLSX.utils.encode_cell({ r, c: 2 })
-      wsResumo[aRef] = { v: wsResumo[aRef].v, s: metricStyle }
-      wsResumo[bRef] = { v: wsResumo[bRef].v, s: valueStyle }
-      wsResumo[cRef] = { v: wsResumo[cRef].v, s: { ...subTitleStyle, alignment: { vertical: 'center', horizontal: 'left' } } }
+      if (wsResumo[aRef]) wsResumo[aRef] = { ...wsResumo[aRef], s: metricStyle }
+      if (wsResumo[bRef]) wsResumo[bRef] = { ...wsResumo[bRef], s: valueStyle }
+      if (wsResumo[cRef]) wsResumo[cRef] = { ...wsResumo[cRef], s: { ...subTitleStyle, alignment: { vertical: 'center', horizontal: 'left' } } }
     }
     wsResumo['!cols'] = [{ wch: 32 }, { wch: 18 }, { wch: 40 }]
     wsResumo['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }, { s: { r: 4, c: 0 }, e: { r: 4, c: 2 } }]
