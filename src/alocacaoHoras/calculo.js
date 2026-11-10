@@ -15,6 +15,7 @@ export const pad2 = n => String(n).padStart(2, '0')
 export const fmtH = v => v == null ? '—' : v.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 })
 export const fmtDif = v => v == null ? '—' : (v > 0 ? '+' : '') + fmtH(v)
 export const ymLabel = ym => { const [y, m] = ym.split('-').map(Number); return `${MES_NOME[m - 1]}/${y}` }
+export const nomePlanilhaAlocacao = ym => { const [y, m] = ym.split('-').map(Number); return `Alocação ${MES_ABREV[m - 1]}-${String(y).slice(2)}` }
 export const ymToPcp = ym => { const [y, m] = ym.split('-').map(Number); return `${MES_ABREV[m - 1]}/${String(y).slice(2)}` }
 export const pcpToYm = lb => { const m = lb.match(/^([A-Z]{3})\/(\d{2})$/); return m ? `${2000 + +m[2]}-${pad2(MES_ABREV.indexOf(m[1]) + 1)}` : null }
 export const dmy = s => `${s.slice(8, 10)}/${s.slice(5, 7)}`

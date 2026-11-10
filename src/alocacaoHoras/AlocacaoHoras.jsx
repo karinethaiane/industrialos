@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx'
 import './alocacaoHoras.css'
 import {
   GERENCIA_ALVO, TAGS_MANUAIS, ST_LABEL, ST_CURTO, ST_COR, TD,
-  fmtH, fmtDif, ymLabel, ymToPcp, dmy, dmyFull, colLetra, notaKey, sinal,
+  fmtH, fmtDif, ymLabel, nomePlanilhaAlocacao, ymToPcp, dmy, dmyFull, colLetra, notaKey, sinal,
   interpretarPcp, interpretarRelatorio, calcular, ordenar, mesesDisponiveis, semanasDoMes,
   capturar, stSnap, cobertura, distSnap, metaPct, analisarEvolucao, montarResumo,
 } from './calculo'
@@ -310,116 +310,52 @@ export default function AlocacaoHoras({ isAdmin = false }) {
       (l.nota.tag ? `[${l.nota.tag}] ` : '') + l.nota.texto,
     ])
 
-    const palette = {
-      navy: '#0F172A',
-      navy2: '#1F2937',
-      slate: '#334155',
-      muted: '#64748B',
-      border: '#D9E2EC',
-      rowAlt: '#F3F4F6',
-      rowEven: '#FFFFFF',
-      gray: '#E2E8F0',
-      green: '#DCFCE7',
-      greenText: '#166534',
-      amber: '#FEF3C7',
-      amberText: '#92400E',
-      red: '#FEE2E2',
-      redText: '#991B1B',
-      blue: '#DBEAFE',
-      blueText: '#1D4ED8',
-      white: '#FFFFFF',
-    }
-
-    const border = { top: { style: 'thin', color: { rgb: 'FFD9E2EC' } }, bottom: { style: 'thin', color: { rgb: 'FFD9E2EC' } }, left: { style: 'thin', color: { rgb: 'FFD9E2EC' } }, right: { style: 'thin', color: { rgb: 'FFD9E2EC' } } }
-    const headerStyle = { font: { bold: true, color: { rgb: 'FFFFFFFF' }, sz: 11 }, fill: { fgColor: { rgb: palette.navy } }, border, alignment: { vertical: 'center', horizontal: 'center' } }
-    const titleStyle = { font: { bold: true, color: { rgb: 'FFFFFFFF' }, sz: 14 }, fill: { fgColor: { rgb: palette.navy2 } }, border, alignment: { vertical: 'center', horizontal: 'center' } }
-    const summaryLabelStyle = { font: { bold: true, color: { rgb: palette.slate } }, fill: { fgColor: { rgb: palette.gray } }, border, alignment: { vertical: 'center', horizontal: 'left' } }
-    const summaryValueStyle = { font: { bold: true, color: { rgb: palette.navy } }, fill: { fgColor: { rgb: palette.white } }, border, alignment: { vertical: 'center', horizontal: 'center' } }
-    const dataStyle = { font: { color: { rgb: palette.slate }, sz: 10 }, border, alignment: { vertical: 'center', horizontal: 'center' } }
-
     const wb = XLSX.utils.book_new()
-
-    const resumoRows = [
-      ['RELATÓRIO DE ALOCAÇÃO DE HORAS'],
-      ['Gerência', GERENCIA_ALVO, 'Período', ymLabel(ymAtivo)],
-      ['Data da extração', A ? dmyFull(A.ult.data) : '—', 'Comparação', A && A.pen ? `${dmyFull(A.pen.data)} x ${dmyFull(A.ult.data)}` : '—'],
-      [],
-      ['Indicador', 'Valor', 'Observação'],
-      ['Colaboradores monitorados', String(A ? A.pes.length : visiveis.length), 'Equipe em acompanhamento'],
-      ['Em dia', String(A ? A.c('ok') : 0), 'Concluíram a alocação esperada'],
-      ['Evoluindo', String(A ? A.c('up') + A.c('stall') : 0), 'Crescimento ou estabilidade positiva'],
-      ['Sem alocação', String(A ? A.c('zero') + A.c('down') : 0), 'Sem alocação ou sem evolução'],
-      ['Cobertura atual', `${Math.round(A ? A.cov : 0)}%`, 'Percentual do planejado alocado'],
-      ['Horas na última semana', `${A && A.n > 1 ? `${A.horasAdd >= 0 ? '+' : ''}${fmtH(A.horasAdd)} h` : '—'}`, 'Variação de alocação na última comparação'],
-    ]
-
-    const wsResumo = XLSX.utils.aoa_to_sheet(resumoRows)
-    wsResumo['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }, { s: { r: 4, c: 0 }, e: { r: 4, c: 2 } }]
-    wsResumo['!cols'] = [{ wch: 26 }, { wch: 16 }, { wch: 24 }, { wch: 28 }]
-    wsResumo['!freeze'] = { xSplit: 0, ySplit: 4 }
-
-    const setCellStyle = (ref, style) => { if (wsResumo[ref]) wsResumo[ref].s = style }
-    setCellStyle('A1', titleStyle)
-    setCellStyle('A2', summaryLabelStyle)
-    setCellStyle('B2', summaryValueStyle)
-    setCellStyle('C2', summaryLabelStyle)
-    setCellStyle('D2', summaryValueStyle)
-    setCellStyle('A3', summaryLabelStyle)
-    setCellStyle('B3', summaryValueStyle)
-    setCellStyle('C3', summaryLabelStyle)
-    setCellStyle('D3', summaryValueStyle)
-    setCellStyle('A5', headerStyle)
-    setCellStyle('B5', headerStyle)
-    setCellStyle('C5', headerStyle)
-    for (let r = 6; r <= 15; r++) {
-      const aRef = XLSX.utils.encode_cell({ r, c: 0 })
-      const bRef = XLSX.utils.encode_cell({ r, c: 1 })
-      const cRef = XLSX.utils.encode_cell({ r, c: 2 })
-      if (wsResumo[aRef]) wsResumo[aRef] = { ...wsResumo[aRef], s: summaryLabelStyle }
-      if (wsResumo[bRef]) wsResumo[bRef] = { ...wsResumo[bRef], s: summaryValueStyle }
-      if (wsResumo[cRef]) wsResumo[cRef] = { ...wsResumo[cRef], s: { ...summaryLabelStyle, alignment: { vertical: 'center', horizontal: 'left' } } }
-    }
-    XLSX.utils.book_append_sheet(wb, wsResumo, 'Resumo')
-
     const ws = XLSX.utils.aoa_to_sheet([cab, ...dados])
-    ws['!cols'] = [14, 40, 38, 12, 14, 14, 14, 12, 22, ...wks.map(() => 16), 60, 60].map(wch => ({ wch }))
-    ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: dados.length, c: cab.length - 1 } }) }
+    const sheetName = nomePlanilhaAlocacao(ymAtivo)
+    const cellBorder = { top: { style: 'thin', color: { rgb: 'FFD9E2EC' } }, bottom: { style: 'thin', color: { rgb: 'FFD9E2EC' } }, left: { style: 'thin', color: { rgb: 'FFD9E2EC' } }, right: { style: 'thin', color: { rgb: 'FFD9E2EC' } } }
+    const headerStyle = { font: { bold: true, color: { rgb: 'FFFFFFFF' }, sz: 10 }, fill: { fgColor: { rgb: 'FF1F3864' } }, border: cellBorder, alignment: { vertical: 'center', horizontal: 'center' } }
+    const dataStyle = { font: { color: { rgb: 'FF262626' }, sz: 9.5 }, border: cellBorder, alignment: { vertical: 'center', horizontal: 'center' } }
+
+    ws['!cols'] = [
+      { wch: 14 }, { wch: 28 }, { wch: 30 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 14 },
+      ...wks.map(() => ({ wch: 15 })),
+      { wch: 32 }, { wch: 30 }
+    ]
     ws['!freeze'] = { xSplit: 0, ySplit: 1 }
+    ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: dados.length, c: cab.length - 1 } }) }
 
-    const headerRange = XLSX.utils.decode_range(ws['!ref'])
-    for (let c = 0; c <= headerRange.e.c; c++) {
-      const ref = XLSX.utils.encode_cell({ r: 0, c })
-      if (ws[ref]) ws[ref].s = headerStyle
-    }
-
-    for (let r = 1; r <= dados.length; r++) {
-      for (let c = 0; c <= cab.length - 1; c++) {
+    const range = XLSX.utils.decode_range(ws['!ref'])
+    for (let r = 0; r <= range.e.r; r++) {
+      for (let c = 0; c <= range.e.c; c++) {
         const ref = XLSX.utils.encode_cell({ r, c })
-        if (ws[ref]) {
-          ws[ref].s = {
-            ...border,
-            fill: { fgColor: { rgb: r % 2 === 0 ? palette.rowAlt : palette.rowEven } },
-            font: { color: { rgb: palette.slate }, sz: 10 },
-            alignment: { vertical: 'center', horizontal: c === 1 || c === 2 || c === 11 || c === 12 ? 'left' : 'center' }
-          }
+        if (!ws[ref]) continue
+
+        if (r === 0) {
+          ws[ref].s = headerStyle
+          continue
+        }
+
+        const isAlt = r % 2 === 0
+        ws[ref].s = {
+          ...dataStyle,
+          fill: { fgColor: { rgb: isAlt ? 'FFF4F6FA' : 'FFFFFFFF' } },
+          alignment: {
+            vertical: 'center',
+            horizontal: c === 1 || c === 2 || c === 12 ? 'left' : c === 3 || c === 4 || c === 5 || c === 6 || c === 7 || c === 8 || c === 9 || c === 10 || c === 11 ? 'right' : 'center'
+          },
+          font: { color: { rgb: 'FF262626' }, sz: 9.5, bold: c === 1 || c === 2 ? true : false }
         }
       }
-
-      const pctRef = XLSX.utils.encode_cell({ r, c: 7 })
-      if (ws[pctRef] && typeof ws[pctRef].v === 'number') ws[pctRef].z = '0%'
-
-      const statusRef = XLSX.utils.encode_cell({ r, c: 8 })
-      const status = (ws[statusRef] && ws[statusRef].v) || ''
-      let fill = { fgColor: { rgb: palette.white } }
-      let textColor = palette.slate
-      if (status.includes('Sem alocação') || status.includes('Abaixo') || status.includes('Regred')) fill = { fgColor: { rgb: palette.red } }, textColor = palette.redText
-      else if (status.includes('Evoluindo') || status.includes('Dentro') || status.includes('Acima')) fill = { fgColor: { rgb: palette.blue } }, textColor = palette.blueText
-      else if (status.includes('Em dia')) fill = { fgColor: { rgb: palette.green } }, textColor = palette.greenText
-      if (ws[statusRef]) ws[statusRef].s = { ...ws[statusRef].s, fill, font: { bold: true, color: { rgb: textColor }, sz: 10 } }
     }
 
-    XLSX.utils.book_append_sheet(wb, ws, 'Detalhamento')
+    const pctIdx = cab.indexOf('% Alocado')
+    for (let r = 1; r <= dados.length; r++) {
+      const pctRef = XLSX.utils.encode_cell({ r, c: pctIdx })
+      if (ws[pctRef] && typeof ws[pctRef].v === 'number') ws[pctRef].z = '0%'
+    }
 
+    XLSX.utils.book_append_sheet(wb, ws, sheetName)
     XLSX.writeFile(wb, `alocacao-horas-${GERENCIA_ALVO}-${ymAtivo}.xlsx`)
     toast('Relatório exportado.')
   }

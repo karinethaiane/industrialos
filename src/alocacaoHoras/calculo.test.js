@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { interpretarPcp, interpretarRelatorio } from './calculo.js'
+import { interpretarPcp, interpretarRelatorio, nomePlanilhaAlocacao } from './calculo.js'
 import { dataDoArquivo } from './leitorXlsx.js'
 
 test('interpreta horas em formato brasileiro no relatório', () => {
@@ -40,4 +40,8 @@ test('identifica a data correta do relatório no nome do arquivo', () => {
   assert.equal(dataDoArquivo(f1), '2026-11-05')
   assert.equal(dataDoArquivo(f2), '2026-11-03')
   assert.equal(dataDoArquivo(f3), '2026-11-05')
+})
+
+test('nomeia a aba do relatório igual ao modelo do projeto', () => {
+  assert.equal(nomePlanilhaAlocacao('2026-11'), 'Alocação NOV-26')
 })
