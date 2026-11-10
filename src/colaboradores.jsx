@@ -56,6 +56,24 @@ function badgeKit(nome) {
   return <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 8px', borderRadius: 5, fontSize: 11, fontWeight: 600, background: 'var(--blue-dim)', color: 'var(--blue)' }}>{nome}</span>
 }
 
+function resolverKitPorCargo(cargo, kits) {
+  const cargoNormalizado = String(cargo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+  const nomesPermitidos = [
+    'pesquisador industrial',
+    'desenvolvedor de inovação e tecnologia',
+    'coordenador de inovação e tecnologia',
+    'designer',
+  ]
+
+  if (!nomesPermitidos.includes(cargoNormalizado)) return null
+
+  const kitPesquisador = kits.find(k =>
+    String(k.nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim() === 'pesquisador industrial'
+  )
+
+  return kitPesquisador?.id || null
+}
+
 export default function Colaboradores() {
   const [lista, setLista]         = useState([])
   const [todasFerias, setTodasFerias] = useState([])
@@ -136,8 +154,9 @@ export default function Colaboradores() {
         const kitNome = String(valorLinha(linha, ['kit', 'kit_epi', 'epi_kit']) || '').trim()
         const ativo = parseBoolean(valorLinha(linha, ['ativo', 'status', 'situacao']))
 
-        let kitId = null
-        if (kitNome) {
+        let kitId = resolverKitPorCargo(cargo, kits)
+
+        if (!kitId && kitNome) {
           const { data: kitExistente } = await supabase.from('epi_kits').select('id').eq('nome', kitNome).maybeSingle()
           if (kitExistente) {
             kitId = kitExistente.id
@@ -244,10 +263,12 @@ export default function Colaboradores() {
   async function salvar() {
     if (!form.nome.trim()) return
     setSalvando(true)
+    const kitIdFinal = resolverKitPorCargo(form.cargo, kits) || form.kit_id || null
+
     if (editando) {
-      await supabase.from('colaboradores').update({ nome: form.nome.toUpperCase().trim(), setor: form.setor.trim(), cargo: form.cargo.trim(), kit_id: form.kit_id || null }).eq('id', editando.id)
+      await supabase.from('colaboradores').update({ nome: form.nome.toUpperCase().trim(), setor: form.setor.trim(), cargo: form.cargo.trim(), kit_id: kitIdFinal }).eq('id', editando.id)
     } else {
-      await supabase.from('colaboradores').insert({ nome: form.nome.toUpperCase().trim(), matricula: gerarMatricula(), setor: form.setor.trim(), cargo: form.cargo.trim(), kit_id: form.kit_id || null, ativo: true })
+      await supabase.from('colaboradores').insert({ nome: form.nome.toUpperCase().trim(), matricula: gerarMatricula(), setor: form.setor.trim(), cargo: form.cargo.trim(), kit_id: kitIdFinal, ativo: true })
     }
     setForm({ nome: '', setor: '', cargo: '', kit_id: '' })
     setModal(false); setEditando(null); setSalvando(false); carregar()
