@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import * as XLSX from 'xlsx'
 import { supabase } from './supabase'
 
 function fmtData(d) {
@@ -70,7 +71,117 @@ export default function Colaboradores() {
   const [salvando, setSalvando]   = useState(false)
   const [salvandoFerias, setSalvandoFerias] = useState(false)
   const [limpandoBase, setLimpandoBase] = useState(false)
+  const [importando, setImportando] = useState(false)
   const [erroFerias, setErroFerias] = useState('')
+  const [erroImport, setErroImport] = useState('')
+
+  function normalizarTexto(valor) {
+    return String(valor ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+  }
+
+  function valorLinha(row, aliases) {
+    const chaves = Object.keys(row || {})
+    for (const alias of aliases) {
+      const chave = chaves.find(k => normalizarTexto(k) === normalizarTexto(alias))
+      if (chave && row[chave] !== null && row[chave] !== undefined && String(row[chave]).trim() !== '') return row[chave]
+    }
+    return ''
+  }
+
+  function parseDateValue(valor) {
+    if (!valor && valor !== 0) return ''
+    if (valor instanceof Date) return valor.toISOString().slice(0, 10)
+    if (typeof valor === 'number') {
+      const parsed = XLSX.SSF.parse_date_code(valor)
+      if (parsed) return `${String(parsed.y).padStart(4, '0')}-${String(parsed.m + 1).padStart(2, '0')}-${String(parsed.d).padStart(2, '0')}`
+    }
+    const texto = String(valor).trim()
+    if (!texto) return ''
+    return texto
+  }
+
+  function parseBoolean(valor) {
+    if (valor === undefined || valor === null || valor === '') return true
+    if (typeof valor === 'boolean') return valor
+    const texto = normalizarTexto(valor)
+    return !['nao', 'não', 'n', '0', 'false', 'inativo', 'desativado', 'cancelado'].includes(texto)
+  }
+
+  async function importarExcelColaboradores(event) {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setImportando(true)
+    setErroImport('')
+
+    try {
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' })
+      const sheetName = workbook.SheetNames.find((nome) => {
+        const texto = normalizarTexto(nome)
+        return texto.includes('colaborador') || texto.includes('funcionario') || texto.includes('pessoa')
+      })
+
+      if (!sheetName) throw new Error('Nenhuma aba de colaboradores foi encontrada na planilha.')
+
+      const linhas = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' })
+      let total = 0
+
+      for (const linha of linhas) {
+        const nome = String(valorLinha(linha, ['nome', 'nome_completo', 'colaborador', 'funcionario']) || '').trim()
+        if (!nome) continue
+
+        const matricula = String(valorLinha(linha, ['matricula', 'matrícula']) || '').trim()
+        const setor = String(valorLinha(linha, ['setor', 'area', 'departamento']) || '').trim()
+        const cargo = String(valorLinha(linha, ['cargo', 'funcao', 'função']) || '').trim()
+        const kitNome = String(valorLinha(linha, ['kit', 'kit_epi', 'epi_kit']) || '').trim()
+        const ativo = parseBoolean(valorLinha(linha, ['ativo', 'status', 'situacao']))
+
+        let kitId = null
+        if (kitNome) {
+          const { data: kitExistente } = await supabase.from('epi_kits').select('id').eq('nome', kitNome).maybeSingle()
+          if (kitExistente) {
+            kitId = kitExistente.id
+          } else {
+            const { data: kitNovo, error: erroKit } = await supabase.from('epi_kits').insert({ nome: kitNome, ativo: true }).select('id').single()
+            if (!erroKit && kitNovo) kitId = kitNovo.id
+          }
+        }
+
+        const payload = {
+          nome: nome.toUpperCase().trim(),
+          setor,
+          cargo,
+          kit_id: kitId,
+          ativo,
+        }
+
+        if (matricula) payload.matricula = matricula
+
+        let resultado
+        if (matricula) {
+          resultado = await supabase.from('colaboradores').upsert(payload, { onConflict: 'matricula' })
+        } else {
+          const { data: existente } = await supabase.from('colaboradores').select('id').eq('nome', payload.nome).maybeSingle()
+          if (existente) {
+            resultado = await supabase.from('colaboradores').update(payload).eq('id', existente.id)
+          } else {
+            resultado = await supabase.from('colaboradores').insert(payload)
+          }
+        }
+
+        if (resultado.error) throw new Error(resultado.error.message)
+        total += 1
+      }
+
+      setErroImport(`Importação concluída: ${total} colaboradores carregados.`)
+      carregar()
+    } catch (erro) {
+      setErroImport('Erro ao importar colaboradores: ' + erro.message)
+    } finally {
+      setImportando(false)
+      event.target.value = ''
+    }
+  }
 
   useEffect(() => { carregar() }, [])
 
@@ -234,6 +345,10 @@ export default function Colaboradores() {
           <div style={S.sub}>Cadastro e gestão de equipe</div>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <label style={{ ...S.btnSm, background: 'var(--subtle)', color: 'var(--text2)', borderColor: 'var(--border2)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+            {importando ? 'Importando...' : 'Importar Excel'}
+            <input type="file" accept=".xlsx,.xls" hidden onChange={importarExcelColaboradores} disabled={importando} />
+          </label>
           <button style={{ ...S.btnSm, background: 'var(--red-dim)', color: 'var(--red)', borderColor: 'rgba(239,68,68,.2)' }} onClick={limparBase} disabled={limpandoBase}>
             {limpandoBase ? 'Limpando...' : 'Limpar base'}
           </button>
@@ -243,6 +358,10 @@ export default function Colaboradores() {
           </button>
         </div>
       </div>
+
+      {erroImport && (
+        <div style={{ background: erroImport.startsWith('Erro') ? 'var(--red-dim)' : 'var(--green-dim)', border: '1px solid ' + (erroImport.startsWith('Erro') ? 'rgba(239,68,68,.2)' : 'rgba(16,185,129,.2)'), color: erroImport.startsWith('Erro') ? 'var(--red)' : 'var(--green)', borderRadius: 8, padding: '10px 12px', marginBottom: 18, fontSize: 12 }}>{erroImport}</div>
+      )}
 
       {loading ? (
         <div style={{ color: 'var(--muted)', padding: 40, textAlign: 'center' }}>Carregando...</div>

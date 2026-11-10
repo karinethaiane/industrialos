@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import * as XLSX from 'xlsx'
 import { supabase } from './supabase'
 
 const S = {
@@ -111,6 +112,129 @@ export default function Epis({ isAdmin = false }) {
   const [editForm, setEditForm] = useState({ data_entrega: '', quantidade: 1, ca: '', motivo: '', data_prox_entrega: '' })
   const [proxEntrega, setProxEntrega] = useState(null)
   const [salvando, setSalvando] = useState(false)
+  const [importando, setImportando] = useState(false)
+  const [erroImport, setErroImport] = useState('')
+
+  function normalizarTexto(valor) {
+    return String(valor ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+  }
+
+  function valorLinha(row, aliases) {
+    const chaves = Object.keys(row || {})
+    for (const alias of aliases) {
+      const chave = chaves.find(k => normalizarTexto(k) === normalizarTexto(alias))
+      if (chave && row[chave] !== null && row[chave] !== undefined && String(row[chave]).trim() !== '') return row[chave]
+    }
+    return ''
+  }
+
+  function parseDateValue(valor) {
+    if (!valor && valor !== 0) return ''
+    if (valor instanceof Date) return valor.toISOString().slice(0, 10)
+    if (typeof valor === 'number') {
+      const parsed = XLSX.SSF.parse_date_code(valor)
+      if (parsed) return `${String(parsed.y).padStart(4, '0')}-${String(parsed.m + 1).padStart(2, '0')}-${String(parsed.d).padStart(2, '0')}`
+    }
+    const texto = String(valor).trim()
+    if (!texto) return ''
+    return texto
+  }
+
+  async function importarExcelEntregas(event) {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setImportando(true)
+    setErroImport('')
+
+    try {
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' })
+      const sheetName = workbook.SheetNames.find((nome) => {
+        const texto = normalizarTexto(nome)
+        return texto.includes('entrega') || texto.includes('epi') || texto.includes('itens')
+      })
+
+      if (!sheetName) throw new Error('Nenhuma aba de entregas de EPIs foi encontrada na planilha.')
+
+      const linhas = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' })
+      let total = 0
+
+      for (const linha of linhas) {
+        const nomeColab = String(valorLinha(linha, ['nome', 'nome_completo', 'colaborador', 'funcionario']) || '').trim()
+        const matricula = String(valorLinha(linha, ['matricula', 'matrícula']) || '').trim()
+        const tipo = String(valorLinha(linha, ['tipo', 'epi', 'nome_epi', 'produto', 'item']) || '').trim()
+        const dataEntrega = parseDateValue(valorLinha(linha, ['data_entrega', 'data_de_entrega', 'entrega']))
+
+        if (!nomeColab && !matricula) continue
+        if (!tipo || !dataEntrega) continue
+
+        let colaborador = null
+        if (matricula) {
+          const { data } = await supabase.from('colaboradores').select('*').eq('matricula', matricula).limit(1)
+          colaborador = data?.[0] || null
+        }
+
+        if (!colaborador && nomeColab) {
+          const { data } = await supabase.from('colaboradores').select('*').ilike('nome', `%${nomeColab}%`).limit(1)
+          colaborador = data?.[0] || null
+        }
+
+        if (!colaborador) {
+          const payload = {
+            nome: nomeColab.toUpperCase().trim(),
+            matricula: matricula || `MAT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            ativo: true,
+          }
+          const { data: dataColab, error: erroColab } = await supabase.from('colaboradores').insert(payload).select('*').single()
+          if (erroColab) throw new Error(erroColab.message)
+          colaborador = dataColab
+        }
+
+        const quantidade = Number(String(valorLinha(linha, ['quantidade', 'qtd']) || '1').replace(',', '.')) || 1
+        const motivo = String(valorLinha(linha, ['motivo', 'justificativa']) || '').trim()
+        const ca = String(valorLinha(linha, ['ca', 'numero_ca', 'n_ca']) || '').trim()
+        const proxEntrega = parseDateValue(valorLinha(linha, ['data_prox_entrega', 'proxima_entrega', 'data_vencimento', 'vencimento'])) || dataEntrega
+
+        const { data: existente } = await supabase
+          .from('epis')
+          .select('id')
+          .eq('colaborador_id', colaborador.id)
+          .eq('tipo', tipo)
+          .eq('data_entrega', dataEntrega)
+          .maybeSingle()
+
+        const payload = {
+          colaborador_id: colaborador.id,
+          tipo,
+          quantidade,
+          data_entrega: dataEntrega,
+          data_vencimento: proxEntrega,
+          data_prox_entrega: proxEntrega,
+          motivo: motivo || null,
+          ca: ca || null,
+          registrado_por: 'importacao',
+        }
+
+        if (existente) {
+          const { error } = await supabase.from('epis').update(payload).eq('id', existente.id)
+          if (error) throw new Error(error.message)
+        } else {
+          const { error } = await supabase.from('epis').insert(payload)
+          if (error) throw new Error(error.message)
+        }
+
+        total += 1
+      }
+
+      setErroImport(`Importação concluída: ${total} entregas de EPIs carregadas.`)
+      init()
+    } catch (erro) {
+      setErroImport('Erro ao importar entregas de EPIs: ' + erro.message)
+    } finally {
+      setImportando(false)
+      event.target.value = ''
+    }
+  }
 
   useEffect(() => { init() }, [])
 
@@ -301,8 +425,20 @@ export default function Epis({ isAdmin = false }) {
     <div style={S.wrap}>
       <div style={S.header}>
         <div><div style={S.title}>Gestão de EPIs</div><div style={S.sub}>Controle de entregas e validades</div></div>
-        {isAdmin && <button style={S.btn} onClick={() => setModal(true)}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Registrar Entrega</button>}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {isAdmin && (
+            <label style={{ ...S.btnSm, background: 'var(--subtle)', color: 'var(--text2)', border: '1px solid var(--border2)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+              {importando ? 'Importando...' : 'Importar Excel'}
+              <input type="file" accept=".xlsx,.xls" hidden onChange={importarExcelEntregas} disabled={importando} />
+            </label>
+          )}
+          {isAdmin && <button style={S.btn} onClick={() => setModal(true)}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Registrar Entrega</button>}
+        </div>
       </div>
+
+      {erroImport && (
+        <div style={{ background: erroImport.startsWith('Erro') ? 'var(--red-dim)' : 'var(--green-dim)', border: '1px solid ' + (erroImport.startsWith('Erro') ? 'rgba(239,68,68,.2)' : 'rgba(16,185,129,.2)'), color: erroImport.startsWith('Erro') ? 'var(--red)' : 'var(--green)', borderRadius: 8, padding: '10px 12px', marginBottom: 18, fontSize: 12 }}>{erroImport}</div>
+      )}
 
       <div style={S.stats}>
         {[['var(--blue)', porColab.length, 'Colaboradores'], ['var(--green)', stats.vigente, 'Vigentes'], ['var(--amber)', stats.vencendo, 'Vencendo 30d'], ['var(--red)', stats.vencido, 'Vencidos'], ['var(--purple)', totalPendentes, 'Pendências Kit']].map(([cor, val, lbl]) => (
