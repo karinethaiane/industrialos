@@ -155,6 +155,7 @@ export default function Colaboradores() {
       supabase.from('alocacao_notas').delete().eq('colaborador_id', id),
       supabase.from('epis').delete().eq('colaborador_id', id),
       supabase.from('saidas_veiculos').delete().eq('colaborador_id', id),
+      supabase.from('revisoes_veiculos').delete().eq('responsavel_id', id),
     ]
 
     const resultados = await Promise.allSettled(deletes)
@@ -198,6 +199,7 @@ export default function Colaboradores() {
       supabase.from('alocacao_notas').delete().in('colaborador_id', ids),
       supabase.from('epis').delete().in('colaborador_id', ids),
       supabase.from('saidas_veiculos').delete().in('colaborador_id', ids),
+      supabase.from('revisoes_veiculos').delete().in('responsavel_id', ids),
     ]
 
     const resultados = await Promise.allSettled(deletes)
