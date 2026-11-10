@@ -301,24 +301,27 @@ export default function AlocacaoHoras({ isAdmin = false }) {
   // ── exportar Excel ────────────────────────────────────────────────────────
   function exportar() {
     const cab = ['Gerência', 'Colaborador', 'Função', 'Planejado (h)', 'Alocado (h)', '% Alocado', 'Situação', ...wks.map(w => `${w.label} (${w.faixa})`), 'Nota']
-    const dados = visiveis.map(l => [
-      l.gerencia,
-      l.nome,
-      l.funcao,
-      l.planejado,
-      l.alocado,
-      l.pct == null ? null : +(l.pct / 100).toFixed(4),
-      l.status === 'afast' ? (l.nota.tag || 'Afastado') : ST_LABEL[l.status],
-      ...l.semanasH.map(h => +h.toFixed(2)),
-      (l.nota.tag ? `[${l.nota.tag}] ` : '') + l.nota.texto,
-    ])
+    const dados = visiveis.map(l => {
+      const nota = (l.nota && (l.nota.tag || l.nota.texto)) ? `${l.nota.tag ? `[${l.nota.tag}] ` : ''}${l.nota.texto || ''}` : (l.alertas && l.alertas.length ? l.alertas.map(a => a[1]).join(' | ') : '')
+      return [
+        l.gerencia,
+        l.nome,
+        l.funcao,
+        l.planejado,
+        l.alocado,
+        l.pct == null ? null : +(l.pct / 100).toFixed(4),
+        l.status === 'afast' ? (l.nota.tag || 'Afastado') : ST_LABEL[l.status],
+        ...l.semanasH.map(h => +h.toFixed(2)),
+        nota,
+      ]
+    })
 
     const wb = XLSX.utils.book_new()
     const ws = XLSX.utils.aoa_to_sheet([cab, ...dados])
     const sheetName = nomePlanilhaAlocacao(ymAtivo)
 
     ws['!cols'] = Array(cab.length).fill({ wch: 13 })
-    ws['!freeze'] = { xSplit: 2, ySplit: 1 }
+    ws['!freeze'] = 'C13'
 
     const range = XLSX.utils.decode_range(ws['!ref'])
     for (let r = 0; r <= range.e.r; r++) {
@@ -330,7 +333,7 @@ export default function AlocacaoHoras({ isAdmin = false }) {
           ws[ref].s = {
             font: { bold: true, color: { rgb: 'FFFFFFFF' }, sz: 10 },
             fill: { fgColor: { rgb: 'FF1F3864' } },
-            alignment: { vertical: 'center', horizontal: 'center' }
+            alignment: { vertical: 'center', horizontal: c === 1 || c === 2 || c === cab.length - 1 ? 'left' : 'center' }
           }
           continue
         }
@@ -341,7 +344,7 @@ export default function AlocacaoHoras({ isAdmin = false }) {
           fill: { fgColor: { rgb: isAlt ? 'FFF4F6FA' : 'FFFFFFFF' } },
           alignment: {
             vertical: 'center',
-            horizontal: c === 1 || c === 2 || c === cab.length - 1 ? 'left' : c === 3 || c === 4 || c === 5 || c === 6 || c === 7 || c === 8 || c === 9 || c === 10 || c === 11 || c === 12 ? 'right' : 'center'
+            horizontal: c === 1 || c === 2 || c === cab.length - 1 ? 'left' : c >= 3 && c <= 12 ? 'right' : 'center'
           }
         }
       }
