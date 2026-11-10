@@ -3,21 +3,21 @@
 *, *::before, *::after { box-sizing: border-box; }
 
 :root {
-  /* Brand palette (Option A - premium neutral + teal accent) */
-  --brand-charcoal: #0F1724;
+  /* Brand palette tuned for a neutral, corporate administrative system */
+  --brand-charcoal: #0F172A;
   --brand-slate:    #334155;
-  --brand-off:      #F8FAFC;
-  --a:              #0EA5A4; /* accent */
-  --a-dim:          rgba(14,165,164,0.06);
-  --a-border:       rgba(14,165,164,0.12);
+  --brand-off:      #F3F5F7;
+  --a:              #64748B;
+  --a-dim:          rgba(100,116,139,0.08);
+  --a-border:       rgba(100,116,139,0.14);
 
   /* semantic colors */
-  --danger:         #ef4444;
-  --danger-dim:     rgba(239,68,68,0.06);
-  --warn:           #f59e0b;
-  --warn-dim:       rgba(245,158,11,0.06);
-  --ok:             #10b981;
-  --ok-dim:         rgba(16,185,129,0.06);
+  --danger:         #b65353;
+  --danger-dim:     rgba(182,83,83,0.08);
+  --warn:           #aa7a2a;
+  --warn-dim:       rgba(170,122,42,0.08);
+  --ok:             #2f7d66;
+  --ok-dim:         rgba(47,125,102,0.08);
 
   /* typography & rhythm */
   --font-family:    'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
@@ -31,60 +31,60 @@
   --radius:   8px;
 
   /* elevation */
-  --shadow-sm: 0 4px 12px rgba(7,13,20,0.06);
-  --shadow-md: 0 8px 40px rgba(7,13,20,0.12);
+  --shadow-sm: 0 4px 12px rgba(15,23,42,0.06);
+  --shadow-md: 0 8px 40px rgba(15,23,42,0.12);
 
   /* fallbacks for semantic usage */
-  --text:     #e6eef6;
-  --text2:    #b8c6d6;
-  --text3:    #94a3b8;
-  --muted:    #64748b;
-  --subtle:   rgba(255,255,255,0.02);
-  --border:   rgba(255,255,255,0.04);
-  --border2:  rgba(255,255,255,0.06);
+  --text:     #edf2f7;
+  --text2:    #dfe7f1;
+  --text3:    #9aa8b7;
+  --muted:    #9aa8b7;
+  --subtle:   rgba(148,163,184,0.04);
+  --border:   rgba(148,163,184,0.14);
+  --border2:  rgba(148,163,184,0.2);
   --bg:       var(--brand-charcoal);
-  --surface:  #0b1320;
-  --surface2: #0f1724;
-  --shadow:   rgba(0,0,0,.48);
+  --surface:  #111827;
+  --surface2: #172033;
+  --shadow:   rgba(15,23,42,.5);
   /* Sidebar / chrome tokens */
-  --sb-bg:        linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-  --sb-border:    rgba(255,255,255,0.06);
-  --sb-text:      #e6eef6;
-  --sb-text2:     #b8c6d6;
-  --sb-muted:     #94a3b8;
-  --sb-hover:     rgba(255,255,255,0.02);
-  --sb-active-bg: rgba(14,165,164,0.06);
+  --sb-bg:        #111827;
+  --sb-border:    rgba(148,163,184,0.12);
+  --sb-text:      #e5e7eb;
+  --sb-text2:     #d1d5db;
+  --sb-muted:     #9aa5b1;
+  --sb-hover:     rgba(148,163,184,0.08);
+  --sb-active-bg: rgba(148,163,184,0.12);
   --sb-active:    var(--a);
-  --sb-badge-bg:  rgba(255,255,255,0.03);
-  --sb-badge-text: #9ee6df;
-  --sb-tooltip-bg: rgba(7,12,18,0.7);
+  --sb-badge-bg:  rgba(148,163,184,0.08);
+  --sb-badge-text: #e5e7eb;
+  --sb-tooltip-bg: #111827;
 }
 
 /* Light theme overrides */
 [data-tema="light"] {
   --bg:       var(--brand-off);
   --surface:  #ffffff;
-  --surface2: #f8fafc;
-  --border:   #e6eef6;
-  --border2:  #cfdbe8;
-  --text:     #0f1724;
-  --text2:    #334155;
+  --surface2: #f7f9fb;
+  --border:   #e5e7eb;
+  --border2:  #d6dae2;
+  --text:     #111827;
+  --text2:    #374151;
   --text3:    #475569;
   --muted:    #64748b;
   --subtle:   rgba(15,23,42,0.02);
   --shadow:   rgba(15,23,42,.06);
   /* Sidebar / chrome tokens - light */
   --sb-bg:        #ffffff;
-  --sb-border:    rgba(15,23,42,0.04);
-  --sb-text:      #0f1724;
-  --sb-text2:     #334155;
+  --sb-border:    rgba(15,23,42,0.06);
+  --sb-text:      #111827;
+  --sb-text2:     #374151;
   --sb-muted:     #64748b;
-  --sb-hover:     rgba(14,165,164,0.04);
-  --sb-active-bg: rgba(14,165,164,0.08);
+  --sb-hover:     rgba(100,116,139,0.06);
+  --sb-active-bg: rgba(100,116,139,0.09);
   --sb-active:    var(--a);
-  --sb-badge-bg:  rgba(14,165,164,0.06);
+  --sb-badge-bg:  rgba(100,116,139,0.08);
   --sb-badge-text: var(--a);
-  --sb-tooltip-bg: #f1f5fb;
+  --sb-tooltip-bg: #f1f5f9;
 }
 
 /* Ensure font-family is available globally */

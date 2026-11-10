@@ -73,10 +73,11 @@ function GraficoLinha({ snaps, ym, modo }) {
   const meta = []
   for (let d = ini; d <= fim; d += 864e5) meta.push(`${X(d).toFixed(1)},${Y(metaPct(new Date(d).toISOString().slice(0, 10), ym, modo) * 100).toFixed(1)}`)
   const pts = snaps.map((s, i) => `${X(ts[i]).toFixed(1)},${Y(covs[i]).toFixed(1)}`)
+  const minLabelGap = Math.max(68, (W - L - R) / Math.max(1, Math.min(snaps.length, 4)))
   let lastShownX = -Infinity
   return (
     <>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Evolução da cobertura">
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Evolução do status de alocação por data de extração do relatório">
         {grade.map(v => (
           <g key={v}>
             <line x1={L} x2={W - R} y1={Y(v)} y2={Y(v)} style={{ stroke: v === 100 ? 'var(--border2)' : 'var(--border)' }} strokeDasharray={v === 100 ? '2 3' : undefined} />
@@ -89,7 +90,7 @@ function GraficoLinha({ snaps, ym, modo }) {
         {snaps.length > 1 && <polyline points={pts.join(' ')} fill="none" style={{ stroke: 'var(--teal)' }} strokeWidth="2.4" strokeLinejoin="round" />}
         {snaps.map((s, i) => {
           const x = X(ts[i])
-          const mostrarData = i === 0 || i === snaps.length - 1 || x - lastShownX >= 42
+          const mostrarData = i === 0 || i === snaps.length - 1 || x - lastShownX >= minLabelGap
           if (mostrarData) lastShownX = x
           return (
             <g key={s.data}>
@@ -97,14 +98,14 @@ function GraficoLinha({ snaps, ym, modo }) {
                 <title>{dmyFull(s.data)} · {covs[i].toFixed(1)}% do planejado</title>
               </circle>
               <text x={x} y={Y(covs[i]) - 10} textAnchor="middle" style={{ fill: 'var(--text)', fontWeight: 500 }}>{Math.round(covs[i])}%</text>
-              {mostrarData && <text x={x} y={H - 14} textAnchor="middle">{dmy(s.data)}</text>}
+              {mostrarData && <text x={x} y={H - 14} textAnchor="middle" style={{ fill: 'var(--muted)', fontSize: 10 }}>{dmy(s.data)}</text>}
             </g>
           )
         })}
       </svg>
       <div className="legend">
-        <span><i style={{ background: 'var(--teal)' }} />Cobertura real</span>
-        <span><i style={{ background: 'var(--muted)' }} />Meta ({modo === 'd7' ? 'tudo até o 7º dia' : 'linear'})</span>
+        <span><i style={{ background: 'var(--teal)' }} />Status de alocação</span>
+        <span><i style={{ background: 'var(--muted)' }} />Meta de referência ({modo === 'd7' ? 'até o 7º dia' : 'linear'})</span>
       </div>
     </>
   )
@@ -583,8 +584,8 @@ export default function AlocacaoHoras({ isAdmin = false }) {
 
               <div className="evo-grid">
                 <div className="card">
-                  <h4>Cobertura da equipe: alocado ÷ planejado</h4>
-                  <div className="hint">Cada ponto é uma extração semanal do relatório. A linha tracejada é a meta de referência.</div>
+                  <h4>Status de alocação por data do relatório</h4>
+                  <div className="hint">Cada ponto representa uma extração do relatório e o nível de alocação é avaliado conforme a data da coleta. A linha tracejada mostra a meta esperada para esse mesmo ponto de referência.</div>
                   <GraficoLinha snaps={snaps} ym={evYmAtivo} modo={evMeta} />
                 </div>
                 <div className="card">
