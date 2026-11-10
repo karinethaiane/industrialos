@@ -300,30 +300,25 @@ export default function AlocacaoHoras({ isAdmin = false }) {
 
   // ── exportar Excel ────────────────────────────────────────────────────────
   function exportar() {
-    const cab = ['Gerência', 'Colaborador', 'Função', 'Matrícula', 'Planejado (h)', 'Alocado (h)', 'Diferença (h)', '% Alocado', 'Situação', ...wks.map(w => `${w.label} (${w.faixa})`), 'Alertas automáticos', 'Nota']
+    const cab = ['Gerência', 'Colaborador', 'Função', 'Planejado (h)', 'Alocado (h)', '% Alocado', 'Situação', ...wks.map(w => `${w.label} (${w.faixa})`), 'Nota']
     const dados = visiveis.map(l => [
-      l.gerencia, l.nome, l.funcao, l.mat, l.planejado, l.alocado, l.dif,
+      l.gerencia,
+      l.nome,
+      l.funcao,
+      l.planejado,
+      l.alocado,
       l.pct == null ? null : +(l.pct / 100).toFixed(4),
       l.status === 'afast' ? (l.nota.tag || 'Afastado') : ST_LABEL[l.status],
       ...l.semanasH.map(h => +h.toFixed(2)),
-      l.alertas.map(a => a[1]).join(' | '),
       (l.nota.tag ? `[${l.nota.tag}] ` : '') + l.nota.texto,
     ])
 
     const wb = XLSX.utils.book_new()
     const ws = XLSX.utils.aoa_to_sheet([cab, ...dados])
     const sheetName = nomePlanilhaAlocacao(ymAtivo)
-    const cellBorder = { top: { style: 'thin', color: { rgb: 'FFD9E2EC' } }, bottom: { style: 'thin', color: { rgb: 'FFD9E2EC' } }, left: { style: 'thin', color: { rgb: 'FFD9E2EC' } }, right: { style: 'thin', color: { rgb: 'FFD9E2EC' } } }
-    const headerStyle = { font: { bold: true, color: { rgb: 'FFFFFFFF' }, sz: 10 }, fill: { fgColor: { rgb: 'FF1F3864' } }, border: cellBorder, alignment: { vertical: 'center', horizontal: 'center' } }
-    const dataStyle = { font: { color: { rgb: 'FF262626' }, sz: 9.5 }, border: cellBorder, alignment: { vertical: 'center', horizontal: 'center' } }
 
-    ws['!cols'] = [
-      { wch: 14 }, { wch: 28 }, { wch: 30 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 14 },
-      ...wks.map(() => ({ wch: 15 })),
-      { wch: 32 }, { wch: 30 }
-    ]
-    ws['!freeze'] = { xSplit: 0, ySplit: 1 }
-    ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: dados.length, c: cab.length - 1 } }) }
+    ws['!cols'] = Array(cab.length).fill({ wch: 13 })
+    ws['!freeze'] = { xSplit: 2, ySplit: 1 }
 
     const range = XLSX.utils.decode_range(ws['!ref'])
     for (let r = 0; r <= range.e.r; r++) {
@@ -332,19 +327,22 @@ export default function AlocacaoHoras({ isAdmin = false }) {
         if (!ws[ref]) continue
 
         if (r === 0) {
-          ws[ref].s = headerStyle
+          ws[ref].s = {
+            font: { bold: true, color: { rgb: 'FFFFFFFF' }, sz: 10 },
+            fill: { fgColor: { rgb: 'FF1F3864' } },
+            alignment: { vertical: 'center', horizontal: 'center' }
+          }
           continue
         }
 
         const isAlt = r % 2 === 0
         ws[ref].s = {
-          ...dataStyle,
+          font: { color: { rgb: 'FF262626' }, sz: 9.5, bold: c === 1 || c === 2 ? true : false },
           fill: { fgColor: { rgb: isAlt ? 'FFF4F6FA' : 'FFFFFFFF' } },
           alignment: {
             vertical: 'center',
-            horizontal: c === 1 || c === 2 || c === 12 ? 'left' : c === 3 || c === 4 || c === 5 || c === 6 || c === 7 || c === 8 || c === 9 || c === 10 || c === 11 ? 'right' : 'center'
-          },
-          font: { color: { rgb: 'FF262626' }, sz: 9.5, bold: c === 1 || c === 2 ? true : false }
+            horizontal: c === 1 || c === 2 || c === cab.length - 1 ? 'left' : c === 3 || c === 4 || c === 5 || c === 6 || c === 7 || c === 8 || c === 9 || c === 10 || c === 11 || c === 12 ? 'right' : 'center'
+          }
         }
       }
     }
