@@ -299,7 +299,7 @@ export default function AlocacaoHoras({ isAdmin = false }) {
   }
 
   // ── exportar Excel ────────────────────────────────────────────────────────
-  function exportar() {
+  async function exportar() {
     const cab = ['Gerência', 'Colaborador', 'Função', 'Planejado (h)', 'Alocado (h)', '% Alocado', 'Situação', ...wks.map(w => `${w.label} (${w.faixa})`), 'Nota']
     const dados = visiveis.map(l => {
       const nota = (l.nota && (l.nota.tag || l.nota.texto)) ? `${l.nota.tag ? `[${l.nota.tag}] ` : ''}${l.nota.texto || ''}` : (l.alertas && l.alertas.length ? l.alertas.map(a => a[1]).join(' | ') : '')
@@ -319,6 +319,7 @@ export default function AlocacaoHoras({ isAdmin = false }) {
     const wb = XLSX.utils.book_new()
     const ws = XLSX.utils.aoa_to_sheet([cab, ...dados])
     const sheetName = nomePlanilhaAlocacao(ymAtivo)
+    const nomeArquivo = `alocacao-horas-${GERENCIA_ALVO}-${ymAtivo}.xlsx`
 
     ws['!cols'] = Array(cab.length).fill({ wch: 13 })
     ws['!freeze'] = 'C13'
@@ -357,8 +358,45 @@ export default function AlocacaoHoras({ isAdmin = false }) {
     }
 
     XLSX.utils.book_append_sheet(wb, ws, sheetName)
-    XLSX.writeFile(wb, `alocacao-horas-${GERENCIA_ALVO}-${ymAtivo}.xlsx`)
-    toast('Relatório exportado.')
+    const rawBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+    const rawBlob = new Blob([rawBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+
+    const formData = new FormData()
+    formData.append('arquivo', rawBlob, nomeArquivo)
+
+    try {
+      const response = await fetch('http://localhost:8001/formatar-relatorio', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error('Formato do relatório não respondeu corretamente.')
+      }
+
+      const formattedBlob = await response.blob()
+      const downloadUrl = URL.createObjectURL(formattedBlob)
+      const anchor = document.createElement('a')
+      anchor.href = downloadUrl
+      anchor.download = nomeArquivo.replace(/\.xlsx$/, '_formatado.xlsx')
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(downloadUrl)
+      toast('Relatório formatado enviado ao usuário.')
+      return
+    } catch (err) {
+      console.error(err)
+      const fallbackUrl = URL.createObjectURL(rawBlob)
+      const anchor = document.createElement('a')
+      anchor.href = fallbackUrl
+      anchor.download = nomeArquivo
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(fallbackUrl)
+      toast('Relatório bruto gerado. O formatter local não está ativo; foi enviado o arquivo cru.')
+    }
   }
 
   // ── evolução ──────────────────────────────────────────────────────────────
