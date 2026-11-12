@@ -10,6 +10,7 @@ const S = {
   btn: { background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 12px var(--blue-glow)', whiteSpace: 'nowrap' },
   btnSm: { background: 'var(--subtle)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 6, padding: '4px 9px', fontSize: 11, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' },
   btnDanger: { background: 'var(--red-dim)', color: 'var(--red)', border: '1px solid transparent', borderRadius: 6, padding: '4px 8px', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' },
+  btnRed: { background: 'var(--red)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
   btnBlue: { background: 'var(--blue-dim)', color: 'var(--blue)', border: '1px solid transparent', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' },
   btnGray: { background: 'var(--subtle)', border: '1px solid var(--border2)', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 500, color: 'var(--text2)', cursor: 'pointer', fontFamily: 'inherit' },
   stats: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 10, marginBottom: 18 },
@@ -166,6 +167,8 @@ function ultimasEntregas(epis) {
   return Object.values(map)
 }
 
+const MOTIVOS_DISPENSA = ['Uso esporádico', 'Não faz mais parte do kit', 'Mudança de função', 'Outro motivo']
+
 export default function Epis({ isAdmin = false }) {
   const [epis, setEpis] = useState([])
   const [catalogo, setCatalogo] = useState([])
@@ -192,6 +195,9 @@ export default function Epis({ isAdmin = false }) {
   const [importando, setImportando] = useState(false)
   const [erroImport, setErroImport] = useState('')
   const [importStatus, setImportStatus] = useState('')
+  const [modalDispensa, setModalDispensa] = useState(null) // { epi, escolha, texto, erro }
+  const [confirmacao, setConfirmacao] = useState(null)     // { titulo, texto, rotulo, perigo, erro, onConfirm }
+  const [salvandoAcao, setSalvandoAcao] = useState(false)
 
   function normalizarTexto(valor) {
     return String(valor ?? '')
@@ -463,40 +469,66 @@ export default function Epis({ isAdmin = false }) {
     setEditando(null); setSalvando(false); init()
   }
 
-  async function excluir(id) {
-    if (!confirm('Excluir este registro? Isso apaga o histórico desta entrega. Se o EPI só não é mais obrigatório, use "Dispensar".')) return
-    await supabase.from('epis').delete().eq('id', id)
+  // ── Janela de confirmação (excluir / reativar) ───────────────────────────
+  function pedirExcluir(e) {
+    setConfirmacao({
+      titulo: 'Excluir este registro?',
+      texto: `A entrega de "${e.tipo}" será apagada de vez, junto com o histórico dela. Se o EPI só deixou de ser obrigatório, use "Dispensar" para manter o histórico.`,
+      rotulo: 'Excluir',
+      perigo: true,
+      erro: '',
+      onConfirm: async () => {
+        const { error } = await supabase.from('epis').delete().eq('id', e.id)
+        return error ? 'Não foi possível excluir: ' + error.message : null
+      },
+    })
+  }
+
+  function pedirReativar(e) {
+    setConfirmacao({
+      titulo: 'Voltar a controlar este EPI?',
+      texto: `"${e.tipo}" volta a contar para vencimentos e pendências do colaborador.`,
+      rotulo: 'Reativar',
+      perigo: false,
+      erro: '',
+      onConfirm: async () => {
+        const { error } = await supabase.from('epis').update({ dispensado: false, dispensado_motivo: null }).eq('id', e.id)
+        return error ? 'Não foi possível reativar: ' + error.message : null
+      },
+    })
+  }
+
+  async function executarConfirmacao() {
+    if (!confirmacao) return
+    setSalvandoAcao(true)
+    const erro = await confirmacao.onConfirm()
+    setSalvandoAcao(false)
+    if (erro) { setConfirmacao(c => ({ ...c, erro })); return }
+    setConfirmacao(null)
     init()
   }
 
   // ── Dispensar: o item deixa de contar como vencido, mas o registro fica no histórico ──
-  async function dispensar(e) {
-    const motivo = window.prompt(
-      `Dispensar "${e.tipo}"?\n\nO item deixa de contar como vencido/vencendo, mas o registro da entrega continua no histórico.\n\nMotivo (opcional):`,
-      ''
-    )
-    if (motivo === null) return // cancelou
-    const { error } = await supabase.from('epis').update({
-      dispensado: true,
-      dispensado_motivo: motivo.trim() || null,
-    }).eq('id', e.id)
-    if (error) {
-      alert('Não foi possível dispensar o item: ' + error.message + '\n\nConfira se as colunas "dispensado" e "dispensado_motivo" foram criadas na tabela epis do Supabase.')
-      return
-    }
-    init()
+  function abrirDispensa(e) {
+    setModalDispensa({ epi: e, escolha: '', texto: '', erro: '' })
   }
 
-  async function reativar(e) {
-    if (!confirm(`Voltar a controlar o vencimento de "${e.tipo}"?`)) return
+  async function confirmarDispensa() {
+    if (!modalDispensa) return
+    const { epi, escolha, texto } = modalDispensa
+    const base = escolha && escolha !== 'Outro motivo' ? escolha : ''
+    const motivo = [base, texto.trim()].filter(Boolean).join(' — ')
+    setSalvandoAcao(true)
     const { error } = await supabase.from('epis').update({
-      dispensado: false,
-      dispensado_motivo: null,
-    }).eq('id', e.id)
+      dispensado: true,
+      dispensado_motivo: motivo || null,
+    }).eq('id', epi.id)
+    setSalvandoAcao(false)
     if (error) {
-      alert('Não foi possível reativar o item: ' + error.message)
+      setModalDispensa(m => ({ ...m, erro: 'Não foi possível dispensar: ' + error.message + '. Confira se as colunas "dispensado" e "dispensado_motivo" foram criadas na tabela epis do Supabase.' }))
       return
     }
+    setModalDispensa(null)
     init()
   }
 
@@ -770,8 +802,8 @@ export default function Epis({ isAdmin = false }) {
                         <Badge status={statusEfetivo(e)} />
                         {isAdmin && <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                           <button style={S.btnSm} onClick={() => { setEditando(e); setEditForm({ data_entrega: e.data_entrega || '', quantidade: e.quantidade || 1, ca: e.ca || '', motivo: e.motivo || '', data_prox_entrega: e.data_prox_entrega || '' }) }}>Editar</button>
-                          <button style={S.btnSm} title="Não é mais obrigatório: deixa de contar como vencido, mas o histórico fica guardado" onClick={() => dispensar(e)}>Dispensar</button>
-                          <button style={S.btnDanger} onClick={() => excluir(e.id)}>✕</button>
+                          <button style={S.btnSm} title="Não é mais obrigatório: deixa de contar como vencido, mas o histórico fica guardado" onClick={() => abrirDispensa(e)}>Dispensar</button>
+                          <button style={S.btnDanger} onClick={() => pedirExcluir(e)}>✕</button>
                         </div>}
                       </div>
                     )) : (
@@ -793,8 +825,8 @@ export default function Epis({ isAdmin = false }) {
                         <Badge status="VIGENTE" />
                         {isAdmin && <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                           <button style={S.btnSm} onClick={() => { setEditando(e); setEditForm({ data_entrega: e.data_entrega || '', quantidade: e.quantidade || 1, ca: e.ca || '', motivo: e.motivo || '', data_prox_entrega: e.data_prox_entrega || '' }) }}>Editar</button>
-                          <button style={S.btnSm} title="Não é mais obrigatório: deixa de contar como vencido, mas o histórico fica guardado" onClick={() => dispensar(e)}>Dispensar</button>
-                          <button style={S.btnDanger} onClick={() => excluir(e.id)}>✕</button>
+                          <button style={S.btnSm} title="Não é mais obrigatório: deixa de contar como vencido, mas o histórico fica guardado" onClick={() => abrirDispensa(e)}>Dispensar</button>
+                          <button style={S.btnDanger} onClick={() => pedirExcluir(e)}>✕</button>
                         </div>}
                       </div>
                     ))}
@@ -822,8 +854,8 @@ export default function Epis({ isAdmin = false }) {
                         </div>
                         <Badge status="DISPENSADO" />
                         {isAdmin && <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                          <button style={S.btnSm} onClick={() => reativar(e)}>Reativar</button>
-                          <button style={S.btnDanger} onClick={() => excluir(e.id)}>✕</button>
+                          <button style={S.btnSm} onClick={() => pedirReativar(e)}>Reativar</button>
+                          <button style={S.btnDanger} onClick={() => pedirExcluir(e)}>✕</button>
                         </div>}
                       </div>
                     ))}
@@ -900,6 +932,109 @@ export default function Epis({ isAdmin = false }) {
           })}
           {checklist.length === 0 && <div style={{ color: 'var(--muted)', textAlign: 'center', padding: 40 }}>Nenhum colaborador com kit atribuído.</div>}
         </>
+      )}
+
+      {/* ══ MODAL DISPENSAR EPI ══ */}
+      {modalDispensa && (() => {
+        const e = modalDispensa.epi
+        const lbl = { fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }
+        const val = { fontSize: 13, color: 'var(--text)', fontWeight: 500 }
+        return (
+          <div style={S.modal} onClick={ev => ev.target === ev.currentTarget && !salvandoAcao && setModalDispensa(null)}>
+            <div style={{ ...S.modalBox, maxWidth: 480 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--amber-dim)', color: 'var(--amber)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+                </div>
+                <div>
+                  <div style={{ ...S.modalTitle, marginBottom: 2 }}>Dispensar EPI</div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)' }}>Deixa de contar como vencido, mas o histórico fica guardado.</div>
+                </div>
+              </div>
+
+              <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: '12px 14px', marginBottom: 18, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 16px' }}>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <div style={lbl}>Colaborador</div>
+                  <div style={val}>{e.colaboradores?.nome || '—'}</div>
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <div style={lbl}>EPI</div>
+                  <div style={val}>{e.tipo}</div>
+                </div>
+                <div>
+                  <div style={lbl}>Entregue em</div>
+                  <div style={{ ...val, fontFamily: "'JetBrains Mono', monospace" }}>{fmtData(e.data_entrega)}</div>
+                </div>
+                <div>
+                  <div style={lbl}>Status atual</div>
+                  <Badge status={calcStatus(e.data_prox_entrega, e.data_entrega)} />
+                </div>
+              </div>
+
+              <div style={S.field}>
+                <label style={S.label}>Motivo</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {MOTIVOS_DISPENSA.map(m => {
+                    const on = modalDispensa.escolha === m
+                    return (
+                      <button key={m} type="button" onClick={() => setModalDispensa(x => ({ ...x, escolha: on ? '' : m }))}
+                        style={{ background: on ? 'var(--blue-dim)' : 'var(--subtle)', color: on ? 'var(--blue)' : 'var(--text2)', border: `1px solid ${on ? 'rgba(59,130,246,.45)' : 'var(--border2)'}`, borderRadius: 20, padding: '6px 13px', fontSize: 12, fontWeight: on ? 600 : 500, cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s' }}>
+                        {on ? '✓ ' : ''}{m}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div style={S.field}>
+                <label style={S.label}>Observação (opcional)</label>
+                <input style={S.input} placeholder="Ex.: usa apenas em campo, a pedido da gestão..." value={modalDispensa.texto} onChange={ev => setModalDispensa(x => ({ ...x, texto: ev.target.value }))} />
+              </div>
+
+              <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.5, marginBottom: 4 }}>
+                Se esse EPI for entregue novamente, ele volta a ser controlado. Você também pode reativar a qualquer momento em “ver itens dispensados”.
+              </div>
+
+              {modalDispensa.erro && (
+                <div style={{ background: 'var(--red-dim)', border: '1px solid rgba(239,68,68,.25)', borderRadius: 6, padding: '8px 12px', color: 'var(--red)', fontSize: 12, marginTop: 10 }}>{modalDispensa.erro}</div>
+              )}
+
+              <div style={S.row}>
+                <button style={S.btnSm} onClick={() => setModalDispensa(null)} disabled={salvandoAcao}>Cancelar</button>
+                <button style={S.btn} onClick={confirmarDispensa} disabled={salvandoAcao}>{salvandoAcao ? 'Salvando...' : 'Dispensar EPI'}</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* ══ MODAL DE CONFIRMAÇÃO (excluir / reativar) ══ */}
+      {confirmacao && (
+        <div style={S.modal} onClick={ev => ev.target === ev.currentTarget && !salvandoAcao && setConfirmacao(null)}>
+          <div style={{ ...S.modalBox, maxWidth: 420 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 6 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: confirmacao.perigo ? 'var(--red-dim)' : 'var(--blue-dim)', color: confirmacao.perigo ? 'var(--red)' : 'var(--blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {confirmacao.perigo
+                  ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                  : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                }
+              </div>
+              <div>
+                <div style={{ ...S.modalTitle, marginBottom: 6 }}>{confirmacao.titulo}</div>
+                <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.55 }}>{confirmacao.texto}</div>
+              </div>
+            </div>
+
+            {confirmacao.erro && (
+              <div style={{ background: 'var(--red-dim)', border: '1px solid rgba(239,68,68,.25)', borderRadius: 6, padding: '8px 12px', color: 'var(--red)', fontSize: 12, marginTop: 12 }}>{confirmacao.erro}</div>
+            )}
+
+            <div style={S.row}>
+              <button style={S.btnSm} onClick={() => setConfirmacao(null)} disabled={salvandoAcao}>Cancelar</button>
+              <button style={confirmacao.perigo ? S.btnRed : S.btn} onClick={executarConfirmacao} disabled={salvandoAcao}>{salvandoAcao ? 'Aguarde...' : confirmacao.rotulo}</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ══ MODAL NOVA ENTREGA ══ */}
