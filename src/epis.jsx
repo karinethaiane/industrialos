@@ -49,11 +49,12 @@ function parseLocalDate(dateStr) {
   return Number.isNaN(dt.getTime()) ? null : dt
 }
 
+// Soma dias a uma data AAAA-MM-DD e devolve AAAA-MM-DD (sem erro de fuso horário)
 function somarDias(dataIso, dias) {
   const dt = parseLocalDate(dataIso)
   if (!dt) return ''
   dt.setDate(dt.getDate() + dias)
-  return dt.toISOString().split('T')[0]
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
 }
 
 function dataProximaSegura(dataEntrega, dataProx) {
@@ -72,6 +73,12 @@ function calcStatus(dataProx, dataEntrega = null) {
   if (dias < 0) return 'VENCIDO'
   if (dias <= 30) return 'VENCENDO'
   return 'VIGENTE'
+}
+
+// Status "real" da entrega: se foi dispensada, não conta como vencida/vencendo
+function statusEfetivo(e) {
+  if (e?.dispensado) return 'DISPENSADO'
+  return calcStatus(e?.data_prox_entrega, e?.data_entrega)
 }
 
 function fmtData(d) {
@@ -142,9 +149,10 @@ function epiMatchComGrupo(epiTipo, kitItemNome, catalogoList) {
 
 function Badge({ status }) {
   const cfg = {
-    VIGENTE:  { bg: 'var(--green-dim)', c: 'var(--green)',  l: '● Vigente' },
-    VENCENDO: { bg: 'var(--amber-dim)', c: 'var(--amber)',  l: '⚠ Vencendo' },
-    VENCIDO:  { bg: 'var(--red-dim)',   c: 'var(--red)',    l: '✕ Vencido' },
+    VIGENTE:    { bg: 'var(--green-dim)', c: 'var(--green)',  l: '● Vigente' },
+    VENCENDO:   { bg: 'var(--amber-dim)', c: 'var(--amber)',  l: '⚠ Vencendo' },
+    VENCIDO:    { bg: 'var(--red-dim)',   c: 'var(--red)',    l: '✕ Vencido' },
+    DISPENSADO: { bg: 'var(--subtle)',    c: 'var(--muted)',  l: '⏸ Dispensado' },
   }[status] || { bg: 'var(--subtle)', c: 'var(--muted)', l: status }
   return <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 5, fontSize: 11, fontWeight: 600, background: cfg.bg, color: cfg.c, whiteSpace: 'nowrap' }}>{cfg.l}</span>
 }
@@ -163,6 +171,7 @@ export default function Epis({ isAdmin = false }) {
   const [catalogo, setCatalogo] = useState([])
   const [colaboradores, setColaboradores] = useState([])
   const [kitItens, setKitItens] = useState([])
+  const [kits, setKits] = useState([])
   const [loading, setLoading] = useState(true)
   const [aba, setAba] = useState('entregas')
   const [modal, setModal] = useState(false)
@@ -174,6 +183,7 @@ export default function Epis({ isAdmin = false }) {
   const [buscaCheck, setBuscaCheck] = useState('')
   const [expandido, setExpandido] = useState('all')
   const [expandidosOk, setExpandidosOk] = useState({})
+  const [expandidosDisp, setExpandidosDisp] = useState({})
   const [almoExpanded, setAlmoExpanded] = useState(true)
   const [form, setForm] = useState({ colaborador_id: '', catalogo_id: '', data_entrega: '', quantidade: 1, motivo: '', ca: '' })
   const [editForm, setEditForm] = useState({ data_entrega: '', quantidade: 1, ca: '', motivo: '', data_prox_entrega: '' })
@@ -181,6 +191,7 @@ export default function Epis({ isAdmin = false }) {
   const [salvando, setSalvando] = useState(false)
   const [importando, setImportando] = useState(false)
   const [erroImport, setErroImport] = useState('')
+  const [importStatus, setImportStatus] = useState('')
 
   function normalizarTexto(valor) {
     return String(valor ?? '')
@@ -204,15 +215,19 @@ export default function Epis({ isAdmin = false }) {
     return ''
   }
 
+  // Converte qualquer data da planilha para AAAA-MM-DD
   function parseDateValue(valor) {
     if (!valor && valor !== 0) return ''
     if (valor instanceof Date) return valor.toISOString().slice(0, 10)
     if (typeof valor === 'number') {
-      const parsed = XLSX.SSF.parse_date_code(valor)
-      if (parsed) return `${String(parsed.y).padStart(4, '0')}-${String(parsed.m + 1).padStart(2, '0')}-${String(parsed.d).padStart(2, '0')}`
+      // número serial do Excel (dias desde 30/12/1899)
+      const dt = new Date(Math.round((valor - 25569) * 86400000))
+      return dt.toISOString().slice(0, 10)
     }
     const texto = String(valor).trim()
     if (!texto) return ''
+    const br = texto.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+    if (br) return `${br[3]}-${br[2].padStart(2, '0')}-${br[1].padStart(2, '0')}`
     return texto
   }
 
@@ -222,6 +237,7 @@ export default function Epis({ isAdmin = false }) {
 
     setImportando(true)
     setErroImport('')
+    setImportStatus('')
 
     try {
       const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' })
@@ -248,8 +264,14 @@ export default function Epis({ isAdmin = false }) {
       const { data: kitsAtivos, error: erroKits } = await supabase.from('epi_kits').select('*').eq('ativo', true)
       if (erroKits) throw new Error(erroKits.message)
 
+      // Catálogo: de onde vêm o nome oficial do EPI e o prazo em dias
+      const { data: catalogoImport, error: erroCatalogo } = await supabase.from('epis_catalogo').select('*').eq('ativo', true)
+      if (erroCatalogo) throw new Error(erroCatalogo.message)
+
       const linhas = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' })
       let total = 0
+      let ignoradas = 0
+      const naoEncontrados = new Set()
 
       for (const linha of linhas) {
         const nomeColab = String(valorLinha(linha, ['nome', 'nome_completo', 'colaborador', 'funcionario', 'nomecolaborador']) || '').trim()
@@ -258,10 +280,17 @@ export default function Epis({ isAdmin = false }) {
         const cargo = normalizarCargoEpi(String(valorLinha(linha, ['cargo', 'funcao', 'função', 'cargo_funcao']) || '').trim())
         const tipo = String(valorLinha(linha, ['tipo', 'epi', 'nome_epi', 'produto', 'item', 'nomeitem']) || '').trim()
         const dataEntrega = parseDateValue(valorLinha(linha, ['data_entrega', 'data_de_entrega', 'entrega', 'dataentrega']))
-        const dataProximaImport = parseDateValue(valorLinha(linha, ['data_prox_entrega', 'proxima_entrega', 'data_vencimento', 'vencimento']))
 
         if (!nomeColab && !matricula) continue
         if (!tipo || !dataEntrega) continue
+
+        // O EPI precisa existir no catálogo (pelo nome). Se não existir, a linha é ignorada e avisada.
+        const itemCatalogo = (catalogoImport || []).find(c => normalizarTexto(c.nome) === normalizarTexto(tipo))
+        if (!itemCatalogo) {
+          naoEncontrados.add(tipo)
+          ignoradas += 1
+          continue
+        }
 
         let colaborador = null
         if (matricula) {
@@ -305,19 +334,21 @@ export default function Epis({ isAdmin = false }) {
         const quantidade = Number(String(valorLinha(linha, ['quantidade', 'qtd']) || '1').replace(',', '.')) || 1
         const motivo = String(valorLinha(linha, ['motivo', 'justificativa']) || '').trim()
         const ca = String(valorLinha(linha, ['ca', 'numero_ca', 'n_ca']) || '').trim()
-        const proxEntrega = dataProximaSegura(dataEntrega, dataProximaImport)
+
+        // Mesma regra do sistema: próxima entrega = data da entrega + prazo do catálogo × quantidade
+        const proxEntrega = somarDias(dataEntrega, (Number(itemCatalogo.prazo_dias) || 0) * quantidade)
 
         const { data: existente } = await supabase
           .from('epis')
           .select('id')
           .eq('colaborador_id', colaborador.id)
-          .eq('tipo', tipo)
+          .eq('tipo', itemCatalogo.nome)
           .eq('data_entrega', dataEntrega)
           .maybeSingle()
 
         const payload = {
           colaborador_id: colaborador.id,
-          tipo,
+          tipo: itemCatalogo.nome,
           quantidade,
           data_entrega: dataEntrega,
           data_vencimento: proxEntrega,
@@ -338,9 +369,16 @@ export default function Epis({ isAdmin = false }) {
         total += 1
       }
 
-      setErroImport(`Importação concluída: ${total} entregas de EPIs carregadas.`)
+      if (ignoradas > 0) {
+        setImportStatus('aviso')
+        setErroImport(`Importação concluída: ${total} entregas carregadas. ${ignoradas} linhas foram ignoradas porque o EPI não foi encontrado no catálogo: ${[...naoEncontrados].join('; ')}.`)
+      } else {
+        setImportStatus('ok')
+        setErroImport(`Importação concluída: ${total} entregas de EPIs carregadas.`)
+      }
       init()
     } catch (erro) {
+      setImportStatus('erro')
       setErroImport('Erro ao importar entregas de EPIs: ' + erro.message)
     } finally {
       setImportando(false)
@@ -352,16 +390,18 @@ export default function Epis({ isAdmin = false }) {
 
   async function init() {
     setLoading(true)
-    const [e, cat, col, ki] = await Promise.all([
+    const [e, cat, col, ki, kt] = await Promise.all([
       supabase.from('epis').select('*, colaboradores(nome, matricula)').order('data_entrega', { ascending: false }),
       supabase.from('epis_catalogo').select('*').eq('ativo', true).order('nome'),
       supabase.from('colaboradores').select('*, epi_kits(id, nome)').eq('ativo', true).order('nome'),
       supabase.from('epi_kit_itens').select('*'),
+      supabase.from('epi_kits').select('*'),
     ])
     setEpis(e.data || [])
     setCatalogo(cat.data || [])
     setColaboradores(col.data || [])
     setKitItens(ki.data || [])
+    setKits(kt.data || [])
     setLoading(false)
   }
 
@@ -371,9 +411,7 @@ export default function Epis({ isAdmin = false }) {
     if (!item || !dataEntrega) return null
     const quantidade = parseInt(qtd) || 1
     const totalDias  = item.prazo_dias * quantidade
-    const d = new Date(dataEntrega + 'T00:00:00')
-    d.setDate(d.getDate() + totalDias)
-    return d.toISOString().split('T')[0]
+    return somarDias(dataEntrega, totalDias)
   }
 
   // ── Info do cálculo para exibir no modal ─────────────────────────────────
@@ -426,8 +464,39 @@ export default function Epis({ isAdmin = false }) {
   }
 
   async function excluir(id) {
-    if (!confirm('Excluir este registro?')) return
+    if (!confirm('Excluir este registro? Isso apaga o histórico desta entrega. Se o EPI só não é mais obrigatório, use "Dispensar".')) return
     await supabase.from('epis').delete().eq('id', id)
+    init()
+  }
+
+  // ── Dispensar: o item deixa de contar como vencido, mas o registro fica no histórico ──
+  async function dispensar(e) {
+    const motivo = window.prompt(
+      `Dispensar "${e.tipo}"?\n\nO item deixa de contar como vencido/vencendo, mas o registro da entrega continua no histórico.\n\nMotivo (opcional):`,
+      ''
+    )
+    if (motivo === null) return // cancelou
+    const { error } = await supabase.from('epis').update({
+      dispensado: true,
+      dispensado_motivo: motivo.trim() || null,
+    }).eq('id', e.id)
+    if (error) {
+      alert('Não foi possível dispensar o item: ' + error.message + '\n\nConfira se as colunas "dispensado" e "dispensado_motivo" foram criadas na tabela epis do Supabase.')
+      return
+    }
+    init()
+  }
+
+  async function reativar(e) {
+    if (!confirm(`Voltar a controlar o vencimento de "${e.tipo}"?`)) return
+    const { error } = await supabase.from('epis').update({
+      dispensado: false,
+      dispensado_motivo: null,
+    }).eq('id', e.id)
+    if (error) {
+      alert('Não foi possível reativar o item: ' + error.message)
+      return
+    }
     init()
   }
 
@@ -444,21 +513,30 @@ export default function Epis({ isAdmin = false }) {
   const episAtivos = epis.filter(e => colaboradorIdsAtivos.has(e.colaborador_id))
   const ultimas = ultimasEntregas(episAtivos)
 
+  function getKitDoColaborador(colab) {
+    if (colab?.epi_kits) return colab.epi_kits
+    if (!colab?.kit_id) return null
+    return kits.find(k => k.id === colab.kit_id) || null
+  }
+
   const porColab = colaboradores.map(c => {
     const itens = ultimas.filter(e => e.colaborador_id === c.id)
     if (!busca && itens.length === 0) return null
     if (busca && !normalizar(c.nome).includes(normalizar(busca)) && !itens.some(e => normalizar(e.tipo).includes(normalizar(busca)))) return null
-    const comProblema = itens.filter(e => calcStatus(e.data_prox_entrega, e.data_entrega) !== 'VIGENTE')
-    const vigentes    = itens.filter(e => calcStatus(e.data_prox_entrega, e.data_entrega) === 'VIGENTE')
-    if (filtroStatus === 'PROBLEMAS' && comProblema.length === 0) return null
-    if (filtroStatus === 'VIGENTE'   && comProblema.length > 0)  return null
-    return { colab: c, itens, comProblema, vigentes }
+    const dispensados = itens.filter(e => e.dispensado)
+    const ativos      = itens.filter(e => !e.dispensado)
+    const comProblema = ativos.filter(e => statusEfetivo(e) !== 'VIGENTE')
+    const vigentes    = ativos.filter(e => statusEfetivo(e) === 'VIGENTE')
+    if (filtroStatus === 'PROBLEMAS'    && comProblema.length === 0)  return null
+    if (filtroStatus === 'VIGENTE'      && comProblema.length > 0)    return null
+    if (filtroStatus === 'DISPENSADOS'  && dispensados.length === 0)  return null
+    return { colab: c, itens, ativos, comProblema, vigentes, dispensados }
   }).filter(Boolean)
 
   const necessidades = (() => {
     const vencidos = {}, vencendo = {}
     ultimas.forEach(e => {
-      const s = calcStatus(e.data_prox_entrega, e.data_entrega)
+      const s = statusEfetivo(e)
       const colab = colaboradores.find(c => c.id === e.colaborador_id)
       if (!colab) return
       if (s === 'VENCIDO')  { if (!vencidos[e.tipo])  vencidos[e.tipo]  = []; vencidos[e.tipo].push({ colab: colab.nome, data: e.data_prox_entrega }) }
@@ -470,25 +548,28 @@ export default function Epis({ isAdmin = false }) {
   const totalNecessidades = Object.keys(necessidades.vencidos).length + Object.keys(necessidades.vencendo).length
 
   const stats = {
-    vigente:  ultimas.filter(e => calcStatus(e.data_prox_entrega, e.data_entrega) === 'VIGENTE').length,
-    vencendo: ultimas.filter(e => calcStatus(e.data_prox_entrega, e.data_entrega) === 'VENCENDO').length,
-    vencido:  ultimas.filter(e => calcStatus(e.data_prox_entrega, e.data_entrega) === 'VENCIDO').length,
+    vigente:    ultimas.filter(e => statusEfetivo(e) === 'VIGENTE').length,
+    vencendo:   ultimas.filter(e => statusEfetivo(e) === 'VENCENDO').length,
+    vencido:    ultimas.filter(e => statusEfetivo(e) === 'VENCIDO').length,
+    dispensado: ultimas.filter(e => statusEfetivo(e) === 'DISPENSADO').length,
   }
 
   // ── Checklist com equivalência por grupo ──────────────────────────────────
   const checklist = colaboradores
-    .filter(c => c.epi_kits)
+    .filter(c => getKitDoColaborador(c))
     .filter(c => !buscaCheck || normalizar(c.nome).includes(normalizar(buscaCheck)))
     .map(c => {
-      const itensDoKit  = kitItens.filter(k => k.kit_id === c.epi_kits.id)
+      const kitColab = getKitDoColaborador(c)
+      const itensDoKit  = kitItens.filter(k => k.kit_id === kitColab?.id)
       const episDoColab = ultimas.filter(e => e.colaborador_id === c.id)
 
       const itens = itensDoKit.map(kitItem => {
-        // Procura entrega que bata pelo nome OU pelo grupo de equivalência
-        const entrega = episDoColab.find(e => epiMatchComGrupo(e.tipo, kitItem.epi_nome, catalogo))
-        const status  = entrega ? calcStatus(entrega.data_prox_entrega, entrega.data_entrega) : null
-        // "entregue e vigente" = realmente ok no checklist
-        const ok = !!entrega && status === 'VIGENTE'
+        // Procura entrega que bata pelo nome OU pelo grupo de equivalência (prefere a que não foi dispensada)
+        const candidatas = episDoColab.filter(e => epiMatchComGrupo(e.tipo, kitItem.epi_nome, catalogo))
+        const entrega = candidatas.find(e => !e.dispensado) || candidatas[0]
+        const status  = entrega ? statusEfetivo(entrega) : null
+        // ok = entregue e vigente, ou dispensado (não é mais obrigatório)
+        const ok = !!entrega && (status === 'VIGENTE' || status === 'DISPENSADO')
         return {
           nome: kitItem.epi_nome,
           entregue: !!entrega,
@@ -517,8 +598,8 @@ export default function Epis({ isAdmin = false }) {
     return 'linear-gradient(135deg,#3b82f6,#06b6d4)'
   }
   function cardStatus(comProblema) {
-    if (comProblema.some(e => calcStatus(e.data_prox_entrega, e.data_entrega) === 'VENCIDO'))  return 'bad'
-    if (comProblema.some(e => calcStatus(e.data_prox_entrega, e.data_entrega) === 'VENCENDO')) return 'warn'
+    if (comProblema.some(e => statusEfetivo(e) === 'VENCIDO'))  return 'bad'
+    if (comProblema.some(e => statusEfetivo(e) === 'VENCENDO')) return 'warn'
     return 'ok'
   }
   const cardBorder = { bad: 'rgba(239,68,68,.5)', warn: 'rgba(245,158,11,.4)', ok: 'rgba(16,185,129,.4)' }
@@ -533,6 +614,12 @@ export default function Epis({ isAdmin = false }) {
   const infoCalc = (form.catalogo_id && form.quantidade) ? calcInfo(form.catalogo_id, form.quantidade) : null
   // CA padrão do catálogo selecionado
   const catalogoSelecionado = catalogo.find(c => c.id === form.catalogo_id)
+
+  const bannerCor = importStatus === 'erro'
+    ? { bg: 'var(--red-dim)', bd: 'rgba(239,68,68,.2)', c: 'var(--red)' }
+    : importStatus === 'aviso'
+      ? { bg: 'var(--amber-dim)', bd: 'rgba(245,158,11,.25)', c: 'var(--amber)' }
+      : { bg: 'var(--green-dim)', bd: 'rgba(16,185,129,.2)', c: 'var(--green)' }
 
   return (
     <div style={S.wrap}>
@@ -550,11 +637,11 @@ export default function Epis({ isAdmin = false }) {
       </div>
 
       {erroImport && (
-        <div style={{ background: erroImport.startsWith('Erro') ? 'var(--red-dim)' : 'var(--green-dim)', border: '1px solid ' + (erroImport.startsWith('Erro') ? 'rgba(239,68,68,.2)' : 'rgba(16,185,129,.2)'), color: erroImport.startsWith('Erro') ? 'var(--red)' : 'var(--green)', borderRadius: 8, padding: '10px 12px', marginBottom: 18, fontSize: 12 }}>{erroImport}</div>
+        <div style={{ background: bannerCor.bg, border: '1px solid ' + bannerCor.bd, color: bannerCor.c, borderRadius: 8, padding: '10px 12px', marginBottom: 18, fontSize: 12 }}>{erroImport}</div>
       )}
 
       <div style={S.stats}>
-        {[['var(--blue)', porColab.length, 'Colaboradores'], ['var(--green)', stats.vigente, 'Vigentes'], ['var(--amber)', stats.vencendo, 'Vencendo 30d'], ['var(--red)', stats.vencido, 'Vencidos'], ['var(--purple)', totalPendentes, 'Pendências Kit']].map(([cor, val, lbl]) => (
+        {[['var(--blue)', porColab.length, 'Colaboradores'], ['var(--green)', stats.vigente, 'Vigentes'], ['var(--amber)', stats.vencendo, 'Vencendo 30d'], ['var(--red)', stats.vencido, 'Vencidos'], ['var(--purple)', totalPendentes, 'Pendências Kit'], ['var(--muted)', stats.dispensado, 'Dispensados']].map(([cor, val, lbl]) => (
           <div key={lbl} style={S.statCard()}>
             <div style={S.statVal(cor)}>{val}</div>
             <div style={S.statLbl}>{lbl}</div>
@@ -645,14 +732,16 @@ export default function Epis({ isAdmin = false }) {
               <option value="">Todos os Status</option>
               <option value="PROBLEMAS">Com problemas</option>
               <option value="VIGENTE">Todos vigentes</option>
+              <option value="DISPENSADOS">Com itens dispensados</option>
             </select>
           </div>
 
           {loading ? <div style={{ color: 'var(--muted)', textAlign: 'center', padding: 40 }}>Carregando...</div> : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
-              {porColab.map(({ colab, comProblema, vigentes }) => {
+              {porColab.map(({ colab, ativos, comProblema, vigentes, dispensados }) => {
                 const st = cardStatus(comProblema)
                 const expanded = expandidosOk[colab.id]
+                const dispAberto = expandidosDisp[colab.id]
                 return (
                   <div key={colab.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: `3px solid ${cardBorder[st]}`, borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 4px var(--shadow)' }}>
                     <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)' }}>
@@ -673,21 +762,22 @@ export default function Epis({ isAdmin = false }) {
                       <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: '1px solid var(--border)' }}
                         onMouseEnter={ev => ev.currentTarget.style.background = 'var(--subtle)'}
                         onMouseLeave={ev => ev.currentTarget.style.background = 'transparent'}>
-                        <div style={{ width: 7, height: 7, borderRadius: '50%', background: calcStatus(e.data_prox_entrega, e.data_entrega) === 'VENCIDO' ? 'var(--red)' : 'var(--amber)', flexShrink: 0 }} />
+                        <div style={{ width: 7, height: 7, borderRadius: '50%', background: statusEfetivo(e) === 'VENCIDO' ? 'var(--red)' : 'var(--amber)', flexShrink: 0 }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 13, color: 'var(--text2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.tipo}</div>
-                          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: calcStatus(e.data_prox_entrega, e.data_entrega) === 'VENCIDO' ? 'var(--red)' : 'var(--amber)', fontWeight: 600, marginTop: 2 }}>{fmtData(dataProximaSegura(e.data_entrega, e.data_prox_entrega))}</div>
+                          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: statusEfetivo(e) === 'VENCIDO' ? 'var(--red)' : 'var(--amber)', fontWeight: 600, marginTop: 2 }}>{fmtData(dataProximaSegura(e.data_entrega, e.data_prox_entrega))}</div>
                         </div>
-                        <Badge status={calcStatus(e.data_prox_entrega, e.data_entrega)} />
+                        <Badge status={statusEfetivo(e)} />
                         {isAdmin && <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                           <button style={S.btnSm} onClick={() => { setEditando(e); setEditForm({ data_entrega: e.data_entrega || '', quantidade: e.quantidade || 1, ca: e.ca || '', motivo: e.motivo || '', data_prox_entrega: e.data_prox_entrega || '' }) }}>Editar</button>
+                          <button style={S.btnSm} title="Não é mais obrigatório: deixa de contar como vencido, mas o histórico fica guardado" onClick={() => dispensar(e)}>Dispensar</button>
                           <button style={S.btnDanger} onClick={() => excluir(e.id)}>✕</button>
                         </div>}
                       </div>
                     )) : (
-                      <div style={{ padding: '12px 16px', textAlign: 'center', fontSize: 12, color: 'var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                        Todos os EPIs em dia
+                      <div style={{ padding: '12px 16px', textAlign: 'center', fontSize: 12, color: ativos.length === 0 ? 'var(--muted)' : 'var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                        {ativos.length > 0 && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>}
+                        {ativos.length === 0 ? 'Nenhum EPI ativo no momento' : 'Todos os EPIs em dia'}
                       </div>
                     )}
 
@@ -703,6 +793,7 @@ export default function Epis({ isAdmin = false }) {
                         <Badge status="VIGENTE" />
                         {isAdmin && <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                           <button style={S.btnSm} onClick={() => { setEditando(e); setEditForm({ data_entrega: e.data_entrega || '', quantidade: e.quantidade || 1, ca: e.ca || '', motivo: e.motivo || '', data_prox_entrega: e.data_prox_entrega || '' }) }}>Editar</button>
+                          <button style={S.btnSm} title="Não é mais obrigatório: deixa de contar como vencido, mas o histórico fica guardado" onClick={() => dispensar(e)}>Dispensar</button>
                           <button style={S.btnDanger} onClick={() => excluir(e.id)}>✕</button>
                         </div>}
                       </div>
@@ -715,6 +806,35 @@ export default function Epis({ isAdmin = false }) {
                         onMouseLeave={e => { e.currentTarget.style.color = 'var(--muted)'; e.currentTarget.style.background = 'var(--surface2)' }}>
                         <span style={{ display: 'inline-block', transition: 'transform .2s', transform: expanded ? 'rotate(180deg)' : 'none' }}>▼</span>
                         {expanded ? 'recolher itens vigentes' : `ver ${vigentes.length} ${vigentes.length === 1 ? 'item vigente' : 'itens vigentes'}`}
+                      </button>
+                    )}
+
+                    {dispensados.length > 0 && dispAberto && dispensados.map(e => (
+                      <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px', borderBottom: '1px solid var(--border)', opacity: .7 }}
+                        onMouseEnter={ev => ev.currentTarget.style.background = 'var(--subtle)'}
+                        onMouseLeave={ev => ev.currentTarget.style.background = 'transparent'}>
+                        <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--muted)', flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, color: 'var(--text2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.tipo}</div>
+                          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {e.dispensado_motivo || 'Sem motivo informado'} · entregue em {fmtData(e.data_entrega)}
+                          </div>
+                        </div>
+                        <Badge status="DISPENSADO" />
+                        {isAdmin && <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                          <button style={S.btnSm} onClick={() => reativar(e)}>Reativar</button>
+                          <button style={S.btnDanger} onClick={() => excluir(e.id)}>✕</button>
+                        </div>}
+                      </div>
+                    ))}
+
+                    {dispensados.length > 0 && (
+                      <button onClick={() => setExpandidosDisp(x => ({ ...x, [colab.id]: !x[colab.id] }))}
+                        style={{ width: '100%', padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, cursor: 'pointer', fontSize: 11, fontWeight: 500, color: 'var(--muted)', background: 'var(--surface2)', border: 'none', borderTop: '1px solid var(--border)', fontFamily: 'inherit' }}
+                        onMouseEnter={e => { e.currentTarget.style.color = 'var(--blue)'; e.currentTarget.style.background = 'var(--blue-dim)' }}
+                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--muted)'; e.currentTarget.style.background = 'var(--surface2)' }}>
+                        <span style={{ display: 'inline-block', transition: 'transform .2s', transform: dispAberto ? 'rotate(180deg)' : 'none' }}>▼</span>
+                        {dispAberto ? 'recolher dispensados' : `ver ${dispensados.length} ${dispensados.length === 1 ? 'item dispensado' : 'itens dispensados'}`}
                       </button>
                     )}
 
@@ -741,11 +861,11 @@ export default function Epis({ isAdmin = false }) {
             </div>
           </div>
           {checklist.map(c => {
-            const isExpanded = expanded === 'all' || expanded === c.id
+            const isExpanded = expandido === 'all' || expandido === c.id
             return (
             <div key={c.id} style={S.colabCard}>
               <div style={S.colabCardHeader} onClick={() => setExpandido(prev => prev === c.id ? null : c.id)}>
-                <div><div style={S.colabCardName}>{c.nome}</div><div style={S.colabCardMat}>{c.matricula} · {c.epi_kits?.nome}</div></div>
+                <div><div style={S.colabCardName}>{c.nome}</div><div style={S.colabCardMat}>{c.matricula} · {(getKitDoColaborador(c)?.nome || 'Kit não definido')}</div></div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   {c.pendentes > 0 && <span style={{ background: 'var(--red-dim)', color: 'var(--red)', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{c.pendentes} pendente{c.pendentes > 1 ? 's' : ''}</span>}
                   {c.vencidos  > 0 && <span style={{ background: 'var(--red-dim)', color: 'var(--red)', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{c.vencidos} vencido{c.vencidos > 1 ? 's' : ''}</span>}
@@ -759,11 +879,11 @@ export default function Epis({ isAdmin = false }) {
                   {/* Ícone reflete status real, não só "entregue" */}
                   <div style={{
                     width: 20, height: 20, borderRadius: '50%',
-                    background: !item.entregue ? 'var(--red-dim)' : item.status === 'VENCIDO' ? 'var(--red-dim)' : item.status === 'VENCENDO' ? 'var(--amber-dim)' : 'var(--green-dim)',
-                    color: !item.entregue ? 'var(--red)' : item.status === 'VENCIDO' ? 'var(--red)' : item.status === 'VENCENDO' ? 'var(--amber)' : 'var(--green)',
+                    background: !item.entregue ? 'var(--red-dim)' : item.status === 'DISPENSADO' ? 'var(--subtle)' : item.status === 'VENCIDO' ? 'var(--red-dim)' : item.status === 'VENCENDO' ? 'var(--amber-dim)' : 'var(--green-dim)',
+                    color: !item.entregue ? 'var(--red)' : item.status === 'DISPENSADO' ? 'var(--muted)' : item.status === 'VENCIDO' ? 'var(--red)' : item.status === 'VENCENDO' ? 'var(--amber)' : 'var(--green)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, flexShrink: 0
                   }}>
-                    {!item.entregue ? '!' : item.status === 'VIGENTE' ? '✓' : '⚠'}
+                    {!item.entregue ? '!' : item.status === 'DISPENSADO' ? '–' : item.status === 'VIGENTE' ? '✓' : '⚠'}
                   </div>
                   <div style={{ flex: 1, fontSize: 13, color: 'var(--text2)' }}>{item.nome}</div>
                   {item.entregue
@@ -914,7 +1034,7 @@ export default function Epis({ isAdmin = false }) {
                           </div>
                           <div>
                             <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }}>Status</div>
-                            <Badge status={calcStatus(h.data_prox_entrega, h.data_entrega)} />
+                            <Badge status={statusEfetivo(h)} />
                           </div>
                           <div>
                             <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }}>Nº CA</div>
@@ -928,6 +1048,12 @@ export default function Epis({ isAdmin = false }) {
                             <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }}>Motivo</div>
                             <div style={{ fontSize: 12, color: 'var(--text2)' }}>{h.motivo || '—'}</div>
                           </div>
+                          {h.dispensado && (
+                            <div style={{ gridColumn: '1 / -1' }}>
+                              <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }}>Motivo da dispensa</div>
+                              <div style={{ fontSize: 12, color: 'var(--text2)' }}>{h.dispensado_motivo || 'Sem motivo informado'}</div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
