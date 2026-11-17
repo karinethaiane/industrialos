@@ -64,81 +64,9 @@ function getDataExtenso() {
 }
 
 // ── Tela Início ───────────────────────────────────────────────────────────
-async function getUltimaAnaliseAlocacao() {
-  try {
-    const local = JSON.parse(localStorage.getItem('alocacao_snaps') || '{}')
-    const snapsLocais = Object.values(local).flat().filter(Boolean)
-    const { data: snapsSupabase } = await supabase
-      .from('alocacao_snapshots')
-      .select('mes, data_extracao, linhas')
-      .order('data_extracao', { ascending: true })
-
-    const snaps = [
-      ...(snapsSupabase || []).map(r => ({ data: r.data_extracao, mes: r.mes, rows: r.linhas })),
-      ...snapsLocais,
-    ]
-
-    if (!snaps.length) return null
-
-    const ultimo = [...snaps].sort((a, b) => a.data.localeCompare(b.data)).at(-1)
-    const rows = Object.values(ultimo.rows || {})
-    const planejado = rows.reduce((total, r) => total + (Number(r?.p) || 0), 0)
-    const alocado = rows.reduce((total, r) => total + (Number(r?.a) || 0), 0)
-    const cobertura = planejado ? Math.round((alocado / planejado) * 100) : 0
-    const status = cobertura >= 90 ? 'Em dia' : cobertura >= 70 ? 'Acompanhando' : 'Atenção'
-    const statusCor = cobertura >= 90 ? 'var(--green)' : cobertura >= 70 ? 'var(--amber)' : 'var(--red)'
-
-    return {
-      data: ultimo.data,
-      cobertura,
-      status,
-      statusCor,
-      mes: ultimo.mes || null,
-    }
-  } catch {
-    try {
-      const local = JSON.parse(localStorage.getItem('alocacao_snaps') || '{}')
-      const snaps = Object.values(local).flat().filter(Boolean)
-      if (!snaps.length) return null
-      const ultimo = [...snaps].sort((a, b) => a.data.localeCompare(b.data)).at(-1)
-      const rows = Object.values(ultimo.rows || {})
-      const planejado = rows.reduce((total, r) => total + (Number(r?.p) || 0), 0)
-      const alocado = rows.reduce((total, r) => total + (Number(r?.a) || 0), 0)
-      const cobertura = planejado ? Math.round((alocado / planejado) * 100) : 0
-      return {
-        data: ultimo.data,
-        cobertura,
-        status: cobertura >= 90 ? 'Em dia' : cobertura >= 70 ? 'Acompanhando' : 'Atenção',
-        statusCor: cobertura >= 90 ? 'var(--green)' : cobertura >= 70 ? 'var(--amber)' : 'var(--red)',
-        mes: ultimo.mes || null,
-      }
-    } catch {
-      return null
-    }
-  }
-}
-
 function Inicio({ onNavegar, tema, nomeUsuario }) {
   const [exportando, setExportando]         = useState(false)
   const [progressoExport, setProgressoExport] = useState('')
-  const [ultimaAnalise, setUltimaAnalise]   = useState(null)
-
-  useEffect(() => {
-    let vivo = true
-    async function carregar() {
-      const proximo = await getUltimaAnaliseAlocacao()
-      if (vivo) setUltimaAnalise(proximo)
-    }
-    carregar()
-    const atualizar = () => carregar()
-    window.addEventListener('storage', atualizar)
-    window.addEventListener('focus', atualizar)
-    return () => {
-      vivo = false
-      window.removeEventListener('storage', atualizar)
-      window.removeEventListener('focus', atualizar)
-    }
-  }, [])
 
   async function handleExportar() {
     setExportando(true)
@@ -182,32 +110,6 @@ function Inicio({ onNavegar, tema, nomeUsuario }) {
           {getDataExtenso()}
         </div>
       </div>
-
-      {ultimaAnalise && (
-        <div style={{ marginBottom: 26, padding: '18px 20px', borderRadius: 14, border: '1px solid var(--border)', background: 'linear-gradient(135deg, rgba(20,184,166,.08), rgba(59,130,246,.04))' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 6 }}>
-                Última análise
-              </div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', letterSpacing: '-.02em' }}>
-                {new Date(`${ultimaAnalise.data}T00:00:00`).toLocaleDateString('pt-BR')}
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span style={{ background: `color-mix(in srgb, ${ultimaAnalise.statusCor} 14%, transparent)`, color: ultimaAnalise.statusCor, borderRadius: 999, padding: '4px 10px', fontSize: 11, fontWeight: 700 }}>
-                {ultimaAnalise.status}
-              </span>
-              <span style={{ background: 'var(--teal-dim)', color: 'var(--teal)', borderRadius: 999, padding: '4px 10px', fontSize: 11, fontWeight: 700 }}>
-                {ultimaAnalise.cobertura}% de cobertura
-              </span>
-            </div>
-          </div>
-          <div style={{ marginTop: 10, fontSize: 12, color: 'var(--muted)' }}>
-            Foto mais recente da alocação de horas para consulta rápida do status da equipe.
-          </div>
-        </div>
-      )}
 
       {/* Grid de módulos */}
       <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 16 }}>
