@@ -357,8 +357,8 @@ export function metaPct(dataStr, ym, modo) {
 export const TD = {
   zero: ['Sem alocação', 'var(--red)', 0],
   down: ['Sem alocação', 'var(--red)', 1],
-  stall: ['Evoluindo', 'var(--amber)', 2],
-  up: ['Evoluindo', 'var(--teal)', 3],
+  stall: ['Estável', 'var(--amber)', 2],
+  up: ['Subindo', 'var(--teal)', 3],
   ok: ['Em dia', 'var(--green)', 4],
   na: ['—', 'var(--muted)', 5],
 }
@@ -403,10 +403,10 @@ export function montarResumo(ym, A) {
   return [
     `Alocação de horas · TICs · ${ymLabel(ym)} (posição de ${dmyFull(ult.data)})`,
     `• Equipe em ${Math.round(cov)}% do planejado${covPrev != null ? ` (${sinal(cov - covPrev)} pp desde ${dmyFull(pen.data)})` : ''}; ${pes.length} colaboradores monitorados.`,
-    `• ${dist.ok + dist.acima} em dia · ${c('up') + c('stall')} evoluindo · ${dist.sem} sem alocação.`,
+    `• ${dist.ok + dist.acima} em dia · ${c('up') + c('stall')} em evolução · ${dist.sem} sem alocação.`,
     ...(pen ? [`• Na semana: ${horasAdd >= 0 ? '+' : ''}${fmtH(horasAdd)} h alocadas; ${comecaram} colaborador(es) começaram a alocar.`] : []),
-    ...(c('up') ? [`• Evoluindo na semana (${c('up')}): ${nomes(pes.filter(p => p.t === 'up'))}.`] : []),
-    ...(c('stall') ? [`• Evoluindo com estabilidade (${c('stall')}): ${nomes(pes.filter(p => p.t === 'stall'))}.`] : []),
+    ...(c('up') ? [`• Subindo na semana (${c('up')}): ${nomes(pes.filter(p => p.t === 'up'))}.`] : []),
+    ...(c('stall') ? [`• Estável na semana (${c('stall')}): ${nomes(pes.filter(p => p.t === 'stall'))}.`] : []),
     ...(c('zero') ? [`• Sem alocação (${c('zero')}): ${nomes(pes.filter(p => p.t === 'zero'))}.`] : []),
   ].join('\n')
 }

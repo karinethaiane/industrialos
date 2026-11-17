@@ -547,8 +547,12 @@ export default function Epis({ isAdmin = false }) {
 
   function getKitDoColaborador(colab) {
     if (colab?.epi_kits) return colab.epi_kits
-    if (!colab?.kit_id) return null
-    return kits.find(k => k.id === colab.kit_id) || null
+    if (colab?.kit_id) return kits.find(k => k.id === colab.kit_id) || null
+    if (colab?.cargo) {
+      const kitAuto = resolverKitPorCargoEpi(colab.cargo, kits)
+      if (kitAuto) return kits.find(k => k.id === kitAuto) || null
+    }
+    return null
   }
 
   const porColab = colaboradores.map(c => {
@@ -622,6 +626,15 @@ export default function Epis({ isAdmin = false }) {
     })
 
   const totalPendentes = checklist.reduce((a, c) => a + c.pendentes, 0)
+  const checklistSemKit = colaboradores.some(c => !getKitDoColaborador(c) && !!c.cargo)
+  const checklistSemItens = kits.length > 0 && kits.some(kit => !kitItens.some(item => item.kit_id === kit.id))
+  const checklistMotivo = !kits.length
+    ? 'Nenhum kit ativo foi encontrado em epi_kits. O checklist depende de kits cadastrados para comparar os itens obrigatórios.'
+    : checklistSemItens
+      ? 'Há kit(s) cadastrados, mas nenhum item foi associado em epi_kit_itens. Sem itens do kit, o checklist não consegue montar a lista.'
+      : checklistSemKit
+        ? 'Há colaboradores com cargo reconhecido, mas sem kit atribuído. O módulo só monta a checklist quando o kit já está ligado ao colaborador.'
+        : 'Não há registros válidos para montar o checklist no momento.'
 
   function initials(nome) { return (nome || '').split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase() }
   function avatarColor(st) {
@@ -930,7 +943,12 @@ export default function Epis({ isAdmin = false }) {
             </div>
             )
           })}
-          {checklist.length === 0 && <div style={{ color: 'var(--muted)', textAlign: 'center', padding: 40 }}>Nenhum colaborador com kit atribuído.</div>}
+          {checklist.length === 0 && (
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, color: 'var(--muted)', textAlign: 'left' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>Checklist sem dados para mostrar</div>
+              <div style={{ fontSize: 13, lineHeight: 1.6 }}>{checklistMotivo}</div>
+            </div>
+          )}
         </>
       )}
 

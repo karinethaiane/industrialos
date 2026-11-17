@@ -695,7 +695,7 @@ export default function AlocacaoHoras({ isAdmin = false }) {
                 ['var(--teal)', `${Math.round(A.cov)}%`, 'Cobertura atual', A.covPrev == null ? '' : `${sinal(A.cov - A.covPrev)} pp`],
                 ['var(--blue)', A.n > 1 ? `${A.horasAdd >= 0 ? '+' : ''}${fmtH(A.horasAdd)}` : '—', 'Horas na última semana', ''],
                 ['var(--teal)', A.n > 1 ? A.comecaram : '—', 'Começaram a alocar', ''],
-                ['var(--amber)', A.c('up') + A.c('stall'), 'Evoluindo', ''],
+                ['var(--amber)', A.c('up') + A.c('stall'), 'Em evolução', ''],
                 ['var(--red)', A.c('zero') + A.c('down'), 'Sem alocação', ''],
                 ['var(--green)', A.c('ok'), 'Em dia', A.pes.length ? `${Math.round(A.c('ok') / A.pes.length * 100)}%` : ''],
               ]} />
@@ -713,7 +713,7 @@ export default function AlocacaoHoras({ isAdmin = false }) {
                   <GraficoBarras snaps={snaps} tol={tol} />
                   <div className="legend">
                     <span><i style={{ background: 'var(--red)' }} />Sem alocação</span>
-                    <span><i style={{ background: 'var(--amber)' }} />Evoluindo</span>
+                    <span><i style={{ background: 'var(--amber)' }} />Estável</span>
                     <span><i style={{ background: 'var(--green)' }} />Em dia</span>
                     <span><i style={{ background: 'var(--purple)' }} />Acima</span>
                   </div>
@@ -734,7 +734,7 @@ export default function AlocacaoHoras({ isAdmin = false }) {
               <div className="toolbar">
                 <input className="search" placeholder="Buscar colaborador..." value={evBusca} onChange={e => setEvBusca(e.target.value)} />
                 <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {[['todos', 'Todos', A.pes.length, ''], ['zero', 'Sem alocação', A.c('zero'), 'c-sem'], ['down', 'Sem alocação', A.c('down'), 'c-sem'], ['stall', 'Evoluindo', A.c('stall'), 'c-abaixo'], ['up', 'Evoluindo', A.c('up'), 'c-ok'], ['ok', 'Em dia', A.c('ok'), 'c-ok']].map(([id, l, k, cl]) => (
+                  {[['todos', 'Todos', A.pes.length, ''], ['zero', 'Sem alocação', A.c('zero'), 'c-sem'], ['down', 'Sem alocação', A.c('down'), 'c-sem'], ['stall', 'Estável', A.c('stall'), 'c-abaixo'], ['up', 'Subindo', A.c('up'), 'c-ok'], ['ok', 'Em dia', A.c('ok'), 'c-ok']].map(([id, l, k, cl]) => (
                     <button key={id} className={`chip ${cl} ${evFiltro === id ? 'on' : ''}`} onClick={() => setEvFiltro(id)}>{l} <span className="n">{k}</span></button>
                   ))}
                 </span>
@@ -786,7 +786,7 @@ export default function AlocacaoHoras({ isAdmin = false }) {
               <li>O sistema não guarda histórico. Por isso, <b>a cada semana</b> você importa o relatório novo e clica em <i>Registrar posição</i>: isso grava uma "foto" (planejado e alocado de cada pessoa) com a data da extração.</li>
               <li>A data da extração é lida do nome do arquivo (ex.: <code>relatorio-alocacoes-1793875403193</code> = 05/11/2026) e pode ser corrigida no campo de data.</li>
               <li>O planejado também é gravado em cada foto, porque o PCP pode mudar durante o mês.</li>
-              <li><b>Tendência</b> compara a última foto com a anterior: <i>Em dia</i> · <i>Evoluindo</i> (+horas) · <i>Parado</i> (abaixo e sem mudança) · <i>Regrediu</i> (horas diminuíram) · <i>Sem movimento</i> (0 h em todas as fotos).</li>
+              <li><b>Tendência</b> compara a última foto com a anterior: <i>Em dia</i> · <i>Subindo</i> (+horas) · <i>Estável</i> (abaixo e sem mudança) · <i>Regrediu</i> (horas diminuíram) · <i>Sem movimento</i> (0 h em todas as fotos).</li>
               <li>As fotos ficam guardadas na tabela <code>alocacao_snapshots</code> do Supabase.</li>
             </ol>
           </details>
