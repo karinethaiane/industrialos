@@ -178,7 +178,7 @@ export async function exportarTudo(onProgress) {
     'Descrição':         r.descricao || '',
     'Status':            r.status || '',
     'Responsável': (() => {
-      const map = { aguardando_abertura_chamado:'Solicitante', em_andamento:'Financeiro', ajustes:'Solicitante', aguardando_desbloqueio:'Gerência', concluido:'Financeiro', cancelado:'Financeiro' }
+      const map = { aguardando_abertura_chamado:'Solicitante', em_andamento:'Financeiro', ajustes:'Solicitante', aguardando_aprovacao:'Gerência', aguardando_desbloqueio:'Gerência', concluido:'Financeiro', cancelado:'Financeiro' }
       return map[r.status] || ''
     })(),
     'Valor':             r.valor ? fmtMoeda(r.valor) : '',

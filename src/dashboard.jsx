@@ -118,8 +118,8 @@ const S = {
   modalBox:  { background:'var(--surface)', border:'1px solid var(--border2)', borderRadius:12, padding:28, width:'90%', maxWidth:480, boxShadow:'0 8px 40px var(--shadow)' },
 }
 
-const STATUS_PAG_COR   = { em_andamento:'var(--a)', ajustes:'var(--warn)', aguardando_desbloqueio:'var(--danger)', concluido:'var(--ok)', cancelado:'var(--text3)' }
-const STATUS_PAG_LABEL = { em_andamento:'Em andamento', ajustes:'Ajustes', aguardando_desbloqueio:'Aguard. Desbloqueio', concluido:'Concluído', cancelado:'Cancelado' }
+const STATUS_PAG_COR   = { aguardando_abertura_chamado:'var(--purple)', em_andamento:'var(--a)', ajustes:'var(--warn)', aguardando_aprovacao:'var(--danger)', aguardando_desbloqueio:'var(--danger)', concluido:'var(--ok)', cancelado:'var(--text3)' }
+const STATUS_PAG_LABEL = { aguardando_abertura_chamado:'Ag. Abertura do Chamado', em_andamento:'Em andamento', ajustes:'Ajustes', aguardando_aprovacao:'Aguard. aprovação', aguardando_desbloqueio:'Aguard. aprovação', concluido:'Concluído', cancelado:'Cancelado' }
 
 export default function Dashboard({ onNavegar }) {
   const [dados, setDados]     = useState(null)
@@ -176,7 +176,7 @@ export default function Dashboard({ onNavegar }) {
 
     // Financeiro
     const nfsAbertas   = emissoes.filter(e => e.status_sgt === 'Em execução')
-    const pagBloqueados = pagamentos.filter(p => p.status === 'aguardando_desbloqueio')
+    const pagBloqueados = pagamentos.filter(p => p.status === 'aguardando_aprovacao' || p.status === 'aguardando_desbloqueio')
 
     // Consultoria
     const bpAgCron  = kickoffs.filter(k => k.status === 'aguardando_cronograma')
@@ -190,7 +190,7 @@ export default function Dashboard({ onNavegar }) {
     const pendencias = []
     veicRevVencida.slice(0,2).forEach(v => pendencias.push({ modulo:'Veículos', tipo:'crit', desc:`${v.placa} — Revisão preventiva vencida`, stTipo:'crit', st:'Vencida', valor:null, previsao:null, pagObj:null }))
     episVencidos.slice(0,2).forEach(e => pendencias.push({ modulo:'EPIs', tipo:'crit', desc:`${e.tipo}${e.colaboradores?.nome?' — '+e.colaboradores.nome:''} · Vencido`, stTipo:'crit', st:'Vencido', valor:null, previsao:null, pagObj:null }))
-    pagBloqueados.slice(0,2).forEach(p => pendencias.push({ modulo:'Financeiro', tipo:'warn', desc:`Chamado #${p.numero_chamado} — Aguardando desbloqueio`, stTipo:'warn', st:'Bloqueado', valor:p.valor, previsao:p.previsao_pagamento, pagObj:p }))
+    pagBloqueados.slice(0,2).forEach(p => pendencias.push({ modulo:'Financeiro', tipo:'warn', desc:`Chamado #${p.numero_chamado} — Aguardando aprovação`, stTipo:'warn', st:'Bloqueado', valor:p.valor, previsao:p.previsao_pagamento, pagObj:p }))
     bpAgCron.slice(0,2).forEach(k => pendencias.push({ modulo:'Consultoria', tipo:'a', desc:`${k.empresa} — ${k.id_sgt} · Ag. cronograma`, stTipo:'warn', st:'Aguardando', valor:null, previsao:null, pagObj:null }))
     episAVencer.slice(0,2).forEach(e => { const dias=Math.floor((new Date(e.data_prox_entrega)-hoje)/86400000); pendencias.push({ modulo:'EPIs', tipo:'warn', desc:`${e.tipo}${e.colaboradores?.nome?' — '+e.colaboradores.nome:''} · Vence em ${dias} dias`, stTipo:'warn', st:'A vencer', valor:null, previsao:null, pagObj:null }) })
     veicRevProxima.slice(0,1).forEach(v => { const dias=v.data_proxima_revisao?Math.floor((new Date(v.data_proxima_revisao)-hoje)/86400000):null; pendencias.push({ modulo:'Veículos', tipo:'', desc:`${v.placa} — Revisão em ${dias!=null?dias+' dias':'breve'}`, stTipo:'', st:'Próxima', valor:null, previsao:null, pagObj:null }) })

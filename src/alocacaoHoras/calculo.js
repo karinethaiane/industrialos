@@ -52,13 +52,14 @@ export function interpretarPcp(linhas) {
   for (let r = h + 2; r < linhas.length; r++) {
     const L = linhas[r]; if (!L) continue
     const nome = lbl(L[cNome]); if (!nome || nome.toUpperCase() === 'TBD') continue
-    if (lbl(L[cSt]).toUpperCase() === 'A CONTRATAR') continue
+    const status = lbl(L[cSt]).toUpperCase()
+    if (status === 'A CONTRATAR' || /ESTAGI/.test(status) || /DESLIG/.test(status) || /INATIVO/.test(status)) continue
     const plan = {}
     for (const [lb, c] of Object.entries(labels)) {
       const n = parseNumero(L[c])
       plan[lb] = n
     }
-    rows.push({ linha: r, mat: lbl(L[cMat]), status: lbl(L[cSt]).toUpperCase(), nome, funcao: lbl(L[cFun]), gerencia: lbl(L[cGer]), plan })
+    rows.push({ linha: r, mat: lbl(L[cMat]), status, nome, funcao: lbl(L[cFun]), gerencia: lbl(L[cGer]), plan })
   }
   return { labels, rows }
 }
@@ -246,6 +247,30 @@ export function calcular({ pcp, rel, ym, tol, incNI, incFora, notas }) {
   }
 }
 
+function metaAteHoje(ym, planejado, dataStr = new Date().toISOString().slice(0, 10)) {
+  if (!planejado) return 0
+  const [y, m] = ym.split('-').map(Number)
+  const ini = Date.UTC(y, m - 1, 1)
+  const diasMes = new Date(Date.UTC(y, m, 0)).getUTCDate()
+  const hojeTs = Date.parse(dataStr)
+  if (Number.isNaN(hojeTs)) return 0
+  const hoje = Math.min(diasMes, Math.max(1, Math.floor((hojeTs - ini) / 864e5) + 1))
+  let diasUteis = 0
+  let ateHoje = 0
+  for (let d = 1; d <= diasMes; d++) {
+    const wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay()
+    if (wd === 0 || wd === 6) continue
+    diasUteis++
+    if (d <= hoje) ateHoje++
+  }
+  return diasUteis ? planejado * (ateHoje / diasUteis) : 0
+}
+
+function metaSemanalMes(ym, planejado) {
+  const semanas = semanasDoMes(ym)
+  return planejado && semanas.length ? planejado / semanas.length : null
+}
+
 function montarLinha(o, { ym, tol, notas, lb }) {
   const nota = notas[notaKey(ym, o.id)] || { tag: '', texto: '' }
   const alertas = []
@@ -262,17 +287,21 @@ function montarLinha(o, { ym, tol, notas, lb }) {
   if (o.aprox && o.u) alertas.push(['info', `Nome no sistema: ${o.u.nome}`])
   if (o.gerencia === 'Não identificada') alertas.push(['warn', 'Gerência "não identificada" no PCP'])
 
-  let status
+  const metaHoje = o.planejado != null ? metaAteHoje(ym, o.planejado) : null
+  const metaSemanal = o.planejado != null ? metaSemanalMes(ym, o.planejado) : null
   const pct = o.planejado ? (o.alocado / o.planejado) * 100 : null
+  const pctMetaHoje = metaHoje ? (o.alocado / metaHoje) * 100 : null
+
+  let status
   if (TAGS_MANUAIS.includes(nota.tag)) status = 'afast'
   else if (o.pcpStatus && o.pcpStatus !== 'ATIVO') status = 'desl'
   else if (!o.planejado) status = 'semplan'
   else if (o.alocado < 0.05) status = 'sem'
-  else if (pct < 100 - tol - 1e-9) status = 'abaixo'
+  else if (pctMetaHoje != null && pctMetaHoje < 100 - tol - 1e-9) status = 'abaixo'
   else if (pct > 100 + tol + 1e-9) status = 'acima'
   else status = 'ok'
 
-  return { ...o, nota, alertas, status, pct, dif: o.planejado != null ? +(o.alocado - o.planejado).toFixed(2) : null, semanasH: distribuirSemanas(o.agg, o.wks) }
+  return { ...o, nota, alertas, status, pct, pctMetaHoje, metaHoje, metaSemanal, dif: o.planejado != null ? +(o.alocado - o.planejado).toFixed(2) : null, semanasH: distribuirSemanas(o.agg, o.wks) }
 }
 
 export function ordenar(linhas, { col, dir }) {

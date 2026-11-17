@@ -417,6 +417,25 @@ export default function AlocacaoHoras({ isAdmin = false }) {
   }
 
   const A = snaps.length ? analisarEvolucao(snaps, tol) : null
+  const ultimaPosicao = useMemo(
+    () => (snaps.length ? [...snaps].sort((a, b) => a.data.localeCompare(b.data)).at(-1) : null),
+    [snaps]
+  )
+  const ultimaCobertura = ultimaPosicao ? Math.round(cobertura(ultimaPosicao) * 100) : null
+  const ultimaStatus = !ultimaPosicao
+    ? 'Sem análise registrada'
+    : ultimaCobertura >= 90
+      ? 'Em dia'
+      : ultimaCobertura >= 70
+        ? 'Acompanhando'
+        : 'Atenção'
+  const ultimaStatusCor = !ultimaPosicao
+    ? 'var(--muted)'
+    : ultimaCobertura >= 90
+      ? 'var(--green)'
+      : ultimaCobertura >= 70
+        ? 'var(--amber)'
+        : 'var(--red)'
   const resumo = A ? montarResumo(evYmAtivo, A) : ''
   function copiarResumo() {
     const ok = () => toast('Resumo copiado.')
@@ -476,6 +495,26 @@ export default function AlocacaoHoras({ isAdmin = false }) {
       {modoLocal && (
         <div className="banner sim">
           <b>Atenção:</b> as tabelas do Supabase ainda não foram criadas, então notas e posições estão sendo guardadas só neste computador. Rode o arquivo <code>alocacao_tabelas.sql</code> no Supabase para guardar para todos.
+        </div>
+      )}
+
+      {ultimaPosicao ? (
+        <div className="card" style={{ marginBottom: 16, padding: '16px 18px', background: 'linear-gradient(135deg, rgba(20,184,166,.08), rgba(59,130,246,.04))' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div>
+              <div className="hint" style={{ marginBottom: 6 }}>Última análise registrada</div>
+              <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-.02em' }}>{dmyFull(ultimaPosicao.data)}</div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span className="badge" style={{ background: `color-mix(in srgb, ${ultimaStatusCor} 14%, transparent)`, color: ultimaStatusCor }}>{ultimaStatus}</span>
+              <span className="pill teal"><b>{ultimaCobertura}%</b> de cobertura</span>
+            </div>
+          </div>
+          <div className="hint" style={{ marginTop: 8 }}>Essa é a última fotografia do mês atual e serve como referência rápida para o status da equipe.</div>
+        </div>
+      ) : (
+        <div className="banner info" style={{ marginBottom: 16 }}>
+          Ainda não há análise registrada para este mês. Importe o relatório e clique em <b>Registrar posição</b> para deixar a última fotografia visível aqui.
         </div>
       )}
 

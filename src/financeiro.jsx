@@ -49,12 +49,13 @@ const S = {
 }
 
 const STATUS_NF  = ['Em execução', 'Concluído']
-const STATUS_PAG = ['aguardando_abertura_chamado', 'em_andamento', 'ajustes', 'aguardando_desbloqueio', 'concluido', 'cancelado']
+const STATUS_PAG = ['aguardando_abertura_chamado', 'em_andamento', 'ajustes', 'aguardando_aprovacao', 'concluido', 'cancelado']
 const STATUS_PAG_LABEL = {
-  aguardando_abertura_chamado: 'Ag. Abertura Chamado',
+  aguardando_abertura_chamado: 'Ag. Abertura do Chamado',
   em_andamento:                'Em andamento',
   ajustes:                     'Ajustes',
-  aguardando_desbloqueio:      'Aguard. Desbloqueio',
+  aguardando_aprovacao:        'Aguard. aprovação',
+  aguardando_desbloqueio:      'Aguard. aprovação',
   concluido:                   'Concluído',
   cancelado:                   'Cancelado',
 }
@@ -62,6 +63,7 @@ const STATUS_PAG_COR = {
   aguardando_abertura_chamado: 'var(--purple)',
   em_andamento:                'var(--blue)',
   ajustes:                     'var(--amber)',
+  aguardando_aprovacao:        'var(--red)',
   aguardando_desbloqueio:      'var(--red)',
   concluido:                   'var(--green)',
   cancelado:                   'var(--muted)',
@@ -70,6 +72,7 @@ const STATUS_GRUPO_AREA = {
   aguardando_abertura_chamado: 'Solicitante',
   em_andamento:                'Financeiro',
   ajustes:                     'Solicitante',
+  aguardando_aprovacao:        'Gerência',
   aguardando_desbloqueio:      'Gerência',
   concluido:                   'Financeiro',
   cancelado:                   'Financeiro',
@@ -110,8 +113,8 @@ function origemBadge(origem) {
 
 // ── Formulários vazios ─────────────────────────────────────────────────────────
 const NF_VAZIO     = { id_sgt: '', empresa: '', status_sgt: 'Em execução', data_conclusao_sgt: '', consultor: '', nf_boleto_enviado: false, data_solicitacao_envio: '', numero_nf: '', valor_parcela: '', numero_parcelas: 1, observacoes: '' }
-const PAG_VAZIO    = { numero_chamado: '', solicitante: '', responsavel: '', numero_nf_boleto_al: '', descricao: '', razao_social: '', status: 'aguardando_abertura_chamado', valor: '', previsao_pagamento: '', observacoes: '' }
-const DIARIA_VAZIO = { numero_chamado: '', op: '', solicitante: '', destino: '', data_inicio: '', data_fim: '', status: 'aguardando_abertura_chamado', valor: '', previsao_pagamento: '', descricao: '', observacoes: '', hospedagem: false, voucher_recebido: false, passagem_aerea: 'nao', chamado_hospedagem: '' }
+const PAG_VAZIO    = { numero_chamado: '', solicitante: 'ISI TICs', responsavel: '', numero_nf_boleto_al: '', descricao: '', razao_social: '', status: 'aguardando_abertura_chamado', valor: '', previsao_pagamento: '', observacoes: '' }
+const DIARIA_VAZIO = { numero_chamado: '', op: '', solicitante: 'ISI TICs', destino: '', data_inicio: '', data_fim: '', status: 'aguardando_abertura_chamado', valor: '', previsao_pagamento: '', descricao: '', observacoes: '', hospedagem: false, voucher_recebido: false, passagem_aerea: 'nao', chamado_hospedagem: '' }
 
 export default function Financeiro({ isAdmin = false }) {
   const [aba, setAba]               = useState('nf')
@@ -193,13 +196,17 @@ export default function Financeiro({ isAdmin = false }) {
   async function excluirNF(id) { if (!confirm('Excluir este registro?')) return; await supabase.from('emissoes_nf').delete().eq('id', id); init() }
 
   // ── PAGAMENTO CRUD ────────────────────────────────────────────────────────────
-  function abrirNovoPag()    { setEditandoPag(null); setErro(''); setFormPag(PAG_VAZIO); setModalPag(true) }
+  function abrirNovoPag()    { setEditandoPag(null); setErro(''); setFormPag({ ...PAG_VAZIO, solicitante: 'ISI TICs' }); setModalPag(true) }
   function abrirEditarPag(r) {
     setEditandoPag(r); setErro('')
-    setFormPag({ numero_chamado: r.numero_chamado || '', solicitante: r.solicitante || '', responsavel: r.responsavel || (r.tipo_tarefa && r.tipo_tarefa !== 'Solicitação de Pagamento' ? r.tipo_tarefa : ''), numero_nf_boleto_al: r.numero_nf_boleto_al || '', descricao: r.descricao || '', razao_social: r.razao_social || '', status: r.status || 'aguardando_abertura_chamado', valor: r.valor || '', previsao_pagamento: r.previsao_pagamento || '', observacoes: r.observacoes || '' })
+    setFormPag({ numero_chamado: r.numero_chamado || '', solicitante: r.solicitante || 'ISI TICs', responsavel: r.responsavel || (r.tipo_tarefa && r.tipo_tarefa !== 'Solicitação de Pagamento' ? r.tipo_tarefa : ''), numero_nf_boleto_al: r.numero_nf_boleto_al || '', descricao: r.descricao || '', razao_social: r.razao_social || '', status: r.status || 'aguardando_abertura_chamado', valor: r.valor || '', previsao_pagamento: r.previsao_pagamento || '', observacoes: r.observacoes || '' })
     setModalPag(true)
   }
   async function salvarPag() {
+    if (formPag.status !== 'aguardando_abertura_chamado' && !String(formPag.numero_chamado || '').trim()) {
+      setErro('O número do chamado é obrigatório quando a solicitação saiu da etapa de abertura.')
+      return
+    }
     setSalvando(true); setErro('')
     const dados = { numero_chamado: formPag.numero_chamado.trim() || null, solicitante: formPag.solicitante || null, responsavel: formPag.responsavel || null, tipo_tarefa: 'Solicitação de Pagamento', numero_nf_boleto_al: formPag.numero_nf_boleto_al || null, descricao: formPag.descricao || null, razao_social: formPag.razao_social || null, status: formPag.status, valor: parseFloat(formPag.valor) || null, previsao_pagamento: formPag.previsao_pagamento || null, observacoes: formPag.observacoes || null }
     let error
@@ -212,14 +219,18 @@ export default function Financeiro({ isAdmin = false }) {
   async function excluirPag(id) { if (!confirm('Excluir?')) return; await supabase.from('solicitacoes_pagamento').delete().eq('id', id); init() }
 
   // ── DIÁRIA CRUD ───────────────────────────────────────────────────────────────
-  function abrirNovaDiaria()    { setEditandoDiaria(null); setErro(''); setFormDiaria(DIARIA_VAZIO); setModalDiaria(true) }
+  function abrirNovaDiaria()    { setEditandoDiaria(null); setErro(''); setFormDiaria({ ...DIARIA_VAZIO, solicitante: 'ISI TICs' }); setModalDiaria(true) }
   function abrirEditarDiaria(r) {
     setEditandoDiaria(r); setErro('')
-    setFormDiaria({ numero_chamado: r.numero_chamado || '', op: r.op || '', solicitante: r.solicitante || '', destino: r.destino || '', data_inicio: r.data_inicio || '', data_fim: r.data_fim || '', status: r.status || 'aguardando_abertura_chamado', valor: r.valor || '', previsao_pagamento: r.previsao_pagamento || '', descricao: r.descricao || '', observacoes: r.observacoes || '', hospedagem: r.hospedagem || false, voucher_recebido: r.voucher_recebido || false, passagem_aerea: r.passagem_aerea || 'nao', chamado_hospedagem: r.chamado_hospedagem || '' })
+    setFormDiaria({ numero_chamado: r.numero_chamado || '', op: r.op || '', solicitante: r.solicitante || 'ISI TICs', destino: r.destino || '', data_inicio: r.data_inicio || '', data_fim: r.data_fim || '', status: r.status || 'aguardando_abertura_chamado', valor: r.valor || '', previsao_pagamento: r.previsao_pagamento || '', descricao: r.descricao || '', observacoes: r.observacoes || '', hospedagem: r.hospedagem || false, voucher_recebido: r.voucher_recebido || false, passagem_aerea: r.passagem_aerea || 'nao', chamado_hospedagem: r.chamado_hospedagem || '' })
     setModalDiaria(true)
   }
   async function salvarDiaria() {
     if (!formDiaria.destino || !formDiaria.data_inicio || !formDiaria.data_fim) { setErro('Destino e período são obrigatórios.'); return }
+    if (formDiaria.status !== 'aguardando_abertura_chamado' && !String(formDiaria.numero_chamado || '').trim()) {
+      setErro('O número do chamado é obrigatório quando a diária saiu da etapa de abertura.')
+      return
+    }
     setSalvando(true); setErro('')
     const dados = { numero_chamado: formDiaria.numero_chamado.trim() || null, op: formDiaria.op.trim() || null, solicitante: formDiaria.solicitante || null, destino: formDiaria.destino.trim(), data_inicio: formDiaria.data_inicio, data_fim: formDiaria.data_fim, status: formDiaria.status, valor: parseFloat(formDiaria.valor) || null, previsao_pagamento: formDiaria.previsao_pagamento || null, descricao: formDiaria.descricao || null, observacoes: formDiaria.observacoes || null, hospedagem: formDiaria.hospedagem, voucher_recebido: formDiaria.voucher_recebido, passagem_aerea: formDiaria.passagem_aerea, chamado_hospedagem: formDiaria.chamado_hospedagem.trim() || null }
     let error
@@ -401,7 +412,7 @@ export default function Financeiro({ isAdmin = false }) {
       {/* ══ ABA PAGAMENTOS ══ */}
       {aba === 'pag' && (<>
         <div style={S.toolbar}>
-              <select style={S.fselSm} value={buscaCampo} onChange={e => setBuscaCampo(e.target.value)}>
+          <select style={S.fselSm} value={buscaCampo} onChange={e => setBuscaCampo(e.target.value)}>
             <option value="">Buscar em todos</option>
             <option value="responsavel">Responsável</option>
             <option value="numero_nf_boleto_al">NF / Boleto / AL</option>
@@ -411,8 +422,14 @@ export default function Financeiro({ isAdmin = false }) {
             <option value="solicitante">Unidade</option>
           </select>
           <input style={S.search} placeholder="Buscar por chamado, razão social, unidade, responsável..." value={busca} onChange={e => setBusca(e.target.value)} />
-          <button style={S.filtro(!filtroStatus)} onClick={() => setFiltroStatus('')}>Todos</button>
-          {STATUS_PAG.map(s => <button key={s} style={S.filtro(filtroStatus === s)} onClick={() => setFiltroStatus(s)}>{STATUS_PAG_LABEL[s]}</button>)}
+          <select style={S.fselSm} value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}>
+            <option value="">Todos os status</option>
+            {STATUS_PAG.map(s => <option key={s} value={s}>{STATUS_PAG_LABEL[s]}</option>)}
+          </select>
+          <select style={S.fselSm} value={filtroResp} onChange={e => setFiltroResp(e.target.value)}>
+            <option value="">Todos os grupos</option>
+            {GRUPOS_AREAS_LISTA.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
         </div>
         {filtroRespRow}
         <div style={S.tableWrap}><table style={S.table}>
@@ -749,8 +766,14 @@ export default function Financeiro({ isAdmin = false }) {
             {erro && <div style={S.erro}>{erro}</div>}
             <div style={S.fieldRow}>
               <div style={S.field}>
-                <label style={S.label}>Nº Chamado <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(opcional)</span></label>
-                <input style={S.input} value={formPag.numero_chamado} onChange={e => setFormPag({ ...formPag, numero_chamado: e.target.value })} placeholder="Ex: 1346676" />
+                <label style={S.label}>Nº Chamado {formPag.status === 'aguardando_abertura_chamado' ? <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(pendente)</span> : <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(obrigatório)</span>}</label>
+                <input
+                  style={{ ...S.input, opacity: formPag.status === 'aguardando_abertura_chamado' ? .7 : 1 }}
+                  value={formPag.numero_chamado}
+                  disabled={formPag.status === 'aguardando_abertura_chamado'}
+                  onChange={e => setFormPag({ ...formPag, numero_chamado: e.target.value })}
+                  placeholder={formPag.status === 'aguardando_abertura_chamado' ? 'Pendente — incluir quando o chamado for aberto' : 'Ex: 1346676'}
+                />
               </div>
               <div style={S.field}><label style={S.label}>Status</label>
                 <select style={S.fsel} value={formPag.status} onChange={e => setFormPag({ ...formPag, status: e.target.value })}>
@@ -761,7 +784,7 @@ export default function Financeiro({ isAdmin = false }) {
             <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 7, padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 12, color: 'var(--muted)' }}>Grupo/Área atual</span>{grupoAreaBadge(formPag.status)}
             </div>
-            <div style={S.field}><label style={S.label}>Unidade</label><input style={S.input} value={formPag.solicitante} onChange={e => setFormPag({ ...formPag, solicitante: e.target.value })} placeholder="Ex: IST - MPP - Energia" /></div>
+            <div style={S.field}><label style={S.label}>Unidade</label><input style={S.input} value={formPag.solicitante} onChange={e => setFormPag({ ...formPag, solicitante: e.target.value })} placeholder="Ex: ISI TICs" /></div>
             <div style={S.field}><label style={S.label}>Responsável</label><input style={S.input} value={formPag.responsavel} onChange={e => setFormPag({ ...formPag, responsavel: e.target.value })} placeholder="Pessoa responsável pela abertura" /></div>
             <div style={S.fieldRow}>
               <div style={S.field}><label style={S.label}>Nº NF / Boleto / AL</label><input style={S.input} value={formPag.numero_nf_boleto_al} onChange={e => setFormPag({ ...formPag, numero_nf_boleto_al: e.target.value })} /></div>
@@ -770,7 +793,7 @@ export default function Financeiro({ isAdmin = false }) {
             <div style={S.field}><label style={S.label}>Descrição</label><textarea style={S.textarea} value={formPag.descricao} onChange={e => setFormPag({ ...formPag, descricao: e.target.value })} /></div>
             <div style={S.fieldRow}>
               <div style={S.field}><label style={S.label}>Valor (R$)</label><input type="number" step="0.01" style={S.input} value={formPag.valor} onChange={e => setFormPag({ ...formPag, valor: e.target.value })} placeholder="0,00" /></div>
-              <div style={S.field}><label style={S.label}>Previsão de Pagamento</label><input type="date" style={S.input} value={formPag.previsao_pagamento} onChange={e => setFormPag({ ...formPag, previsao_pagamento: e.target.value })} /></div>
+              <div style={S.field}><label style={S.label}>Previsão de pagamento / vencimento</label><input type="date" style={S.input} value={formPag.previsao_pagamento} onChange={e => setFormPag({ ...formPag, previsao_pagamento: e.target.value })} /></div>
             </div>
             <div style={S.field}><label style={S.label}>Observações</label><textarea style={S.textarea} value={formPag.observacoes} onChange={e => setFormPag({ ...formPag, observacoes: e.target.value })} /></div>
             <div style={S.row}><button style={S.btnSm} onClick={() => setModalPag(false)}>Cancelar</button><button style={S.btn} onClick={salvarPag} disabled={salvando}>{salvando ? 'Salvando...' : 'Salvar'}</button></div>
@@ -788,8 +811,14 @@ export default function Financeiro({ isAdmin = false }) {
             <div style={S.sectionLbl}>Identificação</div>
             <div style={S.fieldRow}>
               <div style={S.field}>
-                <label style={S.label}>Chamado <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(opcional)</span></label>
-                <input style={S.input} value={formDiaria.numero_chamado} onChange={e => setFormDiaria({ ...formDiaria, numero_chamado: e.target.value })} placeholder="Ex: #1382901" />
+                <label style={S.label}>Chamado {formDiaria.status === 'aguardando_abertura_chamado' ? <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(pendente)</span> : <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(opcional)</span>}</label>
+                <input
+                  style={{ ...S.input, opacity: formDiaria.status === 'aguardando_abertura_chamado' ? .7 : 1 }}
+                  value={formDiaria.numero_chamado}
+                  disabled={formDiaria.status === 'aguardando_abertura_chamado'}
+                  onChange={e => setFormDiaria({ ...formDiaria, numero_chamado: e.target.value })}
+                  placeholder={formDiaria.status === 'aguardando_abertura_chamado' ? 'Pendente — incluir quando o chamado for aberto' : 'Ex: #1382901'}
+                />
               </div>
               <div style={S.field}><label style={S.label}>OP</label><input style={S.input} value={formDiaria.op} onChange={e => setFormDiaria({ ...formDiaria, op: e.target.value })} placeholder="Ex: OP-2026-044" /></div>
             </div>
@@ -866,7 +895,7 @@ export default function Financeiro({ isAdmin = false }) {
             <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 7, padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 12, color: 'var(--muted)' }}>Grupo/Área atual</span>{responsavelBadge(formDiaria.status)}
             </div>
-            <div style={S.field}><label style={S.label}>Previsão de pagamento</label><input type="date" style={S.input} value={formDiaria.previsao_pagamento} onChange={e => setFormDiaria({ ...formDiaria, previsao_pagamento: e.target.value })} /></div>
+            <div style={S.field}><label style={S.label}>Previsão de pagamento / vencimento</label><input type="date" style={S.input} value={formDiaria.previsao_pagamento} onChange={e => setFormDiaria({ ...formDiaria, previsao_pagamento: e.target.value })} /></div>
             <div style={S.field}><label style={S.label}>Observações</label><textarea style={S.textarea} value={formDiaria.observacoes} onChange={e => setFormDiaria({ ...formDiaria, observacoes: e.target.value })} placeholder="Informações adicionais sobre a viagem..." /></div>
             <div style={S.row}>
               <button style={S.btnSm} onClick={() => setModalDiaria(false)}>Cancelar</button>
