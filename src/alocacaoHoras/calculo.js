@@ -174,14 +174,54 @@ function vincular(pcpRows, users) {
 // ═══════════════════════════════════════════════════════════════════════════
 //  SEMANAS DO MÊS
 // ═══════════════════════════════════════════════════════════════════════════
-export function semanasDoMes(ym) {
-  const [y, m] = ym.split('-').map(Number), n = new Date(Date.UTC(y, m, 0)).getUTCDate(), out = []
+function semanasUteisDetalhe(ym) {
+  const [y, m] = ym.split('-').map(Number)
+  const n = new Date(Date.UTC(y, m, 0)).getUTCDate()
+  const out = []
   for (let d = 1; d <= n; d++) {
-    const wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); if (wd === 0 || wd === 6) continue
-    const seg = segundaDe(y, m, d); let w = out.find(x => x.key === seg)
-    if (!w) { w = { key: seg, ini: d, fim: d }; out.push(w) } else w.fim = d
+    const wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay()
+    if (wd === 0 || wd === 6) continue
+    const seg = segundaDe(y, m, d)
+    let w = out.find(x => x.key === seg)
+    if (!w) {
+      w = { key: seg, ini: d, fim: d, dias: [d] }
+      out.push(w)
+    } else {
+      w.fim = d
+      w.dias.push(d)
+    }
   }
-  return out.map((w, i) => ({ key: w.key, label: `S${i + 1}`, faixa: w.ini === w.fim ? `${pad2(w.ini)}/${pad2(m)}` : `${pad2(w.ini)}/${pad2(m)}–${pad2(w.fim)}/${pad2(m)}` }))
+  return out
+}
+
+export function semanasDoMes(ym) {
+  const [, m] = ym.split('-').map(Number)
+  return semanasUteisDetalhe(ym).map((w, i) => ({
+    key: w.key,
+    label: `S${i + 1}`,
+    faixa: w.ini === w.fim ? `${pad2(w.ini)}/${pad2(m)}` : `${pad2(w.ini)}/${pad2(m)}–${pad2(w.fim)}/${pad2(m)}`,
+  }))
+}
+
+export function semanaCorrenteInfo(ym, dataStr = new Date().toISOString().slice(0, 10)) {
+  const semanas = semanasUteisDetalhe(ym)
+  if (!semanas.length) return null
+
+  const [y, m] = ym.split('-').map(Number)
+  const iniMes = Date.UTC(y, m - 1, 1)
+  const diasMes = new Date(Date.UTC(y, m, 0)).getUTCDate()
+  const ts = Date.parse(dataStr)
+  const dia = Number.isNaN(ts) ? 1 : Math.min(diasMes, Math.max(1, Math.floor((ts - iniMes) / 864e5) + 1))
+
+  let idx = semanas.findIndex(s => dia <= s.fim)
+  if (idx < 0) idx = semanas.length - 1
+  const s = semanas[idx]
+  return {
+    index: idx,
+    label: `S${idx + 1}`,
+    total: semanas.length,
+    faixa: s.ini === s.fim ? `${pad2(s.ini)}/${pad2(m)}` : `${pad2(s.ini)}/${pad2(m)}–${pad2(s.fim)}/${pad2(m)}`,
+  }
 }
 function distribuirSemanas(agg, wks) {
   const v = wks.map(() => 0); if (!agg) return v
@@ -193,20 +233,20 @@ function distribuirSemanas(agg, wks) {
 //  SITUAÇÕES (textos e cores)
 // ═══════════════════════════════════════════════════════════════════════════
 export const SEV = { sem: 0, abaixo: 1, acima: 2, ok: 3, semplan: 4, afast: 5, desl: 6 }
-export const ST_LABEL = { sem: 'Sem alocação', abaixo: 'Abaixo do planejado', ok: 'Dentro do planejado', acima: 'Acima do planejado', semplan: 'Sem planejamento', desl: 'Desligado', afast: 'Afastado' }
-export const ST_CURTO = { sem: 'Sem alocação', abaixo: 'Abaixo', ok: 'Dentro', acima: 'Acima', semplan: 'Sem planejamento', desl: 'Desligado', afast: 'Afastado' }
+export const ST_LABEL = { sem: 'Sem alocação', abaixo: 'Abaixo do ritmo semanal', ok: 'Estável', acima: 'Acima do ritmo semanal', semplan: 'Sem planejamento', desl: 'Desligado', afast: 'Afastado' }
+export const ST_CURTO = { sem: 'Sem alocação', abaixo: 'Abaixo', ok: 'Estável', acima: 'Acima', semplan: 'Sem planejamento', desl: 'Desligado', afast: 'Afastado' }
 export const ST_COR = { sem: 'var(--red)', abaixo: 'var(--amber)', ok: 'var(--green)', acima: 'var(--purple)', semplan: 'var(--muted)', desl: 'var(--muted)', afast: 'var(--teal)' }
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  COMPARATIVO PLANEJADO × ALOCADO
-//  opts: { pcp, rel, ym, tol (em %), incNI, incFora, notas }
+//  opts: { pcp, rel, ym, incNI, incFora, notas }
 // ═══════════════════════════════════════════════════════════════════════════
-export function calcular({ pcp, rel, ym, tol, incNI, incFora, notas }) {
+export function calcular({ pcp, rel, ym, incNI, incFora, notas }) {
   const vazio = { linhas: [], info: { niN: 0, foraN: 0, nColab: 0, coluna: null } }
   if (!pcp || !rel || !ym) return vazio
   const lb = ymToPcp(ym), mesAgg = rel.meses.get(ym) || new Map(), wks = semanasDoMes(ym)
   const vinc = vincular(pcp.rows, rel.users)
-  const ctx = { ym, tol, notas: notas || {}, lb }
+  const ctx = { ym, notas: notas || {}, lb }
 
   const ehNI = p => p.gerencia.toLowerCase().startsWith('não identificada')
   const equipe = pcp.rows.filter(p => p.gerencia === GERENCIA_ALVO || (incNI && ehNI(p)))
@@ -266,12 +306,42 @@ function metaAteHoje(ym, planejado, dataStr = new Date().toISOString().slice(0, 
   return diasUteis ? planejado * (ateHoje / diasUteis) : 0
 }
 
+function faixaEsperadaSemana(ym, planejado, dataStr = new Date().toISOString().slice(0, 10)) {
+  if (!planejado) return { min: 0, max: 0, hoje: 0 }
+  const semanas = semanasUteisDetalhe(ym)
+  if (!semanas.length) return { min: 0, max: 0, hoje: 0 }
+
+  const [y, m] = ym.split('-').map(Number)
+  const iniMes = Date.UTC(y, m - 1, 1)
+  const diasMes = new Date(Date.UTC(y, m, 0)).getUTCDate()
+  const ts = Date.parse(dataStr)
+  const dia = Number.isNaN(ts) ? 1 : Math.min(diasMes, Math.max(1, Math.floor((ts - iniMes) / 864e5) + 1))
+
+  const totalUteis = semanas.reduce((a, s) => a + s.dias.length, 0)
+  let uteisHoje = 0
+  for (const s of semanas) for (const d of s.dias) if (d <= dia) uteisHoje++
+
+  let iSemana = semanas.findIndex(s => dia <= s.fim)
+  if (iSemana < 0) iSemana = semanas.length - 1
+  const uteisAteSemanaAnterior = semanas.slice(0, iSemana).reduce((a, s) => a + s.dias.length, 0)
+  const uteisAteFimSemana = uteisAteSemanaAnterior + semanas[iSemana].dias.length
+
+  const pHoje = totalUteis ? uteisHoje / totalUteis : 0
+  const pMin = totalUteis ? uteisAteSemanaAnterior / totalUteis : 0
+  const pMax = totalUteis ? uteisAteFimSemana / totalUteis : 0
+  return {
+    min: planejado * pMin,
+    max: planejado * pMax,
+    hoje: planejado * pHoje,
+  }
+}
+
 function metaSemanalMes(ym, planejado) {
   const semanas = semanasDoMes(ym)
   return planejado && semanas.length ? planejado / semanas.length : null
 }
 
-function montarLinha(o, { ym, tol, notas, lb }) {
+function montarLinha(o, { ym, notas, lb }) {
   const nota = notas[notaKey(ym, o.id)] || { tag: '', texto: '' }
   const alertas = []
   const sitInativa = o.u && /inativo/i.test(o.u.situacao)
@@ -287,6 +357,7 @@ function montarLinha(o, { ym, tol, notas, lb }) {
   if (o.aprox && o.u) alertas.push(['info', `Nome no sistema: ${o.u.nome}`])
   if (o.gerencia === 'Não identificada') alertas.push(['warn', 'Gerência "não identificada" no PCP'])
 
+  const faixa = o.planejado != null ? faixaEsperadaSemana(ym, o.planejado) : { min: null, max: null, hoje: null }
   const metaHoje = o.planejado != null ? metaAteHoje(ym, o.planejado) : null
   const metaSemanal = o.planejado != null ? metaSemanalMes(ym, o.planejado) : null
   const pct = o.planejado ? (o.alocado / o.planejado) * 100 : null
@@ -297,11 +368,24 @@ function montarLinha(o, { ym, tol, notas, lb }) {
   else if (o.pcpStatus && o.pcpStatus !== 'ATIVO') status = 'desl'
   else if (!o.planejado) status = 'semplan'
   else if (o.alocado < 0.05) status = 'sem'
-  else if (pctMetaHoje != null && pctMetaHoje < 100 - tol - 1e-9) status = 'abaixo'
-  else if (pct > 100 + tol + 1e-9) status = 'acima'
+  else if (faixa.min != null && o.alocado < faixa.min - 1e-9) status = 'abaixo'
+  else if (faixa.max != null && o.alocado <= faixa.max + 1e-9) status = 'ok'
+  else if (pct != null && pct > 100 + 1e-9) status = 'acima'
   else status = 'ok'
 
-  return { ...o, nota, alertas, status, pct, pctMetaHoje, metaHoje, metaSemanal, dif: o.planejado != null ? +(o.alocado - o.planejado).toFixed(2) : null, semanasH: distribuirSemanas(o.agg, o.wks) }
+  return {
+    ...o,
+    nota,
+    alertas,
+    status,
+    pct,
+    pctMetaHoje,
+    metaHoje,
+    metaSemanal,
+    faixaSemana: faixa,
+    dif: o.planejado != null ? +(o.alocado - o.planejado).toFixed(2) : null,
+    semanasH: distribuirSemanas(o.agg, o.wks),
+  }
 }
 
 export function ordenar(linhas, { col, dir }) {
@@ -321,26 +405,27 @@ export function mesesDisponiveis(pcp, rel) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 // Tira a "foto" do mês: só a equipe TICs do PCP (sem "não identificada" e sem "fora do PCP")
-export function capturar({ pcp, rel, ym, tol, notas }) {
-  const { linhas } = calcular({ pcp, rel, ym, tol, incNI: false, incFora: false, notas })
+export function capturar({ pcp, rel, ym, notas }) {
+  const { linhas } = calcular({ pcp, rel, ym, incNI: false, incFora: false, notas })
   const rows = {}
   linhas.forEach(l => { rows[l.id] = { n: l.nome, f: l.funcao, p: l.planejado, a: l.alocado, x: ['semplan', 'desl', 'afast'].includes(l.status) ? 1 : 0 } })
   return rows
 }
 
-export function stSnap(r, tol) {
+export function stSnap(r, ym, dataStr) {
   if (r.x || !r.p) return 'x'
-  const pct = r.a / r.p * 100
+  const faixa = faixaEsperadaSemana(ym, r.p, dataStr)
   if (r.a < 0.05) return 'sem'
-  if (pct < 100 - tol - 1e-9) return 'abaixo'
-  if (pct > 100 + tol + 1e-9) return 'acima'
+  if (r.a < faixa.min - 1e-9) return 'abaixo'
+  if (r.a <= faixa.max + 1e-9) return 'ok'
+  if (r.a > r.p + 1e-9) return 'acima'
   return 'ok'
 }
 const monit = s => Object.values(s.rows).filter(r => !r.x && r.p)
 export const cobertura = s => { const m = monit(s), p = m.reduce((a, r) => a + r.p, 0); return p ? m.reduce((a, r) => a + r.a, 0) / p : 0 }
-export function distSnap(s, tol) {
+export function distSnap(s, ym) {
   const d = { sem: 0, abaixo: 0, ok: 0, acima: 0 }
-  Object.values(s.rows).forEach(r => { const k = stSnap(r, tol); if (k !== 'x') d[k]++ })
+  Object.values(s.rows).forEach(r => { const k = stSnap(r, ym, s.data); if (k !== 'x') d[k]++ })
   return d
 }
 
@@ -355,16 +440,17 @@ export function metaPct(dataStr, ym, modo) {
 }
 
 export const TD = {
-  zero: ['Sem alocação', 'var(--red)', 0],
-  down: ['Sem alocação', 'var(--red)', 1],
-  stall: ['Estável', 'var(--amber)', 2],
-  up: ['Subindo', 'var(--teal)', 3],
-  ok: ['Em dia', 'var(--green)', 4],
+  zero: ['Sem tração', 'var(--red)', 0],
+  down: ['Perdeu ritmo', 'var(--red)', 1],
+  stall: ['Ritmo estável', 'var(--amber)', 2],
+  up: ['Recuperação de ritmo', 'var(--teal)', 3],
+  ok: ['Conforme plano', 'var(--green)', 4],
   na: ['—', 'var(--muted)', 5],
 }
-function tendencia(serie, plano, tol) {
+function tendencia(serie, plano, ym, dataStr) {
   const a = serie[serie.length - 1] ?? 0, b = serie.length > 1 ? (serie[serie.length - 2] ?? 0) : null
-  if (plano && a >= plano * (1 - tol / 100) - 1e-9) return 'ok'
+  const atual = stSnap({ a, p: plano, x: 0 }, ym, dataStr)
+  if (atual === 'ok' || atual === 'acima') return 'ok'
   if (serie.every(v => !v)) return 'zero'
   if (b === null) return 'na'
   if (a > b + 0.05) return 'up'
@@ -373,14 +459,23 @@ function tendencia(serie, plano, tol) {
 }
 
 // Tudo que a tela "Evolução semanal" precisa, calculado a partir das fotos
-export function analisarEvolucao(snaps, tol) {
+export function analisarEvolucao(snaps, ym) {
   const n = snaps.length, ult = snaps[n - 1], pen = n > 1 ? snaps[n - 2] : null
   const pes = []
   for (const [id, r] of Object.entries(ult.rows)) {
     if (r.x || !r.p) continue
     const serie = snaps.map(s => s.rows[id] ? s.rows[id].a : null)
     const prev = n > 1 ? (serie[n - 2] ?? 0) : null
-    pes.push({ id, nome: r.n, funcao: r.f, plano: r.p, serie, delta: prev == null ? null : +(r.a - prev).toFixed(1), t: tendencia(serie, r.p, tol), snapsRows: snaps.map(s => s.rows[id]) })
+    pes.push({
+      id,
+      nome: r.n,
+      funcao: r.f,
+      plano: r.p,
+      serie,
+      delta: prev == null ? null : +(r.a - prev).toFixed(1),
+      t: tendencia(serie, r.p, ym, ult.data),
+      snapsRows: snaps.map(s => s.rows[id]),
+    })
   }
   const c = t => pes.filter(p => p.t === t).length
   return {
@@ -389,7 +484,7 @@ export function analisarEvolucao(snaps, tol) {
     covPrev: pen ? cobertura(pen) * 100 : null,
     comecaram: pes.filter(p => n > 1 && !(p.serie[n - 2]) && p.serie[n - 1] > 0).length,
     horasAdd: pes.reduce((a, p) => a + (p.delta || 0), 0),
-    dist: distSnap(ult, tol),
+    dist: distSnap(ult, ym),
   }
 }
 
@@ -398,15 +493,15 @@ export { sinal }
 
 // Texto pronto para copiar e colar no e-mail/chat
 export function montarResumo(ym, A) {
-  const { pes, n, ult, pen, cov, covPrev, comecaram, horasAdd, dist, c } = A
+  const { pes, ult, pen, cov, covPrev, comecaram, horasAdd, dist, c } = A
   const nomes = (arr, k = 6) => arr.slice(0, k).map(p => titulo(p.nome)).join(', ') + (arr.length > k ? ` e mais ${arr.length - k}` : '')
   return [
     `Alocação de horas · TICs · ${ymLabel(ym)} (posição de ${dmyFull(ult.data)})`,
     `• Equipe em ${Math.round(cov)}% do planejado${covPrev != null ? ` (${sinal(cov - covPrev)} pp desde ${dmyFull(pen.data)})` : ''}; ${pes.length} colaboradores monitorados.`,
-    `• ${dist.ok + dist.acima} em dia · ${c('up') + c('stall')} em evolução · ${dist.sem} sem alocação.`,
-    ...(pen ? [`• Na semana: ${horasAdd >= 0 ? '+' : ''}${fmtH(horasAdd)} h alocadas; ${comecaram} colaborador(es) começaram a alocar.`] : []),
-    ...(c('up') ? [`• Subindo na semana (${c('up')}): ${nomes(pes.filter(p => p.t === 'up'))}.`] : []),
-    ...(c('stall') ? [`• Estável na semana (${c('stall')}): ${nomes(pes.filter(p => p.t === 'stall'))}.`] : []),
-    ...(c('zero') ? [`• Sem alocação (${c('zero')}): ${nomes(pes.filter(p => p.t === 'zero'))}.`] : []),
+    `• ${dist.ok + dist.acima} conforme plano · ${c('up') + c('stall')} em recuperação/estabilização · ${dist.sem} sem tração.`,
+    ...(pen ? [`• Semana corrente: ${horasAdd >= 0 ? '+' : ''}${fmtH(horasAdd)} h; ${comecaram} colaborador(es) iniciaram alocação.`] : []),
+    ...(c('up') ? [`• Recuperação de ritmo (${c('up')}): ${nomes(pes.filter(p => p.t === 'up'))}.`] : []),
+    ...(c('stall') ? [`• Ritmo estável (${c('stall')}): ${nomes(pes.filter(p => p.t === 'stall'))}.`] : []),
+    ...(c('zero') ? [`• Sem tração (${c('zero')}): ${nomes(pes.filter(p => p.t === 'zero'))}.`] : []),
   ].join('\n')
 }

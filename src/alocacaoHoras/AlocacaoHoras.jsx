@@ -5,7 +5,7 @@ import {
   GERENCIA_ALVO, TAGS_MANUAIS, ST_LABEL, ST_CURTO, ST_COR, TD,
   fmtH, fmtDif, ymLabel, nomePlanilhaAlocacao, ymToPcp, dmy, dmyFull, colLetra, notaKey, sinal,
   interpretarPcp, interpretarRelatorio, calcular, ordenar, mesesDisponiveis, semanasDoMes,
-  capturar, stSnap, cobertura, distSnap, metaPct, analisarEvolucao, montarResumo,
+  capturar, stSnap, cobertura, distSnap, metaPct, analisarEvolucao, montarResumo, semanaCorrenteInfo,
 } from './calculo'
 import { lerPrimeiraAba, dataDoArquivo } from './leitorXlsx'
 import * as arm from './armazenamento'
@@ -111,31 +111,30 @@ function GraficoLinha({ snaps, ym, modo }) {
   )
 }
 
-function GraficoBarras({ snaps, tol }) {
+function GraficoBarras({ snaps, ym }) {
   const W = 420, H = 250, L = 8, R = 8, T = 22, B = 34
   const n = snaps.length
   const slot = (W - L - R) / Math.max(1, n), bw = Math.min(46, slot * 0.62)
-  const dists = snaps.map(s => distSnap(s, tol))
+  const dists = snaps.map(s => distSnap(s, ym))
   const tot = Math.max(1, ...dists.map(d => d.sem + d.abaixo + d.ok + d.acima))
-  const faixas = [['sem', 'var(--red)'], ['abaixo', 'var(--amber)'], ['ok', 'var(--green)'], ['acima', 'var(--purple)']]
-  let lastShownX = -Infinity
+  const faixas = [['sem', 'var(--red)', 'Sem alocação'], ['abaixo', 'var(--amber)', 'Abaixo do ritmo'], ['ok', 'var(--green)', 'Estável'], ['acima', 'var(--purple)', 'Acima do ritmo']]
+  const saltoRotulo = Math.max(1, Math.ceil(n / 4))
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Distribuição por situação">
       {snaps.map((s, i) => {
         const d = dists[i], cx = L + slot * i + slot / 2
-        const mostrarData = i === 0 || i === snaps.length - 1 || cx - lastShownX >= 52
-        if (mostrarData) lastShownX = cx
+        const mostrarData = i === 0 || i === snaps.length - 1 || i % saltoRotulo === 0
         let yb = H - B
         return (
           <g key={s.data}>
-            {faixas.map(([k, cor]) => {
+            {faixas.map(([k, cor, lb]) => {
               const h = d[k] / tot * (H - T - B)
               if (!h) return null
               const yTopo = yb - h; const yTxt = yb - h / 2 + 3.5
               yb -= h
               return (
                 <g key={k}>
-                  <rect x={cx - bw / 2} y={yTopo} width={bw} height={h} style={{ fill: cor }} rx="2" opacity=".9"><title>{dmyFull(s.data)} · {k}: {d[k]}</title></rect>
+                  <rect x={cx - bw / 2} y={yTopo} width={bw} height={h} style={{ fill: cor }} rx="2" opacity=".9"><title>{dmyFull(s.data)} · {lb}: {d[k]}</title></rect>
                   {h > 13 && <text x={cx} y={yTxt} textAnchor="middle" style={{ fill: '#fff', fontWeight: 500 }}>{d[k]}</text>}
                 </g>
               )
@@ -166,7 +165,6 @@ export default function AlocacaoHoras({ isAdmin = false }) {
   const [ym, setYm] = useState(null)
   const [filtro, setFiltro] = useState('todos')
   const [busca, setBusca] = useState('')
-  const [tol, setTol] = useState(5)
   const [incNI, setIncNI] = useState(false)
   const [incFora, setIncFora] = useState(false)
   const [semanas, setSemanas] = useState(false)
@@ -203,8 +201,8 @@ export default function AlocacaoHoras({ isAdmin = false }) {
   const evYmAtivo = evYm && meses.includes(evYm) ? evYm : ymAtivo
 
   const { linhas: todas, info } = useMemo(
-    () => calcular({ pcp, rel, ym: ymAtivo, tol, incNI, incFora, notas }),
-    [pcp, rel, ymAtivo, tol, incNI, incFora, notas]
+    () => calcular({ pcp, rel, ym: ymAtivo, incNI, incFora, notas }),
+    [pcp, rel, ymAtivo, incNI, incFora, notas]
   )
 
   // carrega as notas do mês
@@ -234,7 +232,7 @@ export default function AlocacaoHoras({ isAdmin = false }) {
     if (!pcp || !rel || !ymAtivo) return
     const data = dataOverride || dataRel || hojeISO()
     const notasDoMes = evYmAtivo === ymAtivo ? notas : await arm.carregarNotas(ymAtivo)
-    const rows = capturar({ pcp, rel, ym: ymAtivo, tol, notas: notasDoMes })
+    const rows = capturar({ pcp, rel, ym: ymAtivo, notas: notasDoMes })
     await arm.salvarSnap(ymAtivo, data, rows)
     setSnaps(await arm.carregarSnaps(ymAtivo))
     setDataSnap(data)
@@ -283,6 +281,8 @@ export default function AlocacaoHoras({ isAdmin = false }) {
   }, [todas, filtro, busca, sort])
 
   const wks = ymAtivo ? semanasDoMes(ymAtivo) : []
+  const semanaRef = ymAtivo ? semanaCorrenteInfo(ymAtivo) : null
+  const semanaRefEvo = evYmAtivo ? semanaCorrenteInfo(evYmAtivo) : null
   const seta = c => sort.col === c ? (sort.dir === 1 ? ' ↑' : ' ↓') : ''
   const ordenarPor = c => setSort(s => s.col === c ? { col: c, dir: -s.dir } : { col: c, dir: 1 })
   const th = (c, rotulo, cls = '') => <th className={`sortable ${cls}`} onClick={() => ordenarPor(c)}>{rotulo}{seta(c)}</th>
@@ -301,6 +301,8 @@ export default function AlocacaoHoras({ isAdmin = false }) {
   // ── exportar Excel ────────────────────────────────────────────────────────
   async function exportar() {
     const cab = ['Gerência', 'Colaborador', 'Função', 'Planejado (h)', 'Alocado (h)', '% Alocado', 'Situação', ...wks.map(w => `${w.label} (${w.faixa})`), 'Nota']
+    const idxSituacao = cab.indexOf('Situação')
+    const idxNota = cab.length - 1
     const dados = visiveis.map(l => {
       const nota = (l.nota && (l.nota.tag || l.nota.texto)) ? `${l.nota.tag ? `[${l.nota.tag}] ` : ''}${l.nota.texto || ''}` : (l.alertas && l.alertas.length ? l.alertas.map(a => a[1]).join(' | ') : '')
       return [
@@ -334,18 +336,19 @@ export default function AlocacaoHoras({ isAdmin = false }) {
           ws[ref].s = {
             font: { bold: true, color: { rgb: 'FFFFFFFF' }, sz: 10 },
             fill: { fgColor: { rgb: 'FF1F3864' } },
-            alignment: { vertical: 'center', horizontal: c === 1 || c === 2 || c === cab.length - 1 ? 'left' : 'center' }
+            alignment: { vertical: 'center', horizontal: c === 1 || c === 2 || c === idxNota ? 'left' : 'center' }
           }
           continue
         }
 
         const isAlt = r % 2 === 0
+        const numCol = c === 3 || c === 4 || c === 5 || (c > idxSituacao && c < idxNota)
         ws[ref].s = {
           font: { color: { rgb: 'FF262626' }, sz: 9.5, bold: c === 1 || c === 2 ? true : false },
           fill: { fgColor: { rgb: isAlt ? 'FFF4F6FA' : 'FFFFFFFF' } },
           alignment: {
             vertical: 'center',
-            horizontal: c === 1 || c === 2 || c === cab.length - 1 ? 'left' : c >= 3 && c <= 12 ? 'right' : 'center'
+            horizontal: c === 1 || c === 2 || c === idxNota ? 'left' : c === idxSituacao ? 'center' : numCol ? 'right' : 'center'
           }
         }
       }
@@ -395,7 +398,7 @@ export default function AlocacaoHoras({ isAdmin = false }) {
       anchor.click()
       anchor.remove()
       URL.revokeObjectURL(fallbackUrl)
-      toast('Relatório bruto gerado. O formatter local não está ativo; foi enviado o arquivo cru.')
+      toast('Relatório bruto gerado. Inicie o formatador com: npm run api:formatar-relatorio')
     }
   }
 
@@ -404,7 +407,7 @@ export default function AlocacaoHoras({ isAdmin = false }) {
   async function registrarPosicao() {
     if (!dataSugerida) { toast('Informe a data da extração.'); return }
     const notasDoMes = evYmAtivo === ymAtivo ? notas : await arm.carregarNotas(evYmAtivo)
-    const rows = capturar({ pcp, rel, ym: evYmAtivo, tol, notas: notasDoMes })
+    const rows = capturar({ pcp, rel, ym: evYmAtivo, notas: notasDoMes })
     await arm.salvarSnap(evYmAtivo, dataSugerida, rows)
     setSnaps(await arm.carregarSnaps(evYmAtivo))
     setModoLocal(arm.estaEmModoLocal())
@@ -416,7 +419,7 @@ export default function AlocacaoHoras({ isAdmin = false }) {
     setSnaps(await arm.carregarSnaps(evYmAtivo))
   }
 
-  const A = snaps.length ? analisarEvolucao(snaps, tol) : null
+  const A = snaps.length ? analisarEvolucao(snaps, evYmAtivo) : null
   const ultimaPosicao = useMemo(
     () => (snaps.length ? [...snaps].sort((a, b) => a.data.localeCompare(b.data)).at(-1) : null),
     [snaps]
@@ -425,9 +428,9 @@ export default function AlocacaoHoras({ isAdmin = false }) {
   const ultimaStatus = !ultimaPosicao
     ? 'Sem análise registrada'
     : ultimaCobertura >= 90
-      ? 'Em dia'
+      ? 'Conforme plano'
       : ultimaCobertura >= 70
-        ? 'Acompanhando'
+        ? 'Em acompanhamento'
         : 'Atenção'
   const ultimaStatusCor = !ultimaPosicao
     ? 'var(--muted)'
@@ -481,7 +484,7 @@ export default function AlocacaoHoras({ isAdmin = false }) {
     )
   }
 
-  const chips = [['todos', 'Todos', todas.length, ''], ['sem', 'Sem alocação', cnt('sem'), 'c-sem'], ['abaixo', 'Abaixo', cnt('abaixo'), 'c-abaixo'], ['ok', 'Dentro', cnt('ok'), 'c-ok'], ['acima', 'Acima', cnt('acima'), 'c-acima'], ['semplan', 'Sem planejamento', cnt('semplan'), ''], ['fora', 'Desligados / afastados', cnt('desl') + cnt('afast'), '']]
+  const chips = [['todos', 'Todos', todas.length, ''], ['sem', 'Sem alocação', cnt('sem'), 'c-sem'], ['abaixo', 'Abaixo', cnt('abaixo'), 'c-abaixo'], ['ok', 'Estável', cnt('ok'), 'c-ok'], ['acima', 'Acima', cnt('acima'), 'c-acima'], ['semplan', 'Sem planejamento', cnt('semplan'), ''], ['fora', 'Desligados / afastados', cnt('desl') + cnt('afast'), '']]
   const extra = []
   if (cnt('semplan')) extra.push(`${cnt('semplan')} sem planejamento`)
   if (cnt('desl')) extra.push(`${cnt('desl')} desligados`)
@@ -535,6 +538,7 @@ export default function AlocacaoHoras({ isAdmin = false }) {
             <select className="sel" disabled title="Fixo: TICs"><option>{GERENCIA_ALVO}</option></select>
             <span className="pill teal">{info.coluna ? <>Planejado lido da coluna <b className="mono">{colLetra(info.coluna)}</b> · {ymToPcp(ymAtivo)}</> : 'Planejado: —'}</span>
             <span className="pill">Relatório: <b>{info.nColab}</b> colaboradores com horas em {ymLabel(ymAtivo)}</span>
+            {semanaRef && <span className="pill">Semana corrente: <b>{semanaRef.label}</b> de {semanaRef.total} · {semanaRef.faixa}</span>}
             <span className="pill">Fonte: <b>{fonte.pcp === fonte.rel ? fonte.pcp : `PCP: ${fonte.pcp} · Sistema: ${fonte.rel}`}</b></span>
           </div>
 
@@ -543,11 +547,11 @@ export default function AlocacaoHoras({ isAdmin = false }) {
             ['var(--teal)', fmtH(somaP), 'Planejado (h)', ''],
             ['var(--teal)', fmtH(somaA), 'Alocado (h)', somaP ? `${Math.round(somaA / somaP * 100)}%` : ''],
             ['var(--red)', cnt('sem'), 'Sem alocação', ''],
-            ['var(--amber)', cnt('abaixo'), 'Abaixo do planejado', ''],
-            ['var(--green)', cnt('ok'), 'Dentro do planejado', ''],
-            ['var(--purple)', cnt('acima'), 'Acima do planejado', ''],
+            ['var(--amber)', cnt('abaixo'), 'Abaixo do ritmo semanal', ''],
+            ['var(--green)', cnt('ok'), 'Estáveis no ritmo semanal', ''],
+            ['var(--purple)', cnt('acima'), 'Acima do ritmo semanal', ''],
           ]} />
-          <div className="statnote">Base de monitoria: o esperado cresce com os dias úteis do mês; a comparação usa o acumulado até hoje, não o total do mês em semana 1.</div>
+          <div className="statnote">Base de monitoria: a leitura segue uma faixa semanal esperada do mês (dias úteis). Quem está dentro da faixa da semana fica como Estável, sem penalização antecipada.</div>
           <div className="statnote">{extra.length ? `Fora dos indicadores: ${extra.join(' · ')}.` : ''}</div>
 
           <div className="toolbar">
@@ -561,11 +565,6 @@ export default function AlocacaoHoras({ isAdmin = false }) {
           </div>
 
           <div className="opts">
-            <label>Tolerância de ±
-              <select className="sel" style={{ padding: '3px 8px', fontSize: 12 }} value={tol} onChange={e => setTol(+e.target.value)}>
-                {[0, 5, 10, 15].map(v => <option key={v} value={v}>{v}%</option>)}
-              </select>
-            </label>
             <label><input type="checkbox" checked={semanas} onChange={e => setSemanas(e.target.checked)} /> Mostrar horas por semana</label>
             {info.niN > 0 && <label><input type="checkbox" checked={incNI} onChange={e => setIncNI(e.target.checked)} /> Incluir gerência "não identificada" no PCP <span className="info">({info.niN})</span></label>}
             <label><input type="checkbox" checked={incFora} onChange={e => setIncFora(e.target.checked)} /> Incluir quem aloca no sistema (vertical TICs) mas não está no PCP <span className="info">({info.foraN})</span></label>
@@ -641,8 +640,8 @@ export default function AlocacaoHoras({ isAdmin = false }) {
               <li><b>Planejado:</b> no PCP, a coluna <code>Planejado</code> do bloco do mês escolhido é localizada pelo cabeçalho (ex.: <code>NOV/26</code> → coluna <code>X</code>). Muda sozinha ao trocar o mês.</li>
               <li><b>Alocado:</b> 1ª aba do relatório do sistema (<code>Alocacoes</code>), somando <code>Horas</code> das linhas cujo <code>Ano/Mês</code> = mês de referência. Colaboradores de outras áreas são ignorados.</li>
               <li><b>Vínculo entre as planilhas:</b> pelo nome (sem acento/caixa). Se o nome estiver abreviado ou com pequena divergência de grafia no sistema, vincula por aproximação (somente quando houver um único candidato) e registra um alerta.</li>
-              <li><b>Esperado até a data:</b> a comparação não usa o total do mês como critério imediato. O esperado do período é <code>planejado × dias úteis até hoje ÷ dias úteis do mês</code>. Ou seja, o indicador cresce com o passar dos dias úteis; nos primeiros 3 dias úteis, ninguém é cobrado e aparece como <i>No prazo</i>.</li>
-              <li><b>Situação:</b> <i>Sem alocação</i> (0 h com planejamento) · <i>Abaixo</i> (&lt; esperado × (1 − tolerância)) · <i>Dentro</i> · <i>Acima</i> (&gt; planejado do mês + tolerância) · <i>Sem planejamento</i> (PCP vazio/0 no mês).</li>
+              <li><b>Faixa esperada da semana:</b> para cada mês, os dias úteis são distribuídos por semana (S1, S2...). Em cada data, o sistema calcula o intervalo esperado acumulado até o fim da semana corrente.</li>
+              <li><b>Situação:</b> <i>Sem alocação</i> (0 h com planejamento) · <i>Abaixo</i> (abaixo do início da faixa semanal) · <i>Estável</i> (dentro da faixa semanal) · <i>Acima</i> (acima do teto da faixa da semana) · <i>Sem planejamento</i> (PCP vazio/0 no mês).</li>
               <li><b>Fora dos indicadores:</b> desligados (status do PCP) e afastados/férias/licença (marcados manualmente na nota) — continuam listados, mas não entram nos totais.</li>
               <li><b>Alertas automáticos:</b> desligado, divergência PCP × sistema, não localizado no relatório, sem planejamento, alocação sem planejamento, nome por aproximação.</li>
             </ol>
@@ -664,6 +663,7 @@ export default function AlocacaoHoras({ isAdmin = false }) {
               <option value="d7">Tudo alocado até o 7º dia</option>
             </select>
             <span className="pill teal"><b>{snaps.length}</b> {snaps.length === 1 ? 'posição registrada' : 'posições registradas'}</span>
+            {semanaRefEvo && <span className="pill">Semana corrente: <b>{semanaRefEvo.label}</b> de {semanaRefEvo.total} · {semanaRefEvo.faixa}</span>}
           </div>
 
           {snaps.length < 2 && (
@@ -695,9 +695,9 @@ export default function AlocacaoHoras({ isAdmin = false }) {
                 ['var(--teal)', `${Math.round(A.cov)}%`, 'Cobertura atual', A.covPrev == null ? '' : `${sinal(A.cov - A.covPrev)} pp`],
                 ['var(--blue)', A.n > 1 ? `${A.horasAdd >= 0 ? '+' : ''}${fmtH(A.horasAdd)}` : '—', 'Horas na última semana', ''],
                 ['var(--teal)', A.n > 1 ? A.comecaram : '—', 'Começaram a alocar', ''],
-                ['var(--amber)', A.c('up') + A.c('stall'), 'Em evolução', ''],
-                ['var(--red)', A.c('zero') + A.c('down'), 'Sem alocação', ''],
-                ['var(--green)', A.c('ok'), 'Em dia', A.pes.length ? `${Math.round(A.c('ok') / A.pes.length * 100)}%` : ''],
+                ['var(--amber)', A.c('up') + A.c('stall'), 'Recuperação/estável', ''],
+                ['var(--red)', A.c('zero') + A.c('down'), 'Sem tração/perda de ritmo', ''],
+                ['var(--green)', A.c('ok'), 'Conforme plano', A.pes.length ? `${Math.round(A.c('ok') / A.pes.length * 100)}%` : ''],
               ]} />
               <div className="statnote">{A.pen ? `Comparando a posição de ${dmyFull(A.ult.data)} com a de ${dmyFull(A.pen.data)}.` : `Posição de ${dmyFull(A.ult.data)}.`}</div>
 
@@ -709,13 +709,13 @@ export default function AlocacaoHoras({ isAdmin = false }) {
                 </div>
                 <div className="card">
                   <h4>Colaboradores por situação</h4>
-                  <div className="hint">Só quem está sendo monitorado em cada extração.</div>
-                  <GraficoBarras snaps={snaps} tol={tol} />
+                  <div className="hint">Somente colaboradores monitorados em cada extração, usando a mesma regra semanal da tabela.</div>
+                  <GraficoBarras snaps={snaps} ym={evYmAtivo} />
                   <div className="legend">
                     <span><i style={{ background: 'var(--red)' }} />Sem alocação</span>
-                    <span><i style={{ background: 'var(--amber)' }} />Estável</span>
-                    <span><i style={{ background: 'var(--green)' }} />Em dia</span>
-                    <span><i style={{ background: 'var(--purple)' }} />Acima</span>
+                    <span><i style={{ background: 'var(--amber)' }} />Abaixo do ritmo</span>
+                    <span><i style={{ background: 'var(--green)' }} />Estável</span>
+                    <span><i style={{ background: 'var(--purple)' }} />Acima do ritmo</span>
                   </div>
                 </div>
               </div>
@@ -734,7 +734,7 @@ export default function AlocacaoHoras({ isAdmin = false }) {
               <div className="toolbar">
                 <input className="search" placeholder="Buscar colaborador..." value={evBusca} onChange={e => setEvBusca(e.target.value)} />
                 <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {[['todos', 'Todos', A.pes.length, ''], ['zero', 'Sem alocação', A.c('zero'), 'c-sem'], ['down', 'Sem alocação', A.c('down'), 'c-sem'], ['stall', 'Estável', A.c('stall'), 'c-abaixo'], ['up', 'Subindo', A.c('up'), 'c-ok'], ['ok', 'Em dia', A.c('ok'), 'c-ok']].map(([id, l, k, cl]) => (
+                  {[['todos', 'Todos', A.pes.length, ''], ['zero', 'Sem tração', A.c('zero'), 'c-sem'], ['down', 'Perdeu ritmo', A.c('down'), 'c-sem'], ['stall', 'Ritmo estável', A.c('stall'), 'c-abaixo'], ['up', 'Recuperação de ritmo', A.c('up'), 'c-ok'], ['ok', 'Conforme plano', A.c('ok'), 'c-ok']].map(([id, l, k, cl]) => (
                     <button key={id} className={`chip ${cl} ${evFiltro === id ? 'on' : ''}`} onClick={() => setEvFiltro(id)}>{l} <span className="n">{k}</span></button>
                   ))}
                 </span>
@@ -761,7 +761,7 @@ export default function AlocacaoHoras({ isAdmin = false }) {
                           <td className="num">{fmtH(p.plano)}</td>
                           {p.snapsRows.map((r, i) => {
                             if (!r) return <td key={i} className="num"><span className="dim">—</span></td>
-                            const cc = corSt[stSnap(r, tol)]
+                            const cc = corSt[stSnap(r, evYmAtivo, snaps[i]?.data)]
                             return (
                               <td key={i} className="num">
                                 <span className="hc" style={{ background: `color-mix(in srgb, ${cc} 13%, transparent)`, color: cc }} title={r.p ? `${Math.round(r.a / r.p * 100)}% de ${fmtH(r.p)} h` : ''}>{fmtH(r.a)}</span>
@@ -786,7 +786,7 @@ export default function AlocacaoHoras({ isAdmin = false }) {
               <li>O sistema não guarda histórico. Por isso, <b>a cada semana</b> você importa o relatório novo e clica em <i>Registrar posição</i>: isso grava uma "foto" (planejado e alocado de cada pessoa) com a data da extração.</li>
               <li>A data da extração é lida do nome do arquivo (ex.: <code>relatorio-alocacoes-1793875403193</code> = 05/11/2026) e pode ser corrigida no campo de data.</li>
               <li>O planejado também é gravado em cada foto, porque o PCP pode mudar durante o mês.</li>
-              <li><b>Tendência</b> compara a última foto com a anterior: <i>Em dia</i> · <i>Subindo</i> (+horas) · <i>Estável</i> (abaixo e sem mudança) · <i>Regrediu</i> (horas diminuíram) · <i>Sem movimento</i> (0 h em todas as fotos).</li>
+              <li><b>Tendência</b> compara a última foto com a anterior: <i>Conforme plano</i> (estável ou acima da faixa da semana) · <i>Recuperação de ritmo</i> (+horas) · <i>Ritmo estável</i> (ainda abaixo, mas sem regressão) · <i>Perdeu ritmo</i> (horas diminuíram) · <i>Sem tração</i> (0 h em todas as fotos).</li>
               <li>As fotos ficam guardadas na tabela <code>alocacao_snapshots</code> do Supabase.</li>
             </ol>
           </details>
@@ -800,7 +800,7 @@ export default function AlocacaoHoras({ isAdmin = false }) {
         const horasProj = l.agg ? (l.agg.tipos['projeto'] || 0) : 0
         return (
           <div className="modal open" onClick={e => { if (e.target === e.currentTarget) setDetId(null) }}>
-            <div className="mbox">
+            <div className="mbox mbox-wide">
               <div className="mhead">
                 <div>
                   <div className="mtitle">{l.nome}</div>

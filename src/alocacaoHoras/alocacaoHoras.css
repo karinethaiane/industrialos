@@ -77,25 +77,26 @@
 .aloc details.regras ol { margin: 10px 0 2px 18px; line-height: 1.7; }
 .aloc details.regras code { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; background: var(--subtle); border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; }
 /* ── Modais ─────────────────────────────────────────────────────────────── */
-.aloc .modal { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(4px); }
+.aloc .modal { position: fixed; inset: 0; background: rgba(15,23,42,.52); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(3px); }
 .aloc .modal.open { display: flex; }
-.aloc .mbox { background: var(--surface); border: 1px solid var(--border2); border-radius: 14px; padding: 28px; width: 92%; max-width: 560px; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 40px var(--shadow); }
+.aloc .mbox { background: var(--surface); border: 1px solid var(--border2); border-radius: 16px; padding: 24px; width: 92%; max-width: 640px; max-height: 90vh; overflow-y: auto; box-shadow: 0 16px 48px var(--shadow); }
+.aloc .mbox.mbox-wide { max-width: 760px; }
 .aloc .mhead { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; gap: 12px; }
-.aloc .mtitle { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.aloc .mtitle { font-size: 18px; font-weight: 700; margin-bottom: 4px; letter-spacing: -.02em; }
 .aloc .mx { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 22px; line-height: 1; }
-.aloc .grid3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 16px; }
-.aloc .mini { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.aloc .grid3 { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; margin-bottom: 16px; }
+.aloc .mini { background: linear-gradient(180deg, color-mix(in srgb, var(--surface2) 78%, transparent), var(--surface2)); border: 1px solid var(--border); border-radius: 10px; padding: 11px 12px; }
 .aloc .mini .l { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; font-weight: 600; margin-bottom: 4px; }
-.aloc .mini .v { font-family: 'JetBrains Mono', monospace; font-size: 17px; color: var(--text); }
-.aloc .sec { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin: 16px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.aloc .mini .v { font-family: 'JetBrains Mono', monospace; font-size: 16px; color: var(--text); }
+.aloc .sec { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin: 18px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
 .aloc .wkrow { display: grid; grid-template-columns: 112px 1fr 56px; gap: 10px; align-items: center; margin-bottom: 7px; font-size: 12px; }
-.aloc .wkrow .t { height: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; overflow: hidden; }
+.aloc .wkrow .t { height: 9px; background: var(--surface2); border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
 .aloc .wkrow .t i { display: block; height: 100%; background: var(--teal); border-radius: 5px; }
 .aloc .wkrow .h { text-align: right; font-family: 'JetBrains Mono', monospace; color: var(--text); }
 .aloc .kv { display: flex; justify-content: space-between; font-size: 12.5px; padding: 5px 0; border-bottom: 1px dashed var(--border); }
 .aloc .kv span:last-child { font-family: 'JetBrains Mono', monospace; color: var(--text); }
 .aloc .tags { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
-.aloc textarea { background: var(--surface2); border: 1px solid var(--border2); border-radius: 7px; padding: 9px 12px; color: var(--text); font-size: 13px; outline: none; font-family: inherit; width: 100%; min-height: 78px; resize: vertical; }
+.aloc textarea { background: var(--surface2); border: 1px solid var(--border2); border-radius: 9px; padding: 10px 12px; color: var(--text); font-size: 13px; outline: none; font-family: inherit; width: 100%; min-height: 88px; resize: vertical; }
 .aloc .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
 .aloc .drop { display: block; border: 1.5px dashed var(--border2); border-radius: 10px; padding: 16px; margin-bottom: 12px; cursor: pointer; background: var(--surface2); }
 .aloc .drop:hover { border-color: var(--teal); }
@@ -134,4 +135,5 @@
 }
 @media (max-width: 900px) {
 .aloc .search { width: 100%; }
+.aloc .grid3 { grid-template-columns: 1fr; }
 }
