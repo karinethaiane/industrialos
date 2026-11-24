@@ -117,7 +117,7 @@ function GraficoBarras({ snaps, ym }) {
   const slot = (W - L - R) / Math.max(1, n), bw = Math.min(46, slot * 0.62)
   const dists = snaps.map(s => distSnap(s, ym))
   const tot = Math.max(1, ...dists.map(d => d.sem + d.abaixo + d.ok + d.acima))
-  const faixas = [['sem', 'var(--red)', 'Sem alocação'], ['abaixo', 'var(--amber)', 'Abaixo do ritmo'], ['ok', 'var(--green)', 'Estável'], ['acima', 'var(--purple)', 'Acima do ritmo']]
+  const faixas = [['sem', 'var(--red)', 'Sem alocação'], ['abaixo', 'var(--amber)', 'Abaixo do planejado'], ['ok', 'var(--green)', 'Estável'], ['acima', 'var(--purple)', 'Acima do planejado']]
   const saltoRotulo = Math.max(1, Math.ceil(n / 4))
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Distribuição por situação">
@@ -378,7 +378,13 @@ export default function AlocacaoHoras({ isAdmin = false }) {
       }
 
       const formattedBlob = await response.blob()
-      const downloadUrl = URL.createObjectURL(formattedBlob)
+      const formattedBuffer = await formattedBlob.arrayBuffer()
+      const wbFormatado = XLSX.read(formattedBuffer, { type: 'array' })
+      if (!wbFormatado.SheetNames.includes('Resumo')) {
+        throw new Error('O formatter respondeu, mas sem a aba Resumo esperada pelo modelo.')
+      }
+
+      const downloadUrl = URL.createObjectURL(new Blob([formattedBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }))
       const anchor = document.createElement('a')
       anchor.href = downloadUrl
       anchor.download = nomeArquivo.replace(/\.xlsx$/, '_formatado.xlsx')
@@ -390,15 +396,8 @@ export default function AlocacaoHoras({ isAdmin = false }) {
       return
     } catch (err) {
       console.error(err)
-      const fallbackUrl = URL.createObjectURL(rawBlob)
-      const anchor = document.createElement('a')
-      anchor.href = fallbackUrl
-      anchor.download = nomeArquivo
-      document.body.appendChild(anchor)
-      anchor.click()
-      anchor.remove()
-      URL.revokeObjectURL(fallbackUrl)
-      toast('Relatório bruto gerado. Inicie o formatador com: npm run api:formatar-relatorio')
+      toast('Falha na formatação. Inicie o formatador com: npm run api:formatar-relatorio')
+      alert('Não foi possível gerar o relatório no layout oficial. Ative o formatador local (npm run api:formatar-relatorio) e exporte novamente.')
     }
   }
 
@@ -547,9 +546,9 @@ export default function AlocacaoHoras({ isAdmin = false }) {
             ['var(--teal)', fmtH(somaP), 'Planejado (h)', ''],
             ['var(--teal)', fmtH(somaA), 'Alocado (h)', somaP ? `${Math.round(somaA / somaP * 100)}%` : ''],
             ['var(--red)', cnt('sem'), 'Sem alocação', ''],
-            ['var(--amber)', cnt('abaixo'), 'Abaixo do ritmo semanal', ''],
-            ['var(--green)', cnt('ok'), 'Estáveis no ritmo semanal', ''],
-            ['var(--purple)', cnt('acima'), 'Acima do ritmo semanal', ''],
+            ['var(--amber)', cnt('abaixo'), 'Abaixo do planejado', ''],
+            ['var(--green)', cnt('ok'), 'Estáveis no planejado', ''],
+            ['var(--purple)', cnt('acima'), 'Acima do planejado', ''],
           ]} />
           <div className="statnote">Base de monitoria: a leitura segue uma faixa semanal esperada do mês (dias úteis). Quem está dentro da faixa da semana fica como Estável, sem penalização antecipada.</div>
           <div className="statnote">{extra.length ? `Fora dos indicadores: ${extra.join(' · ')}.` : ''}</div>
@@ -696,7 +695,7 @@ export default function AlocacaoHoras({ isAdmin = false }) {
                 ['var(--blue)', A.n > 1 ? `${A.horasAdd >= 0 ? '+' : ''}${fmtH(A.horasAdd)}` : '—', 'Horas na última semana', ''],
                 ['var(--teal)', A.n > 1 ? A.comecaram : '—', 'Começaram a alocar', ''],
                 ['var(--amber)', A.c('up') + A.c('stall'), 'Recuperação/estável', ''],
-                ['var(--red)', A.c('zero') + A.c('down'), 'Sem tração/perda de ritmo', ''],
+                ['var(--red)', A.c('zero'), 'Sem alocação', ''],
                 ['var(--green)', A.c('ok'), 'Conforme plano', A.pes.length ? `${Math.round(A.c('ok') / A.pes.length * 100)}%` : ''],
               ]} />
               <div className="statnote">{A.pen ? `Comparando a posição de ${dmyFull(A.ult.data)} com a de ${dmyFull(A.pen.data)}.` : `Posição de ${dmyFull(A.ult.data)}.`}</div>
@@ -713,9 +712,9 @@ export default function AlocacaoHoras({ isAdmin = false }) {
                   <GraficoBarras snaps={snaps} ym={evYmAtivo} />
                   <div className="legend">
                     <span><i style={{ background: 'var(--red)' }} />Sem alocação</span>
-                    <span><i style={{ background: 'var(--amber)' }} />Abaixo do ritmo</span>
+                    <span><i style={{ background: 'var(--amber)' }} />Abaixo do planejado</span>
                     <span><i style={{ background: 'var(--green)' }} />Estável</span>
-                    <span><i style={{ background: 'var(--purple)' }} />Acima do ritmo</span>
+                    <span><i style={{ background: 'var(--purple)' }} />Acima do planejado</span>
                   </div>
                 </div>
               </div>
@@ -734,7 +733,7 @@ export default function AlocacaoHoras({ isAdmin = false }) {
               <div className="toolbar">
                 <input className="search" placeholder="Buscar colaborador..." value={evBusca} onChange={e => setEvBusca(e.target.value)} />
                 <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {[['todos', 'Todos', A.pes.length, ''], ['zero', 'Sem tração', A.c('zero'), 'c-sem'], ['down', 'Perdeu ritmo', A.c('down'), 'c-sem'], ['stall', 'Ritmo estável', A.c('stall'), 'c-abaixo'], ['up', 'Recuperação de ritmo', A.c('up'), 'c-ok'], ['ok', 'Conforme plano', A.c('ok'), 'c-ok']].map(([id, l, k, cl]) => (
+                  {[['todos', 'Todos', A.pes.length, ''], ['zero', 'Sem alocação', A.c('zero'), 'c-sem'], ['stall', 'Ritmo estável', A.c('stall'), 'c-abaixo'], ['up', 'Recuperação de ritmo', A.c('up'), 'c-ok'], ['ok', 'Conforme plano', A.c('ok'), 'c-ok']].map(([id, l, k, cl]) => (
                     <button key={id} className={`chip ${cl} ${evFiltro === id ? 'on' : ''}`} onClick={() => setEvFiltro(id)}>{l} <span className="n">{k}</span></button>
                   ))}
                 </span>
@@ -786,7 +785,7 @@ export default function AlocacaoHoras({ isAdmin = false }) {
               <li>O sistema não guarda histórico. Por isso, <b>a cada semana</b> você importa o relatório novo e clica em <i>Registrar posição</i>: isso grava uma "foto" (planejado e alocado de cada pessoa) com a data da extração.</li>
               <li>A data da extração é lida do nome do arquivo (ex.: <code>relatorio-alocacoes-1793875403193</code> = 05/11/2026) e pode ser corrigida no campo de data.</li>
               <li>O planejado também é gravado em cada foto, porque o PCP pode mudar durante o mês.</li>
-              <li><b>Tendência</b> compara a última foto com a anterior: <i>Conforme plano</i> (estável ou acima da faixa da semana) · <i>Recuperação de ritmo</i> (+horas) · <i>Ritmo estável</i> (ainda abaixo, mas sem regressão) · <i>Perdeu ritmo</i> (horas diminuíram) · <i>Sem tração</i> (0 h em todas as fotos).</li>
+              <li><b>Tendência</b> compara a última foto com a anterior: <i>Conforme plano</i> (estável ou acima da faixa da semana) · <i>Recuperação de ritmo</i> (+horas) · <i>Ritmo estável</i> (ainda abaixo, sem evolução ou com ajuste pontual) · <i>Sem alocação</i> (0 h em todas as fotos).</li>
               <li>As fotos ficam guardadas na tabela <code>alocacao_snapshots</code> do Supabase.</li>
             </ol>
           </details>

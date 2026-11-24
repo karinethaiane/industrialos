@@ -233,7 +233,7 @@ function distribuirSemanas(agg, wks) {
 //  SITUAÇÕES (textos e cores)
 // ═══════════════════════════════════════════════════════════════════════════
 export const SEV = { sem: 0, abaixo: 1, acima: 2, ok: 3, semplan: 4, afast: 5, desl: 6 }
-export const ST_LABEL = { sem: 'Sem alocação', abaixo: 'Abaixo do ritmo semanal', ok: 'Estável', acima: 'Acima do ritmo semanal', semplan: 'Sem planejamento', desl: 'Desligado', afast: 'Afastado' }
+export const ST_LABEL = { sem: 'Sem alocação', abaixo: 'Abaixo do planejado', ok: 'Estável', acima: 'Acima do planejado', semplan: 'Sem planejamento', desl: 'Desligado', afast: 'Afastado' }
 export const ST_CURTO = { sem: 'Sem alocação', abaixo: 'Abaixo', ok: 'Estável', acima: 'Acima', semplan: 'Sem planejamento', desl: 'Desligado', afast: 'Afastado' }
 export const ST_COR = { sem: 'var(--red)', abaixo: 'var(--amber)', ok: 'var(--green)', acima: 'var(--purple)', semplan: 'var(--muted)', desl: 'var(--muted)', afast: 'var(--teal)' }
 
@@ -440,8 +440,8 @@ export function metaPct(dataStr, ym, modo) {
 }
 
 export const TD = {
-  zero: ['Sem tração', 'var(--red)', 0],
-  down: ['Perdeu ritmo', 'var(--red)', 1],
+  zero: ['Sem alocação', 'var(--red)', 0],
+  down: ['Ritmo estável', 'var(--amber)', 1],
   stall: ['Ritmo estável', 'var(--amber)', 2],
   up: ['Recuperação de ritmo', 'var(--teal)', 3],
   ok: ['Conforme plano', 'var(--green)', 4],
@@ -454,7 +454,7 @@ function tendencia(serie, plano, ym, dataStr) {
   if (serie.every(v => !v)) return 'zero'
   if (b === null) return 'na'
   if (a > b + 0.05) return 'up'
-  if (a < b - 0.05) return 'down'
+  if (a < b - 0.05) return 'stall'
   return 'stall'
 }
 
@@ -498,10 +498,10 @@ export function montarResumo(ym, A) {
   return [
     `Alocação de horas · TICs · ${ymLabel(ym)} (posição de ${dmyFull(ult.data)})`,
     `• Equipe em ${Math.round(cov)}% do planejado${covPrev != null ? ` (${sinal(cov - covPrev)} pp desde ${dmyFull(pen.data)})` : ''}; ${pes.length} colaboradores monitorados.`,
-    `• ${dist.ok + dist.acima} conforme plano · ${c('up') + c('stall')} em recuperação/estabilização · ${dist.sem} sem tração.`,
+    `• ${dist.ok + dist.acima} conforme plano · ${c('up') + c('stall')} em recuperação/estabilização · ${dist.sem} sem alocação.`,
     ...(pen ? [`• Semana corrente: ${horasAdd >= 0 ? '+' : ''}${fmtH(horasAdd)} h; ${comecaram} colaborador(es) iniciaram alocação.`] : []),
     ...(c('up') ? [`• Recuperação de ritmo (${c('up')}): ${nomes(pes.filter(p => p.t === 'up'))}.`] : []),
     ...(c('stall') ? [`• Ritmo estável (${c('stall')}): ${nomes(pes.filter(p => p.t === 'stall'))}.`] : []),
-    ...(c('zero') ? [`• Sem tração (${c('zero')}): ${nomes(pes.filter(p => p.t === 'zero'))}.`] : []),
+    ...(c('zero') ? [`• Sem alocação (${c('zero')}): ${nomes(pes.filter(p => p.t === 'zero'))}.`] : []),
   ].join('\n')
 }

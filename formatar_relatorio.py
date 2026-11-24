@@ -129,11 +129,9 @@ for r in range(2, last + 1):
 rng = f'{get_column_letter(c_sit)}2:{get_column_letter(c_sit)}{last}'
 styles = {
     'Sem alocação': ('FBE0DE', '9C2B22'),
-    'Abaixo do ritmo semanal': ('FFF0C9', '8A5A00'),
     'Abaixo do planejado': ('FFF0C9', '8A5A00'),
     'Estável': ('E5F6EE', '0F5132'),
     'Dentro do planejado': ('E5F6EE', '0F5132'),
-    'Acima do ritmo semanal': ('DCE8F8', '1F4E8C'),
     'Acima do planejado': ('DCE8F8', '1F4E8C'),
     'Sem planejamento': ('E8E4F3', '4B3A8C'),
     'Afastado': ('E0F2F1', '0F766E'),
@@ -248,9 +246,9 @@ rs.row_dimensions[r0].height = 26
 
 order = [
     'Sem alocação',
-    'Abaixo do ritmo semanal',
+    'Abaixo do planejado',
     'Estável',
-    'Acima do ritmo semanal',
+    'Acima do planejado',
     'Sem planejamento',
     'Afastado',
     'Desligado',
