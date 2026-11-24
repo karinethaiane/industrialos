@@ -13,6 +13,8 @@ import * as arm from './armazenamento'
 // true  = só quem é admin da plataforma pode salvar notas e registrar posições
 // false = qualquer usuário logado pode
 const SOMENTE_ADMIN_EDITA = true
+const IS_LOCALHOST = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+const FORMATTER_URL = import.meta.env.VITE_ALOCACAO_FORMATTER_URL || (IS_LOCALHOST ? 'http://localhost:8001/formatar-relatorio' : '/api/formatar-relatorio')
 
 // Guarda as planilhas importadas enquanto a página não for recarregada
 // (assim, ao trocar de tela e voltar, não precisa importar de novo)
@@ -368,7 +370,7 @@ export default function AlocacaoHoras({ isAdmin = false }) {
     formData.append('arquivo', rawBlob, nomeArquivo)
 
     try {
-      const response = await fetch('http://localhost:8001/formatar-relatorio', {
+      const response = await fetch(FORMATTER_URL, {
         method: 'POST',
         body: formData,
       })
@@ -396,6 +398,20 @@ export default function AlocacaoHoras({ isAdmin = false }) {
       return
     } catch (err) {
       console.error(err)
+      if (!IS_LOCALHOST) {
+        const fallbackUrl = URL.createObjectURL(rawBlob)
+        const anchor = document.createElement('a')
+        anchor.href = fallbackUrl
+        anchor.download = nomeArquivo.replace(/\.xlsx$/, '_base.xlsx')
+        document.body.appendChild(anchor)
+        anchor.click()
+        anchor.remove()
+        URL.revokeObjectURL(fallbackUrl)
+        toast('Formatter indisponível neste ambiente. Relatório base exportado.')
+        alert('O serviço de formatação oficial não respondeu neste ambiente. O relatório base foi exportado para não interromper sua operação.')
+        return
+      }
+
       toast('Falha na formatação. Inicie o formatador com: npm run api:formatar-relatorio')
       alert('Não foi possível gerar o relatório no layout oficial. Ative o formatador local (npm run api:formatar-relatorio) e exporte novamente.')
     }
